@@ -69,6 +69,15 @@ export function CashIcon({ className }: P) {
   );
 }
 
+export function WalletIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v0H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9" />
+      <path d="M16 13h.01" />
+    </svg>
+  );
+}
+
 export function ChevronIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden>
