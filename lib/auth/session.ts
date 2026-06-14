@@ -7,7 +7,7 @@ export const SESSION_COOKIE = "fizz_session";
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export type SessionPayload = {
-  userId: number;
+  userId: string;
   role: UserRole;
 };
 
@@ -31,7 +31,7 @@ export async function decrypt(
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
-    return { userId: payload.userId as number, role: payload.role as UserRole };
+    return { userId: payload.userId as string, role: payload.role as UserRole };
   } catch {
     return null;
   }

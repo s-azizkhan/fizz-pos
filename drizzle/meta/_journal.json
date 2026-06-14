@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1781466155235,
-      "tag": "0000_wise_genesis",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1781466753856,
-      "tag": "0001_concerned_firebird",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1781467582473,
-      "tag": "0002_gorgeous_wolfsbane",
+      "when": 1781468666207,
+      "tag": "0000_white_inhumans",
       "breakpoints": true
     }
   ]

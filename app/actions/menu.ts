@@ -14,11 +14,12 @@ import {
 } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { STORE_ID } from "@/lib/store/constants";
+import { parseId } from "@/lib/store/ids";
 
 export type MenuState = { ok: boolean; error?: string };
 
 // Only admins and managers shape the menu.
-async function requireEditor(): Promise<{ id: number } | { error: string }> {
+async function requireEditor(): Promise<{ id: string } | { error: string }> {
   const user = await getCurrentUser();
   if (user.role !== "admin" && user.role !== "manager") {
     return { error: "Only admins and managers can edit the menu." };
@@ -66,8 +67,8 @@ export async function updateCategory(
   const auth = await requireEditor();
   if ("error" in auth) return { ok: false, error: auth.error };
 
-  const id = Number(formData.get("id"));
-  if (!Number.isInteger(id) || id <= 0) return { ok: false, error: "Invalid category." };
+  const id = parseId(formData.get("id"));
+  if (!id) return { ok: false, error: "Invalid category." };
 
   const parsed = categoryForm.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -93,8 +94,8 @@ export async function deleteCategory(
   const auth = await requireEditor();
   if ("error" in auth) return { ok: false, error: auth.error };
 
-  const id = Number(formData.get("id"));
-  if (!Number.isInteger(id) || id <= 0) return { ok: false, error: "Invalid category." };
+  const id = parseId(formData.get("id"));
+  if (!id) return { ok: false, error: "Invalid category." };
 
   try {
     await db
@@ -109,10 +110,10 @@ export async function deleteCategory(
 }
 
 // Persist a new category order. Accepts an array of category ids in order.
-export async function reorderCategories(ids: number[]): Promise<MenuState> {
+export async function reorderCategories(ids: string[]): Promise<MenuState> {
   const auth = await requireEditor();
   if ("error" in auth) return { ok: false, error: auth.error };
-  if (!Array.isArray(ids) || ids.some((n) => !Number.isInteger(n))) {
+  if (!Array.isArray(ids) || ids.some((n) => typeof n !== "string" || n.length === 0)) {
     return { ok: false, error: "Invalid order." };
   }
 
@@ -192,8 +193,8 @@ export async function updateItem(
   const auth = await requireEditor();
   if ("error" in auth) return { ok: false, error: auth.error };
 
-  const id = Number(formData.get("id"));
-  if (!Number.isInteger(id) || id <= 0) return { ok: false, error: "Invalid item." };
+  const id = parseId(formData.get("id"));
+  if (!id) return { ok: false, error: "Invalid item." };
 
   const parsed = itemForm.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
@@ -229,8 +230,8 @@ export async function deleteItem(
   const auth = await requireEditor();
   if ("error" in auth) return { ok: false, error: auth.error };
 
-  const id = Number(formData.get("id"));
-  if (!Number.isInteger(id) || id <= 0) return { ok: false, error: "Invalid item." };
+  const id = parseId(formData.get("id"));
+  if (!id) return { ok: false, error: "Invalid item." };
 
   try {
     await db
@@ -252,8 +253,8 @@ export async function toggleItemAvailable(
   const auth = await requireEditor();
   if ("error" in auth) return { ok: false, error: auth.error };
 
-  const id = Number(formData.get("id"));
-  if (!Number.isInteger(id) || id <= 0) return { ok: false, error: "Invalid item." };
+  const id = parseId(formData.get("id"));
+  if (!id) return { ok: false, error: "Invalid item." };
 
   try {
     await db

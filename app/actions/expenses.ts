@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { expenses, expenseForm } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { STORE_ID } from "@/lib/store/constants";
+import { parseId } from "@/lib/store/ids";
 
 export type ExpenseState = { ok: boolean; error?: string };
 
@@ -40,8 +41,8 @@ export async function deleteExpense(
     return { ok: false, error: "Not allowed to delete entries." };
   }
 
-  const id = Number(formData.get("id"));
-  if (!Number.isInteger(id) || id <= 0) {
+  const id = parseId(formData.get("id"));
+  if (!id) {
     return { ok: false, error: "Invalid entry." };
   }
 

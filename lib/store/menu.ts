@@ -39,14 +39,14 @@ async function buildMenu(onlyAvailable: boolean): Promise<MenuCategoryWithItems[
       .orderBy(asc(menuItemVariants.position), asc(menuItemVariants.id)),
   ]);
 
-  const variantsByItem = new Map<number, MenuItemVariant[]>();
+  const variantsByItem = new Map<string, MenuItemVariant[]>();
   for (const v of variants) {
     const list = variantsByItem.get(v.itemId) ?? [];
     list.push(v);
     variantsByItem.set(v.itemId, list);
   }
 
-  const itemsByCat = new Map<number, MenuItemWithVariants[]>();
+  const itemsByCat = new Map<string, MenuItemWithVariants[]>();
   for (const it of items) {
     if (onlyAvailable && !it.available) continue;
     const list = itemsByCat.get(it.categoryId) ?? [];

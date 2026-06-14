@@ -1,4 +1,4 @@
-import { date, integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
+import { date, numeric, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
@@ -6,17 +6,16 @@ import { store } from "./store";
 // One row per trading day: how the day's takings split across payment types.
 // Money stored as numeric(12,2) strings to avoid float drift.
 export const dailySales = pgTable("daily_sales", {
-  id: serial("id").primaryKey(),
-  storeId: integer("store_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  storeId: uuid("store_id")
     .notNull()
-    .default(1)
     .references(() => store.id, { onDelete: "cascade" }),
   saleDate: date("sale_date").notNull(),
   cashSale: numeric("cash_sale", { precision: 12, scale: 2 }).notNull().default("0"),
   onlineSale: numeric("online_sale", { precision: 12, scale: 2 }).notNull().default("0"),
   creditSale: numeric("credit_sale", { precision: 12, scale: 2 }).notNull().default("0"),
   // Who keyed the entry. Keep history even if the user is later removed.
-  enteredBy: integer("entered_by").references(() => users.id, { onDelete: "set null" }),
+  enteredBy: uuid("entered_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   // Soft delete — null means active.

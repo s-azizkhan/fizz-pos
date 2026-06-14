@@ -33,7 +33,7 @@ export async function listDailySales(): Promise<DailySaleRow[]> {
   }));
 }
 
-export async function getDailySale(id: number): Promise<DailySale | undefined> {
+export async function getDailySale(id: string): Promise<DailySale | undefined> {
   const [row] = await db
     .select()
     .from(dailySales)

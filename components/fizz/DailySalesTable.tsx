@@ -28,7 +28,7 @@ function fmtDateTime(d: Date | string): string {
   });
 }
 
-function DeleteButton({ id }: { id: number }) {
+function DeleteButton({ id }: { id: string }) {
   const [, action, pending] = useActionState(deleteDailySale, initial);
   return (
     <form action={action} className="inline">

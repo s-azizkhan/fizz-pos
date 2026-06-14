@@ -24,7 +24,7 @@ export async function listExpenses(): Promise<ExpenseRow[]> {
   return rows.map(({ expense, enteredByName }) => ({ ...expense, enteredByName }));
 }
 
-export async function getExpense(id: number): Promise<Expense | undefined> {
+export async function getExpense(id: string): Promise<Expense | undefined> {
   const [row] = await db
     .select()
     .from(expenses)

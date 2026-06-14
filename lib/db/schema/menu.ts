@@ -1,4 +1,4 @@
-import { boolean, integer, numeric, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
@@ -6,15 +6,14 @@ import { store } from "./store";
 // A menu category (e.g. "Hot Coffee", "Pastries"). Ordered by `position`,
 // each carries an icon key resolved client-side. Soft-deleted via deletedAt.
 export const menuCategories = pgTable("menu_categories", {
-  id: serial("id").primaryKey(),
-  storeId: integer("store_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  storeId: uuid("store_id")
     .notNull()
-    .default(1)
     .references(() => store.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   icon: text("icon").notNull().default("☕"),
   position: integer("position").notNull().default(0),
-  enteredBy: integer("entered_by").references(() => users.id, { onDelete: "set null" }),
+  enteredBy: uuid("entered_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -23,8 +22,8 @@ export type MenuCategory = typeof menuCategories.$inferSelect;
 
 // A menu item belonging to a category. Base price; variants override it.
 export const menuItems = pgTable("menu_items", {
-  id: serial("id").primaryKey(),
-  categoryId: integer("category_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  categoryId: uuid("category_id")
     .notNull()
     .references(() => menuCategories.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
@@ -40,8 +39,8 @@ export type MenuItem = typeof menuItems.$inferSelect;
 
 // A variant of an item (e.g. "Small", "Large"). Has its own price.
 export const menuItemVariants = pgTable("menu_item_variants", {
-  id: serial("id").primaryKey(),
-  itemId: integer("item_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  itemId: uuid("item_id")
     .notNull()
     .references(() => menuItems.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
@@ -89,7 +88,7 @@ const variantSchema = z.object({
 });
 
 export const itemForm = z.object({
-  categoryId: z.coerce.number().int().positive("Pick a category"),
+  categoryId: z.uuid("Pick a category"),
   name: z.string().trim().min(1, "Name is required").max(120),
   description: optionalText(280),
   price: money,

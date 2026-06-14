@@ -1,4 +1,4 @@
-import { date, integer, numeric, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { date, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
@@ -23,10 +23,9 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 // One row per expense. Money stored as numeric(12,2) strings to avoid drift.
 export const expenses = pgTable("expenses", {
-  id: serial("id").primaryKey(),
-  storeId: integer("store_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  storeId: uuid("store_id")
     .notNull()
-    .default(1)
     .references(() => store.id, { onDelete: "cascade" }),
   expenseDate: date("expense_date").notNull(),
   category: text("category").notNull().default("Other"),
@@ -35,7 +34,7 @@ export const expenses = pgTable("expenses", {
   paymentMethod: expenseMethod("payment_method").notNull().default("cash"),
   vendor: text("vendor"),
   // Who keyed the entry. Keep history even if the user is later removed.
-  enteredBy: integer("entered_by").references(() => users.id, { onDelete: "set null" }),
+  enteredBy: uuid("entered_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   // Soft delete — null means active.

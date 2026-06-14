@@ -1,10 +1,10 @@
-import { boolean, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/store/currencies";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   // Profile
   name: text("name").notNull().default("My Café"),
   legalName: text("legal_name"),

@@ -94,7 +94,7 @@ function ItemForm({
   currency,
   onDone,
 }: {
-  categoryId: number;
+  categoryId: string;
   item?: MenuItemWithVariants;
   currency: string;
   onDone: () => void;
@@ -174,7 +174,7 @@ function ItemRow({
   currency,
 }: {
   item: MenuItemWithVariants;
-  categoryId: number;
+  categoryId: string;
   currency: string;
 }) {
   const [editing, setEditing] = useState(false);

@@ -1,9 +1,9 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const waitlist = pgTable("waitlist", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   cafeName: text("cafe_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
