@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { logout } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getStore } from "@/lib/store/data";
+import { navForRole } from "@/components/fizz/dashboard/nav-items";
+import { CURRENCIES } from "@/lib/store/currencies";
 import type { UserRole } from "@/lib/db/schema";
 
-export const metadata: Metadata = {
-  title: "Dashboard — Fizz",
-};
+export const metadata: Metadata = { title: "Dashboard — Fizz" };
 
 const ROLE_LABEL: Record<UserRole, string> = {
   admin: "Owner",
@@ -14,81 +14,91 @@ const ROLE_LABEL: Record<UserRole, string> = {
   staff: "Barista",
 };
 
-// What each role gets to touch. admin sees all; manager loses owner-only tiles;
-// staff sees the till only.
-const TILES: { title: string; blurb: string; roles: UserRole[]; href?: string }[] = [
-  { title: "Till", blurb: "Ring orders, take payment.", roles: ["admin", "manager", "staff"] },
-  { title: "Inventory", blurb: "Track every ingredient, live.", roles: ["admin", "manager"] },
-  { title: "Margins", blurb: "Real cost per cup, no guessing.", roles: ["admin", "manager"] },
-  { title: "Store settings", blurb: "Profile, hours, invoice numbering.", roles: ["admin"], href: "/dashboard/store" },
-];
-
 export default async function DashboardPage() {
-  const user = await getCurrentUser();
-  const tiles = TILES.filter((t) => t.roles.includes(user.role));
+  const [user, store] = await Promise.all([getCurrentUser(), getStore()]);
+  // Action tiles = nav minus the Dashboard entry itself.
+  const tiles = navForRole(user.role).filter((i) => i.href !== "/dashboard");
+  const currency =
+    CURRENCIES.find((c) => c.code === store.currency)?.symbol ?? store.currency;
 
   return (
-    <main className="min-h-dvh">
-      <header className="sticky top-0 z-50 border-b border-ink-line bg-ink/80 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <span className="font-display text-2xl font-bold tracking-tight">
-            Fi<span className="text-fizz">zz</span>
-            <span className="align-super text-xs text-bubble">●</span>
-          </span>
-          <div className="flex items-center gap-4">
-            <span className="hidden text-sm text-steam sm:inline">
-              {user.name}
-            </span>
-            <span className="rounded-full border border-fizz/40 bg-fizz/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-fizz">
-              {ROLE_LABEL[user.role]}
-            </span>
-            <form action={logout}>
-              <button
-                type="submit"
-                className="rounded-full border border-ink-line bg-ink-soft px-4 py-2 text-sm text-steam transition-colors hover:text-cream"
-              >
-                Sign out
-              </button>
-            </form>
+    <div className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
+        {ROLE_LABEL[user.role]} view · {store.name}
+      </p>
+      <h1 className="mt-3 font-display text-[clamp(28px,5vw,44px)] font-bold tracking-tight">
+        Morning, {user.name.split(" ")[0]}.
+      </h1>
+
+      <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-4 lg:grid-cols-4">
+        {/* Hero tile */}
+        <section className="relative col-span-2 row-span-2 flex flex-col justify-between overflow-hidden rounded-fizz border border-fizz/30 bg-fizz/[0.07] p-7">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
+              The floor&apos;s yours
+            </p>
+            <h2 className="mt-3 max-w-[16ch] font-display text-2xl font-bold leading-tight tracking-tight lg:text-3xl">
+              Fast at the counter. Sharp in the back office.
+            </h2>
           </div>
-        </div>
-      </header>
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="text-sm text-steam">Open today</p>
+              <p className="font-display text-xl font-bold text-cream">
+                {store.openingTime} — {store.closingTime}
+              </p>
+            </div>
+            <span className="font-display text-5xl font-bold text-fizz/30">
+              {currency}
+            </span>
+          </div>
+        </section>
 
-      <div className="mx-auto max-w-6xl px-6 py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-          {ROLE_LABEL[user.role]} view
-        </p>
-        <h1 className="mt-3 font-display text-[clamp(28px,5vw,48px)] font-bold tracking-tight">
-          Morning, {user.name.split(" ")[0]}.
-        </h1>
-        <p className="mt-3 max-w-[60ch] text-lg text-steam">
-          The floor&apos;s yours. Here&apos;s what you can run today.
-        </p>
+        {/* Stat tiles */}
+        <Stat label="Timezone" value={store.timezone} />
+        <Stat label="Currency" value={store.currency} />
+        <Stat label="Invoice prefix" value={store.invoicePrefix} />
+        <Stat label="Next invoice #" value={String(store.nextInvoiceSeq)} />
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {tiles.map((t) => {
-            const inner = (
-              <>
-                <h2 className="font-display text-xl font-bold tracking-tight">
-                  {t.title}
-                </h2>
-                <p className="mt-2 text-sm text-steam">{t.blurb}</p>
-              </>
-            );
-            const cls =
-              "block rounded-fizz border border-ink-line bg-ink-soft p-7 transition-transform hover:scale-[1.02]";
-            return t.href ? (
-              <Link key={t.title} href={t.href} className={`${cls} hover:border-fizz/40`}>
-                {inner}
-              </Link>
-            ) : (
-              <div key={t.title} className={cls}>
-                {inner}
+        {/* Action tiles */}
+        {tiles.map((t, i) => {
+          const Icon = t.icon;
+          // Give every third tile extra width for bento rhythm.
+          const wide = i % 3 === 2;
+          return (
+            <Link
+              key={t.href}
+              href={t.href}
+              className={`group flex flex-col justify-between rounded-fizz border border-ink-line bg-ink-soft p-6 transition-all hover:-translate-y-0.5 hover:border-fizz/40 ${
+                wide ? "col-span-2" : ""
+              }`}
+            >
+              <span className="grid h-11 w-11 place-items-center rounded-fizz border border-ink-line bg-ink text-fizz transition-colors group-hover:border-fizz/40">
+                <Icon />
+              </span>
+              <div>
+                <h3 className="font-display text-lg font-bold tracking-tight">
+                  {t.label}
+                </h3>
+                <p className="mt-1 text-sm text-steam">{t.blurb}</p>
               </div>
-            );
-          })}
-        </div>
+            </Link>
+          );
+        })}
       </div>
-    </main>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col justify-between rounded-fizz border border-ink-line bg-ink-soft p-6">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-steam">
+        {label}
+      </p>
+      <p className="truncate font-display text-2xl font-bold tracking-tight text-cream">
+        {value}
+      </p>
+    </div>
   );
 }
