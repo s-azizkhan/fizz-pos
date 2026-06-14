@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatMoney } from "@/lib/store/format";
 import { PRESET_LABELS, PRESET_ORDER, type RangePreset } from "@/lib/store/date-range";
-import type { Analytics, Metric, Slice } from "@/lib/store/analytics";
+import type { Analytics, Metric, SeriesPoint, Slice } from "@/lib/store/analytics";
 
 // Percentage change between current and previous, guarding divide-by-zero.
 function delta(m: Metric): { pct: number; up: boolean } | null {
@@ -14,6 +14,15 @@ function delta(m: Metric): { pct: number; up: boolean } | null {
 }
 
 const SLICE_COLORS = ["#C6F432", "#38E1D6", "#8A93A1", "#E2655A", "#6b7280"];
+
+// Revenue-trend chart styles. "candles" is the stock-market OHLC view.
+type ChartType = "candles" | "line" | "area" | "bars";
+const CHART_TYPES: { value: ChartType; label: string }[] = [
+  { value: "candles", label: "Candles" },
+  { value: "line", label: "Line" },
+  { value: "area", label: "Area" },
+  { value: "bars", label: "Bars" },
+];
 
 export default function AnalyticsClient({
   analytics,
@@ -33,6 +42,7 @@ export default function AnalyticsClient({
   const [customFrom, setCustomFrom] = useState(from);
   const [customTo, setCustomTo] = useState(to);
   const [showCustom, setShowCustom] = useState(preset === "custom");
+  const [chartType, setChartType] = useState<ChartType>("candles");
 
   function applyPreset(p: RangePreset) {
     setShowCustom(false);
@@ -141,13 +151,40 @@ export default function AnalyticsClient({
 
       {/* Revenue trend */}
       <Card className="mt-6">
-        <div className="flex items-baseline justify-between">
-          <h2 className="font-display text-lg font-bold">Revenue trend</h2>
-          <span className="text-xs text-steam">
-            by {analytics.trendUnit === "hour" ? "hour" : "day"}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-baseline gap-2">
+            <h2 className="font-display text-lg font-bold">Revenue trend</h2>
+            <span className="text-xs text-steam">
+              by {analytics.trendUnit === "hour" ? "hour" : "day"}
+            </span>
+          </div>
+          {/* Chart-type toggle (stock-market style: candles) */}
+          <div className="flex gap-1 rounded-fizz border border-ink-line bg-ink p-1">
+            {CHART_TYPES.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => setChartType(c.value)}
+                title={c.label}
+                className={`rounded-[12px] px-3 py-1 text-xs font-semibold transition-colors ${
+                  chartType === c.value
+                    ? "bg-fizz text-ink"
+                    : "text-steam hover:text-cream"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <TrendChart data={analytics.trend} money={money} />
+        {chartType === "candles" ? (
+          <CandleChart data={analytics.trend} unit={analytics.trendUnit} money={money} />
+        ) : (
+          <TrendChart
+            data={analytics.trend}
+            money={money}
+            mode={chartType}
+          />
+        )}
       </Card>
 
       {/* Breakdowns */}
@@ -252,50 +289,152 @@ function Kpi({
   );
 }
 
-// SVG bar chart for the revenue trend. Responsive via viewBox; bars scale to max.
+// Shared chart geometry.
+const CHART_W = 800;
+const CHART_H = 240;
+const CHART_PAD_L = 8;
+const CHART_PAD_R = 8;
+const CHART_PAD_T = 12;
+const CHART_PAD_B = 22;
+
+// Build "nice" gridline values from 0..max (≈4 lines).
+function gridLines(max: number): number[] {
+  if (max <= 0) return [0];
+  const step = niceStep(max / 4);
+  const out: number[] = [];
+  for (let v = 0; v <= max + step / 2; v += step) out.push(Math.round(v * 100) / 100);
+  return out;
+}
+function niceStep(raw: number): number {
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const nice = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+  return nice * mag;
+}
+
+// Y-axis + gridline layer shared by all chart types.
+function Grid({ max, money }: { max: number; money: (x: number) => string }) {
+  const lines = gridLines(max);
+  const plotH = CHART_H - CHART_PAD_T - CHART_PAD_B;
+  return (
+    <>
+      {lines.map((v) => {
+        const y = CHART_PAD_T + plotH - (v / (max || 1)) * plotH;
+        return (
+          <g key={v}>
+            <line
+              x1={CHART_PAD_L}
+              x2={CHART_W - CHART_PAD_R}
+              y1={y}
+              y2={y}
+              className="stroke-ink-line"
+              strokeWidth={1}
+              strokeDasharray="3 4"
+            />
+            <text
+              x={CHART_W - CHART_PAD_R}
+              y={y - 3}
+              textAnchor="end"
+              className="fill-steam"
+              style={{ fontSize: 10 }}
+            >
+              {money(v)}
+            </text>
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+// SVG chart for the revenue trend in bars / line / area mode (gridlines + axis).
 function TrendChart({
   data,
   money,
+  mode,
 }: {
-  data: { label: string; value: number }[];
+  data: SeriesPoint[];
   money: (x: number) => string;
+  mode: "bars" | "line" | "area";
 }) {
   const [hover, setHover] = useState<number | null>(null);
-  if (data.length === 0 || data.every((d) => d.value === 0)) {
-    return <Empty />;
-  }
+  if (data.length === 0 || data.every((d) => d.value === 0)) return <Empty />;
+
   const max = Math.max(...data.map((d) => d.value), 1);
-  const W = 800;
-  const H = 220;
-  const pad = 8;
-  const bw = (W - pad * 2) / data.length;
-  // Show ~8 evenly-spaced x labels max to avoid crowding.
+  const gMax = gridLines(max).at(-1) || max;
+  const W = CHART_W;
+  const H = CHART_H;
+  const plotH = H - CHART_PAD_T - CHART_PAD_B;
+  const innerW = W - CHART_PAD_L - CHART_PAD_R;
+  const bw = innerW / data.length;
   const labelEvery = Math.ceil(data.length / 8);
+  const x = (i: number) => CHART_PAD_L + i * bw + bw / 2;
+  const y = (v: number) => CHART_PAD_T + plotH - (v / gMax) * plotH;
+
+  const linePath = data.map((d, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(d.value)}`).join(" ");
+  const areaPath =
+    `M${x(0)},${y(0)} ` +
+    data.map((d, i) => `L${x(i)},${y(d.value)}`).join(" ") +
+    ` L${x(data.length - 1)},${y(0)} Z`;
 
   return (
     <div className="mt-4">
       <div className="relative">
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
-          {data.map((d, i) => {
-            const h = (d.value / max) * (H - 30);
-            const x = pad + i * bw;
-            const y = H - 20 - h;
-            return (
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+          <Grid max={gMax} money={money} />
+
+          {mode === "bars" &&
+            data.map((d, i) => {
+              const h = (d.value / gMax) * plotH;
+              return (
+                <rect
+                  key={i}
+                  x={CHART_PAD_L + i * bw + bw * 0.15}
+                  y={CHART_PAD_T + plotH - h}
+                  width={bw * 0.7}
+                  height={Math.max(h, d.value > 0 ? 2 : 0)}
+                  rx={3}
+                  className={hover === i ? "fill-bubble" : "fill-fizz"}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover(null)}
+                />
+              );
+            })}
+
+          {mode === "area" && (
+            <>
+              <defs>
+                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#C6F432" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="#C6F432" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d={areaPath} fill="url(#areaFill)" />
+              <path d={linePath} fill="none" className="stroke-fizz" strokeWidth={2} />
+            </>
+          )}
+
+          {mode === "line" && (
+            <path d={linePath} fill="none" className="stroke-fizz" strokeWidth={2} />
+          )}
+
+          {/* Hover hotspots + markers for line/area */}
+          {data.map((d, i) => (
+            <g key={`h${i}`}>
+              {mode !== "bars" && hover === i && (
+                <circle cx={x(i)} cy={y(d.value)} r={4} className="fill-bubble" />
+              )}
               <rect
-                key={i}
-                x={x + bw * 0.12}
-                y={y}
-                width={bw * 0.76}
-                height={Math.max(h, d.value > 0 ? 2 : 0)}
-                rx={3}
-                className={
-                  hover === i ? "fill-bubble" : "fill-fizz"
-                }
+                x={CHART_PAD_L + i * bw}
+                y={CHART_PAD_T}
+                width={bw}
+                height={plotH}
+                fill="transparent"
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
               />
-            );
-          })}
+            </g>
+          ))}
         </svg>
         {hover !== null && (
           <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-fizz border border-ink-line bg-ink px-3 py-1.5 text-sm">
@@ -311,6 +450,113 @@ function TrendChart({
           i % labelEvery === 0 ? <span key={i}>{d.label}</span> : null,
         )}
       </div>
+    </div>
+  );
+}
+
+// Stock-market style candlestick chart. Each candle is the OHLC of individual
+// order totals within a bucket: green when close >= open (orders trended up),
+// red otherwise. Wicks show the high/low order value; the body spans open→close.
+function CandleChart({
+  data,
+  unit,
+  money,
+}: {
+  data: SeriesPoint[];
+  unit: "hour" | "day";
+  money: (x: number) => string;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const active = data.filter((d) => d.count > 0);
+  if (active.length === 0) return <Empty />;
+
+  const hi = Math.max(...data.map((d) => d.high), 1);
+  const gMax = gridLines(hi).at(-1) || hi;
+  const W = CHART_W;
+  const H = CHART_H;
+  const plotH = H - CHART_PAD_T - CHART_PAD_B;
+  const innerW = W - CHART_PAD_L - CHART_PAD_R;
+  const bw = innerW / data.length;
+  const labelEvery = Math.ceil(data.length / 8);
+  const cx = (i: number) => CHART_PAD_L + i * bw + bw / 2;
+  const y = (v: number) => CHART_PAD_T + plotH - (v / gMax) * plotH;
+  const bodyW = Math.max(2, Math.min(16, bw * 0.6));
+
+  return (
+    <div className="mt-4">
+      <div className="relative">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+          <Grid max={gMax} money={money} />
+          {data.map((d, i) => {
+            if (d.count === 0) return null;
+            const up = d.close >= d.open;
+            const color = up ? "#C6F432" : "#E2655A";
+            const bodyTop = y(Math.max(d.open, d.close));
+            const bodyBot = y(Math.min(d.open, d.close));
+            const bodyH = Math.max(2, bodyBot - bodyTop);
+            const x = cx(i);
+            return (
+              <g
+                key={i}
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+              >
+                {/* Wick (high → low) */}
+                <line
+                  x1={x}
+                  x2={x}
+                  y1={y(d.high)}
+                  y2={y(d.low)}
+                  stroke={color}
+                  strokeWidth={1.5}
+                />
+                {/* Body (open → close) */}
+                <rect
+                  x={x - bodyW / 2}
+                  y={bodyTop}
+                  width={bodyW}
+                  height={bodyH}
+                  rx={1.5}
+                  fill={color}
+                  opacity={hover === i ? 1 : 0.9}
+                />
+                {/* hover hotspot */}
+                <rect
+                  x={CHART_PAD_L + i * bw}
+                  y={CHART_PAD_T}
+                  width={bw}
+                  height={plotH}
+                  fill="transparent"
+                />
+              </g>
+            );
+          })}
+        </svg>
+        {hover !== null && data[hover].count > 0 && (
+          <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-fizz border border-ink-line bg-ink px-3 py-2 text-xs">
+            <p className="font-semibold text-cream">{data[hover].label}</p>
+            <div className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-steam">
+              <span>Open</span><span className="text-right text-cream">{money(data[hover].open)}</span>
+              <span>High</span><span className="text-right text-fizz">{money(data[hover].high)}</span>
+              <span>Low</span><span className="text-right text-[#E2655A]">{money(data[hover].low)}</span>
+              <span>Close</span><span className="text-right text-cream">{money(data[hover].close)}</span>
+              <span>Orders</span><span className="text-right text-cream">{data[hover].count}</span>
+              <span>Revenue</span><span className="text-right text-cream">{money(data[hover].value)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="mt-1 flex items-center justify-between">
+        <div className="flex gap-3 text-[10px] text-steam">
+          {data.map((d, i) =>
+            i % labelEvery === 0 ? <span key={i}>{d.label}</span> : null,
+          )}
+        </div>
+      </div>
+      <p className="mt-2 text-[11px] text-steam">
+        Each candle = order-value range that {unit}. Green: order values rose
+        (close ≥ open) · Red: fell. Wick = highest/lowest single order.
+      </p>
     </div>
   );
 }

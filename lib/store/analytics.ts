@@ -16,7 +16,18 @@ export type Metric = {
   prev: number; // same metric over the previous period
 };
 
-export type SeriesPoint = { label: string; value: number; ts: number };
+export type SeriesPoint = {
+  label: string;
+  value: number; // total revenue in the bucket
+  ts: number;
+  // OHLC of individual order totals within the bucket — for the candlestick
+  // view. When the bucket had no orders these are 0.
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  count: number; // orders in the bucket
+};
 export type Slice = { label: string; value: number; count: number };
 export type TopItem = {
   name: string;
@@ -183,13 +194,20 @@ export async function getAnalytics(
         .groupBy(orderItems.name)
         .orderBy(sql`sum(${orderItems.quantity}) desc`)
         .limit(8),
-      // Revenue trend, bucketed by hour or day in the DB's timezone.
+      // Revenue trend, bucketed by hour or day. Also computes OHLC of the
+      // individual order totals within each bucket for the candlestick view:
+      // open = first order, close = last, high = max, low = min.
       db
         .select({
           bucket: hourly
             ? sql<string>`to_char(date_trunc('hour', ${orders.paidAt}), 'YYYY-MM-DD HH24:00')`
             : sql<string>`to_char(date_trunc('day', ${orders.paidAt}), 'YYYY-MM-DD')`,
           value: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
+          count: sql<number>`count(*)`.mapWith(Number),
+          high: sql<number>`coalesce(max(${orders.total}), 0)`.mapWith(Number),
+          low: sql<number>`coalesce(min(${orders.total}), 0)`.mapWith(Number),
+          open: sql<number>`coalesce((array_agg(${orders.total} order by ${orders.paidAt} asc))[1], 0)`.mapWith(Number),
+          close: sql<number>`coalesce((array_agg(${orders.total} order by ${orders.paidAt} desc))[1], 0)`.mapWith(Number),
         })
         .from(orders)
         .where(
@@ -276,13 +294,23 @@ export async function getAnalytics(
 }
 
 // Densify the bucketed rows across the whole range so the chart has a point per
-// hour/day even when there were no sales.
+// hour/day even when there were no sales. Carries OHLC through for candles.
+type TrendRow = {
+  bucket: string;
+  value: number;
+  count: number;
+  high: number;
+  low: number;
+  open: number;
+  close: number;
+};
+
 function buildTrend(
-  rows: { bucket: string; value: number }[],
+  rows: TrendRow[],
   range: DateRange,
   hourly: boolean,
 ): SeriesPoint[] {
-  const map = new Map(rows.map((r) => [r.bucket, r.value]));
+  const map = new Map(rows.map((r) => [r.bucket, r]));
   const out: SeriesPoint[] = [];
   const step = hourly ? 3_600_000 : 86_400_000;
   const cursor = new Date(range.start);
@@ -296,7 +324,17 @@ function buildTrend(
     const label = hourly
       ? `${h}:00`
       : cursor.toLocaleDateString("en-US", { day: "2-digit", month: "short" });
-    out.push({ label, value: r2(map.get(key) ?? 0), ts: cursor.getTime() });
+    const row = map.get(key);
+    out.push({
+      label,
+      value: r2(row?.value ?? 0),
+      ts: cursor.getTime(),
+      open: r2(row?.open ?? 0),
+      high: r2(row?.high ?? 0),
+      low: r2(row?.low ?? 0),
+      close: r2(row?.close ?? 0),
+      count: row?.count ?? 0,
+    });
     cursor.setTime(cursor.getTime() + step);
   }
   return out;
