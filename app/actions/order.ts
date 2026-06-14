@@ -9,7 +9,6 @@ import {
   orderItems,
   orders,
   type CheckoutInput,
-  type SaveOrderInput,
 } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { STORE_ID } from "@/lib/store/constants";
@@ -228,5 +227,3 @@ function bumpPaths() {
   revalidatePath("/dashboard/till");
   revalidatePath("/dashboard/orders");
 }
-
-export type { CheckoutInput, SaveOrderInput };
