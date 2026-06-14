@@ -68,6 +68,11 @@ export default async function TillPage({
     <PosTerminal
       categories={categories}
       currency={store.currency}
+      tax={{
+        rate: Number(store.taxRate),
+        label: store.taxLabel,
+        inclusive: store.taxInclusive,
+      }}
       loaded={loaded}
     />
   );

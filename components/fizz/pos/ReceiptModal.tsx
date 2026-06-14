@@ -6,11 +6,19 @@ import { useEffect } from "react";
 // change owed in big type. Enter / Escape / click dismisses to start the next.
 export default function ReceiptModal({
   orderNumber,
+  subtotal,
+  discount,
+  tax,
+  taxLabel,
   total,
   changeDue,
   onClose,
 }: {
   orderNumber: string;
+  subtotal: string;
+  discount: string | null;
+  tax: string | null;
+  taxLabel: string;
   total: string;
   changeDue: string | null;
   onClose: () => void;
@@ -45,6 +53,32 @@ export default function ReceiptModal({
         </p>
         <p className="mt-1 font-display text-3xl font-bold text-cream">{total}</p>
         <p className="mt-1 text-sm text-steam">Order {orderNumber}</p>
+
+        {/* Bill breakdown */}
+        {(discount || tax) && (
+          <div className="mt-4 space-y-1 rounded-fizz border border-ink-line bg-ink p-4 text-left text-sm">
+            <p className="flex justify-between text-steam">
+              <span>Subtotal</span>
+              <span className="text-cream">{subtotal}</span>
+            </p>
+            {discount && (
+              <p className="flex justify-between text-steam">
+                <span>Discount</span>
+                <span className="text-cream">− {discount}</span>
+              </p>
+            )}
+            {tax && (
+              <p className="flex justify-between text-steam">
+                <span>{taxLabel}</span>
+                <span className="text-cream">{tax}</span>
+              </p>
+            )}
+            <p className="flex justify-between border-t border-ink-line pt-1 font-semibold">
+              <span className="text-cream">Total</span>
+              <span className="text-fizz">{total}</span>
+            </p>
+          </div>
+        )}
 
         {changeDue && Number(changeDue.replace(/[^0-9.]/g, "")) > 0 && (
           <div className="mt-5 rounded-fizz border border-ink-line bg-ink p-4">

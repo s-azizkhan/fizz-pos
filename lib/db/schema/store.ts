@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/store/currencies";
 
@@ -17,6 +17,12 @@ export const store = pgTable("store", {
   postalCode: text("postal_code"),
   country: text("country"),
   taxId: text("tax_id"),
+  // Sales tax applied at the till. Rate is a percentage (e.g. "5.00" = 5%).
+  // `taxLabel` names it on bills (GST, VAT, Sales Tax...). 0 = no tax.
+  taxRate: numeric("tax_rate", { precision: 6, scale: 3 }).notNull().default("0"),
+  taxLabel: text("tax_label").notNull().default("Tax"),
+  // Whether menu prices already include tax (inclusive) or tax is added on top.
+  taxInclusive: boolean("tax_inclusive").notNull().default(false),
   timezone: text("timezone").notNull().default("UTC"),
   currency: text("currency").notNull().default("USD"),
   // Hours (HH:MM, store-local)
@@ -71,6 +77,13 @@ export const storeSettingsForm = z.object({
   postalCode: optionalText(20),
   country: optionalText(80),
   taxId: optionalText(60),
+  taxRate: z
+    .coerce.number({ error: "Enter a valid tax rate" })
+    .min(0, "Cannot be negative")
+    .max(100, "Over 100%?")
+    .transform((n) => n.toFixed(3)),
+  taxLabel: z.string().trim().min(1, "Name the tax").max(24),
+  taxInclusive: z.coerce.boolean().default(false),
   timezone: z.string().trim().min(1).max(60),
   currency: z.enum(CURRENCY_CODES, "Pick a currency"),
   openingTime: z.string().regex(TIME_RE, "Use HH:MM (24h)"),

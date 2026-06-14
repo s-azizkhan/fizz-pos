@@ -35,6 +35,13 @@ export type CartLine = {
 export type OrderType = "dine_in" | "takeaway" | "delivery";
 export type PaymentMethod = "cash" | "card" | "online";
 
+// Store tax configuration surfaced to the till.
+export type TaxConfig = {
+  rate: number; // percentage, e.g. 5 = 5%
+  label: string; // GST / VAT / Sales Tax
+  inclusive: boolean; // prices already include tax
+};
+
 // An existing order loaded into the till for editing (a revisited tab).
 export type LoadedOrder = {
   id: string;

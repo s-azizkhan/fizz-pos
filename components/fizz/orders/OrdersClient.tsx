@@ -232,6 +232,16 @@ export default function OrdersClient({
                   </button>
                 </div>
               )}
+
+              {/* Kitchen ticket — print/reprint for any order */}
+              <a
+                href={`/dashboard/orders/${o.id}/kot`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 block rounded-fizz border border-ink-line px-3 py-2 text-center text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
+              >
+                🧾 {o.status === "open" ? "Print KOT" : "Reprint KOT"}
+              </a>
             </article>
           ))}
         </div>

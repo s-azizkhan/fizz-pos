@@ -11,6 +11,7 @@ import type {
   PaymentMethod,
   PosCategory,
   PosItem,
+  TaxConfig,
 } from "./types";
 import MenuGrid from "./MenuGrid";
 import Ticket from "./Ticket";
@@ -26,10 +27,12 @@ import KeyboardHints from "./KeyboardHints";
 export default function PosTerminal({
   categories,
   currency,
+  tax,
   loaded,
 }: {
   categories: PosCategory[];
   currency: string;
+  tax: TaxConfig;
   loaded: LoadedOrder | null;
 }) {
   const router = useRouter();
@@ -339,6 +342,7 @@ export default function PosTerminal({
       {payOpen && (
         <PayModal
           subtotal={cart.subtotal}
+          tax={tax}
           money={money}
           submitting={submitting}
           onPay={handlePay}
@@ -349,6 +353,10 @@ export default function PosTerminal({
       {receipt && (
         <ReceiptModal
           orderNumber={receipt.orderNumber}
+          subtotal={money(receipt.subtotal)}
+          discount={Number(receipt.discount) > 0 ? money(receipt.discount) : null}
+          tax={Number(receipt.tax) > 0 ? money(receipt.tax) : null}
+          taxLabel={receipt.taxLabel}
           total={money(receipt.total)}
           changeDue={receipt.changeDue ? money(receipt.changeDue) : null}
           onClose={() => setReceipt(null)}

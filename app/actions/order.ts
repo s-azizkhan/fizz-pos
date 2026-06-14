@@ -12,10 +12,19 @@ import {
 } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { STORE_ID } from "@/lib/store/constants";
-import { nextOrderNumber } from "@/lib/store/data";
+import { nextOrderNumber, getStore } from "@/lib/store/data";
 
 export type CheckoutResult =
-  | { ok: true; orderNumber: string; total: string; changeDue: string | null }
+  | {
+      ok: true;
+      orderNumber: string;
+      subtotal: string;
+      discount: string;
+      tax: string;
+      taxLabel: string;
+      total: string;
+      changeDue: string | null;
+    }
   | { ok: false; error: string };
 
 export type SaveResult =
@@ -27,16 +36,35 @@ export type VoidResult = { ok: true } | { ok: false; error: string };
 const r2 = (n: number) => Math.round(n * 100) / 100;
 
 // Recompute totals server-side from the validated lines — never trust client
-// math. Returns the line totals plus subtotal/discount/total.
-function computeTotals(items: CheckoutInput["items"], discount: number) {
+// math. Applies the store's tax: when inclusive, prices already contain tax so
+// we back it out; otherwise tax is added on top of the discounted subtotal.
+function computeTotals(
+  items: CheckoutInput["items"],
+  discount: number,
+  tax: { rate: number; inclusive: boolean },
+) {
   const lines = items.map((l) => ({
     ...l,
     lineTotal: r2(l.unitPrice * l.quantity),
   }));
   const subtotal = r2(lines.reduce((s, l) => s + l.lineTotal, 0));
   const safeDiscount = Math.min(discount, subtotal);
-  const total = r2(subtotal - safeDiscount);
-  return { lines, subtotal, safeDiscount, total };
+  const net = r2(subtotal - safeDiscount); // taxable base
+  const rate = tax.rate / 100;
+
+  let taxAmount = 0;
+  let total = net;
+  if (rate > 0) {
+    if (tax.inclusive) {
+      // Prices include tax — extract the tax portion; total is unchanged.
+      taxAmount = r2(net - net / (1 + rate));
+      total = net;
+    } else {
+      taxAmount = r2(net * rate);
+      total = r2(net + taxAmount);
+    }
+  }
+  return { lines, subtotal, safeDiscount, taxAmount, taxRate: tax.rate, total };
 }
 
 // Replace an order's line items in a transaction-friendly way: wipe existing,
@@ -84,7 +112,12 @@ export async function saveOrder(payload: unknown): Promise<SaveResult> {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid order" };
   }
   const { orderId, type, reference, discount, items } = parsed.data;
-  const { lines, subtotal, safeDiscount, total } = computeTotals(items, discount);
+  const store = await getStore();
+  const { lines, subtotal, safeDiscount, taxAmount, taxRate, total } = computeTotals(
+    items,
+    discount,
+    { rate: Number(store.taxRate), inclusive: store.taxInclusive },
+  );
 
   try {
     if (orderId) {
@@ -99,6 +132,8 @@ export async function saveOrder(payload: unknown): Promise<SaveResult> {
             reference,
             subtotal: subtotal.toFixed(2),
             discount: safeDiscount.toFixed(2),
+            tax: taxAmount.toFixed(2),
+            taxRate: taxRate.toFixed(3),
             total: total.toFixed(2),
             servedBy: user.id,
             updatedAt: new Date(),
@@ -122,6 +157,8 @@ export async function saveOrder(payload: unknown): Promise<SaveResult> {
           reference,
           subtotal: subtotal.toFixed(2),
           discount: safeDiscount.toFixed(2),
+          tax: taxAmount.toFixed(2),
+          taxRate: taxRate.toFixed(3),
           total: total.toFixed(2),
           servedBy: user.id,
         })
@@ -146,7 +183,12 @@ export async function checkout(payload: unknown): Promise<CheckoutResult> {
   }
   const { orderId, type, reference, paymentMethod, discount, tendered, items } =
     parsed.data;
-  const { lines, subtotal, safeDiscount, total } = computeTotals(items, discount);
+  const store = await getStore();
+  const { lines, subtotal, safeDiscount, taxAmount, taxRate, total } = computeTotals(
+    items,
+    discount,
+    { rate: Number(store.taxRate), inclusive: store.taxInclusive },
+  );
 
   if (paymentMethod === "cash" && tendered != null && tendered < total) {
     return { ok: false, error: "Cash tendered is less than the total." };
@@ -171,6 +213,8 @@ export async function checkout(payload: unknown): Promise<CheckoutResult> {
         reference,
         subtotal: subtotal.toFixed(2),
         discount: safeDiscount.toFixed(2),
+        tax: taxAmount.toFixed(2),
+        taxRate: taxRate.toFixed(3),
         total: total.toFixed(2),
         paymentMethod,
         tendered: tendered != null ? tendered.toFixed(2) : null,
@@ -197,6 +241,10 @@ export async function checkout(payload: unknown): Promise<CheckoutResult> {
     return {
       ok: true,
       orderNumber: number,
+      subtotal: subtotal.toFixed(2),
+      discount: safeDiscount.toFixed(2),
+      tax: taxAmount.toFixed(2),
+      taxLabel: store.taxLabel,
       total: total.toFixed(2),
       changeDue: changeDue != null ? changeDue.toFixed(2) : null,
     };

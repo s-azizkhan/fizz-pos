@@ -147,6 +147,42 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
         <Field label="Closing time" name="closingTime" type="time" defaultValue={store.closingTime} required />
       </Section>
 
+      <Section
+        title="Tax"
+        hint="Sales tax applied to every bill at the till (GST, VAT, etc.)."
+      >
+        <Field
+          label="Tax name"
+          name="taxLabel"
+          defaultValue={store.taxLabel}
+          placeholder="GST"
+          required
+        />
+        <Field
+          label="Tax rate (%)"
+          name="taxRate"
+          type="number"
+          defaultValue={String(Number(store.taxRate))}
+          placeholder="0"
+          required
+        />
+        <label className="flex flex-col gap-2 sm:col-span-2">
+          <span className={labelCls}>Pricing</span>
+          <select
+            name="taxInclusive"
+            defaultValue={store.taxInclusive ? "true" : "false"}
+            className={`${inputCls} appearance-none`}
+          >
+            <option value="false" className="bg-ink-soft text-cream">
+              Tax added on top of menu prices
+            </option>
+            <option value="true" className="bg-ink-soft text-cream">
+              Menu prices already include tax
+            </option>
+          </select>
+        </label>
+      </Section>
+
       <section className="rounded-fizz border border-ink-line bg-ink-soft p-7">
         <h2 className="font-display text-xl font-bold tracking-tight">
           Invoice &amp; order numbering

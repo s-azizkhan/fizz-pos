@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { PaymentMethod } from "./types";
+import type { PaymentMethod, TaxConfig } from "./types";
 
 const METHODS: { value: PaymentMethod; label: string; key: string }[] = [
   { value: "cash", label: "Cash", key: "C" },
@@ -14,12 +14,14 @@ const METHODS: { value: PaymentMethod; label: string; key: string }[] = [
 // confirms; Escape cancels.
 export default function PayModal({
   subtotal,
+  tax,
   money,
   submitting,
   onPay,
   onClose,
 }: {
   subtotal: number;
+  tax: TaxConfig;
   money: (n: number) => string;
   submitting: boolean;
   onPay: (input: {
@@ -35,8 +37,14 @@ export default function PayModal({
   const [error, setError] = useState<string | null>(null);
   const tenderedRef = useRef<HTMLInputElement>(null);
 
+  const r2 = (n: number) => Math.round(n * 100) / 100;
   const discount = Math.max(0, Math.min(Number(discountStr) || 0, subtotal));
-  const total = Math.round((subtotal - discount) * 100) / 100;
+  const net = r2(subtotal - discount);
+  const rate = tax.rate / 100;
+  // Mirror the server: inclusive tax is baked in; otherwise add on top.
+  const taxAmount =
+    rate > 0 ? (tax.inclusive ? r2(net - net / (1 + rate)) : r2(net * rate)) : 0;
+  const total = tax.inclusive ? net : r2(net + taxAmount);
   const tendered = Number(tenderedStr) || 0;
   const change = method === "cash" ? Math.round((tendered - total) * 100) / 100 : 0;
   const cashShort = method === "cash" && tenderedStr !== "" && tendered < total;
@@ -102,11 +110,29 @@ export default function PayModal({
         <p className="mt-2 font-display text-4xl font-bold text-cream">
           {money(total)}
         </p>
-        {discount > 0 && (
-          <p className="mt-1 text-sm text-steam">
-            {money(subtotal)} − {money(discount)} discount
-          </p>
-        )}
+        {/* Breakdown: subtotal, discount, tax */}
+        <div className="mt-2 space-y-0.5 text-sm text-steam">
+          {(discount > 0 || taxAmount > 0) && (
+            <p className="flex justify-between">
+              <span>Subtotal</span>
+              <span className="text-cream">{money(subtotal)}</span>
+            </p>
+          )}
+          {discount > 0 && (
+            <p className="flex justify-between">
+              <span>Discount</span>
+              <span className="text-cream">− {money(discount)}</span>
+            </p>
+          )}
+          {taxAmount > 0 && (
+            <p className="flex justify-between">
+              <span>
+                {tax.label} ({tax.rate}%{tax.inclusive ? " incl." : ""})
+              </span>
+              <span className="text-cream">{money(taxAmount)}</span>
+            </p>
+          )}
+        </div>
 
         {/* Method */}
         <div className="mt-5 grid grid-cols-3 gap-2">

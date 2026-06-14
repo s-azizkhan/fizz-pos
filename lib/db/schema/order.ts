@@ -45,6 +45,9 @@ export const orders = pgTable("orders", {
   reference: text("reference"),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 12, scale: 2 }).notNull().default("0"),
+  // Tax charged on the (discounted) subtotal. `taxRate` snapshots the % used.
+  tax: numeric("tax", { precision: 12, scale: 2 }).notNull().default("0"),
+  taxRate: numeric("tax_rate", { precision: 6, scale: 3 }).notNull().default("0"),
   total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
   // Null until settled. An open tab has no payment yet.
   paymentMethod: orderPaymentMethod("payment_method"),
