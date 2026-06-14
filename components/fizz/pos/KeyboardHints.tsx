@@ -5,6 +5,7 @@ import { useState } from "react";
 const HINTS: [string, string][] = [
   ["type", "search"],
   ["1–9", "quick add"],
+  ["F4", "save tab"],
   ["F2 / ↵", "pay"],
   ["⌘⌫", "clear"],
   ["esc", "back"],

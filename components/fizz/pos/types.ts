@@ -34,3 +34,13 @@ export type CartLine = {
 
 export type OrderType = "dine_in" | "takeaway" | "delivery";
 export type PaymentMethod = "cash" | "card" | "online";
+
+// An existing order loaded into the till for editing (a revisited tab).
+export type LoadedOrder = {
+  id: string;
+  number: string;
+  type: OrderType;
+  reference: string | null;
+  discount: number;
+  lines: CartLine[];
+};

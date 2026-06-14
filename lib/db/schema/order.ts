@@ -24,8 +24,14 @@ export type OrderPaymentMethod = (typeof orderPaymentMethod.enumValues)[number];
 export const orderType = pgEnum("order_type", ["dine_in", "takeaway", "delivery"]);
 export type OrderType = (typeof orderType.enumValues)[number];
 
-// A completed sale rung at the till. Money stored as numeric(12,2) strings to
-// avoid float drift, matching the rest of the schema.
+// Lifecycle. `open` = a running tab still being built/eaten (editable);
+// `paid` = settled and closed; `void` = cancelled.
+export const orderStatus = pgEnum("order_status", ["open", "paid", "void"]);
+export type OrderStatus = (typeof orderStatus.enumValues)[number];
+
+// A sale rung at the till. Starts `open` (a tab you can revisit and edit) and
+// becomes `paid` when settled. Money stored as numeric(12,2) strings to avoid
+// float drift, matching the rest of the schema.
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   storeId: uuid("store_id")
@@ -33,19 +39,24 @@ export const orders = pgTable("orders", {
     .references(() => store.id, { onDelete: "cascade" }),
   // Human-facing receipt number from the store's order numbering config.
   number: text("number").notNull(),
+  status: orderStatus("status").notNull().default("open"),
   type: orderType("type").notNull().default("dine_in"),
   // Optional table / tab label keyed at the till.
   reference: text("reference"),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 12, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
-  paymentMethod: orderPaymentMethod("payment_method").notNull().default("cash"),
+  // Null until settled. An open tab has no payment yet.
+  paymentMethod: orderPaymentMethod("payment_method"),
   // What the customer handed over, and the change owed (cash flows).
   tendered: numeric("tendered", { precision: 12, scale: 2 }),
   changeDue: numeric("change_due", { precision: 12, scale: 2 }),
-  // Who rang it. Keep history even if the user is later removed.
+  // Who opened / last touched the order. Keep history even if user removed.
   servedBy: uuid("served_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  // When it was settled (paid). Null while open.
+  paidAt: timestamp("paid_at"),
 });
 export type Order = typeof orders.$inferSelect;
 
@@ -84,6 +95,8 @@ const lineSchema = z.object({
 });
 
 export const checkoutSchema = z.object({
+  // When set, settle this existing open tab instead of creating a new order.
+  orderId: z.uuid().optional(),
   type: z.enum(orderType.enumValues).default("dine_in"),
   reference: z
     .string()
@@ -98,3 +111,20 @@ export const checkoutSchema = z.object({
   items: z.array(lineSchema).min(1, "Add at least one item"),
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+// Save (create or update) an open tab without taking payment. Allows an empty
+// cart on update so you can clear a tab down, but new tabs need a line.
+export const saveOrderSchema = z.object({
+  orderId: z.uuid().optional(),
+  type: z.enum(orderType.enumValues).default("dine_in"),
+  reference: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => v || null),
+  discount: money.default(0),
+  items: z.array(lineSchema).min(1, "Add at least one item"),
+});
+export type SaveOrderInput = z.infer<typeof saveOrderSchema>;

@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
-import { checkout, type CheckoutResult } from "@/app/actions/order";
+import { checkout, saveOrder, type CheckoutResult } from "@/app/actions/order";
 import { useCart } from "./useCart";
-import type { OrderType, PaymentMethod, PosCategory, PosItem } from "./types";
+import type {
+  LoadedOrder,
+  OrderType,
+  PaymentMethod,
+  PosCategory,
+  PosItem,
+} from "./types";
 import MenuGrid from "./MenuGrid";
 import Ticket from "./Ticket";
 import VariantPicker from "./VariantPicker";
@@ -14,19 +21,29 @@ import KeyboardHints from "./KeyboardHints";
 
 // The point-of-sale terminal. Keyboard-first: a global search captures typing,
 // arrow/number keys add items, and the ticket lives on the right. Built for a
-// counter rush — every common action has a shortcut.
+// counter rush — every common action has a shortcut. When `loaded` is set the
+// terminal is editing an existing open tab (revisited from the orders page).
 export default function PosTerminal({
   categories,
   currency,
+  loaded,
 }: {
   categories: PosCategory[];
   currency: string;
+  loaded: LoadedOrder | null;
 }) {
-  const cart = useCart();
+  const router = useRouter();
+  const cart = useCart(loaded?.lines ?? []);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string>(categories[0]?.id ?? "");
-  const [orderType, setOrderType] = useState<OrderType>("dine_in");
-  const [reference, setReference] = useState("");
+  const [orderType, setOrderType] = useState<OrderType>(loaded?.type ?? "dine_in");
+  const [reference, setReference] = useState(loaded?.reference ?? "");
+
+  // The open tab being edited (if any) — drives "save" vs "create".
+  const [editingId, setEditingId] = useState<string | null>(loaded?.id ?? null);
+  const [editingNumber, setEditingNumber] = useState<string | null>(
+    loaded?.number ?? null,
+  );
 
   // Variant chooser for items with multiple sizes/options.
   const [variantFor, setVariantFor] = useState<PosItem | null>(null);
@@ -36,9 +53,32 @@ export default function PosTerminal({
     (CheckoutResult & { ok: true }) | null
   >(null);
   const [submitting, setSubmitting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const money = (n: number | string) => formatMoney(n, currency);
+
+  // Build the line payload from the cart for either save or checkout.
+  const linePayload = () =>
+    cart.lines.map((l) => ({
+      menuItemId: l.menuItemId || null,
+      variantId: l.variantId,
+      name: l.name,
+      variantName: l.variantName,
+      unitPrice: l.unitPrice,
+      quantity: l.quantity,
+    }));
+
+  // Reset the terminal to a fresh order, clearing the ?order= param.
+  function resetTerminal() {
+    cart.clear();
+    setReference("");
+    setOrderType("dine_in");
+    setEditingId(null);
+    setEditingNumber(null);
+    if (loaded) router.replace("/dashboard/till");
+  }
 
   // Visible items: search across all categories, else show the active tab.
   const visibleItems = useMemo<PosItem[]>(() => {
@@ -60,6 +100,34 @@ export default function PosTerminal({
     cart.add(item, null);
   }
 
+  // Save the current cart as an OPEN tab (no payment). Used for dine-in: ring
+  // dishes, save, settle later — and to add dishes mid-meal without a new order.
+  async function handleSave() {
+    if (cart.lines.length === 0 || saving) return;
+    setSaving(true);
+    const res = await saveOrder({
+      orderId: editingId ?? undefined,
+      type: orderType,
+      reference,
+      discount: loaded?.discount ?? 0,
+      items: linePayload(),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setEditingId(res.orderId);
+      setEditingNumber(res.orderNumber);
+      // Keep editing this tab so further saves update it; reflect in the URL.
+      if (!loaded || loaded.id !== res.orderId) {
+        router.replace(`/dashboard/till?order=${res.orderId}`);
+      }
+      setToast(`Saved tab ${res.orderNumber}`);
+      setTimeout(() => setToast(null), 2200);
+    } else {
+      setToast(res.error);
+      setTimeout(() => setToast(null), 2600);
+    }
+  }
+
   // Global keyboard handling. Typing focuses search; shortcuts drive the till.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -78,6 +146,13 @@ export default function PosTerminal({
 
       // Let modals own their own keys.
       if (anyModalOpen) return;
+
+      // F4: save the current cart as an open tab.
+      if (e.key === "F4" && cart.count > 0) {
+        e.preventDefault();
+        void handleSave();
+        return;
+      }
 
       // F2 / Enter (outside fields): open payment if the cart has items.
       if ((e.key === "F2" || (e.key === "Enter" && !inField)) && cart.count > 0) {
@@ -127,26 +202,19 @@ export default function PosTerminal({
     if (cart.lines.length === 0) return;
     setSubmitting(true);
     const res = await checkout({
+      orderId: editingId ?? undefined,
       type: orderType,
       reference,
       paymentMethod: input.paymentMethod,
       discount: input.discount,
       tendered: input.tendered,
-      items: cart.lines.map((l) => ({
-        menuItemId: l.menuItemId,
-        variantId: l.variantId,
-        name: l.name,
-        variantName: l.variantName,
-        unitPrice: l.unitPrice,
-        quantity: l.quantity,
-      })),
+      items: linePayload(),
     });
     setSubmitting(false);
     if (res.ok) {
       setPayOpen(false);
       setReceipt(res);
-      cart.clear();
-      setReference("");
+      resetTerminal();
     } else {
       // Surface the error inside the pay modal.
       return res.error;
@@ -175,6 +243,12 @@ export default function PosTerminal({
                   className="w-full rounded-fizz border border-ink-line bg-ink-soft py-2.5 pl-10 pr-4 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
                 />
               </div>
+              <a
+                href="/dashboard/orders"
+                className="hidden shrink-0 rounded-fizz border border-ink-line bg-ink-soft px-4 py-2.5 text-sm text-cream transition-colors hover:border-fizz hover:text-fizz sm:block"
+              >
+                Orders
+              </a>
             </div>
 
             {/* Category tabs (hidden while searching) */}
@@ -212,10 +286,13 @@ export default function PosTerminal({
           onOrderType={setOrderType}
           reference={reference}
           onReference={setReference}
+          editingNumber={editingNumber}
+          saving={saving}
           onInc={cart.inc}
           onDec={cart.dec}
           onRemove={cart.remove}
-          onClear={cart.clear}
+          onClear={resetTerminal}
+          onSave={handleSave}
           onPay={() => setPayOpen(true)}
         />
       </div>
@@ -249,6 +326,12 @@ export default function PosTerminal({
           changeDue={receipt.changeDue ? money(receipt.changeDue) : null}
           onClose={() => setReceipt(null)}
         />
+      )}
+
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-fizz border border-fizz bg-ink-soft px-5 py-3 text-sm font-medium text-cream shadow-lg">
+          {toast}
+        </div>
       )}
     </div>
   );

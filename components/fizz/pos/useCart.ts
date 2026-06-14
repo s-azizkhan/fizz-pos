@@ -7,8 +7,12 @@ function lineKey(itemId: string, variantId: string | null): string {
 }
 
 // Cart state + mutations. Repeat adds stack quantity on the matching line.
-export function useCart() {
-  const [lines, setLines] = useState<CartLine[]>([]);
+// `initial` seeds the cart (e.g. a revisited tab loaded into the till).
+export function useCart(initial: CartLine[] = []) {
+  const [lines, setLines] = useState<CartLine[]>(initial);
+
+  // Replace the whole cart — used when loading an existing order for editing.
+  const load = useCallback((next: CartLine[]) => setLines(next), []);
 
   const add = useCallback((item: PosItem, variant: PosVariant | null) => {
     const key = lineKey(item.id, variant?.id ?? null);
@@ -80,5 +84,5 @@ export function useCart() {
     [lines],
   );
 
-  return { lines, add, setQty, inc, dec, remove, clear, subtotal, count };
+  return { lines, add, setQty, inc, dec, remove, clear, load, subtotal, count };
 }

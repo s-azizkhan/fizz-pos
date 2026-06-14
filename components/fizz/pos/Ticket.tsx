@@ -19,10 +19,13 @@ export default function Ticket({
   onOrderType,
   reference,
   onReference,
+  editingNumber,
+  saving,
   onInc,
   onDec,
   onRemove,
   onClear,
+  onSave,
   onPay,
 }: {
   lines: CartLine[];
@@ -33,14 +36,26 @@ export default function Ticket({
   onOrderType: (t: OrderType) => void;
   reference: string;
   onReference: (v: string) => void;
+  editingNumber: string | null;
+  saving: boolean;
   onInc: (key: string) => void;
   onDec: (key: string) => void;
   onRemove: (key: string) => void;
   onClear: () => void;
+  onSave: () => void;
   onPay: () => void;
 }) {
   return (
     <aside className="flex min-h-0 flex-col border-t border-ink-line bg-ink-soft/30 lg:border-t-0">
+      {/* Editing banner — shown when revisiting / after saving a tab */}
+      {editingNumber && (
+        <div className="shrink-0 border-b border-fizz/40 bg-fizz/10 px-4 py-2 text-sm">
+          <span className="font-semibold text-fizz">Editing tab</span>{" "}
+          <span className="font-display text-cream">{editingNumber}</span>
+          <span className="text-steam"> — add dishes, then save or settle.</span>
+        </div>
+      )}
+
       {/* Order type + reference */}
       <div className="shrink-0 border-b border-ink-line p-4">
         <div className="grid grid-cols-3 gap-1.5">
@@ -144,20 +159,32 @@ export default function Ticket({
               onClick={onClear}
               className="rounded-fizz border border-ink-line px-3 py-2 text-sm text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A]"
             >
-              Clear
+              {editingNumber ? "New" : "Clear"}
             </button>
           )}
         </div>
-        <button
-          onClick={onPay}
-          disabled={lines.length === 0}
-          className="flex w-full items-center justify-center gap-2 rounded-fizz bg-fizz px-6 py-4 font-display text-lg font-bold text-ink transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Charge {money(subtotal)}
-          <kbd className="rounded bg-ink/20 px-1.5 py-0.5 text-xs font-semibold">
-            F2
-          </kbd>
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={onSave}
+            disabled={lines.length === 0 || saving}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz border border-ink-line bg-ink-soft px-3 py-4 font-display font-bold text-cream transition-colors hover:border-fizz hover:text-fizz disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {saving ? "Saving…" : editingNumber ? "Update tab" : "Save tab"}
+            <kbd className="rounded bg-ink/40 px-1.5 py-0.5 text-xs font-semibold">
+              F4
+            </kbd>
+          </button>
+          <button
+            onClick={onPay}
+            disabled={lines.length === 0}
+            className="flex flex-[1.4] items-center justify-center gap-2 rounded-fizz bg-fizz px-4 py-4 font-display text-lg font-bold text-ink transition-transform hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Charge {money(subtotal)}
+            <kbd className="rounded bg-ink/20 px-1.5 py-0.5 text-xs font-semibold">
+              F2
+            </kbd>
+          </button>
+        </div>
       </div>
     </aside>
   );

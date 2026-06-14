@@ -9,6 +9,7 @@ import {
   CashIcon,
   WalletIcon,
   MenuBookIcon,
+  ReceiptIcon,
 } from "./icons";
 
 export type NavItem = {
@@ -22,6 +23,7 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: GridIcon, roles: ["admin", "manager", "staff"], blurb: "Your floor at a glance." },
   { label: "Till", href: "/dashboard/till", icon: CupIcon, roles: ["admin", "manager", "staff"], blurb: "Ring orders, take payment." },
+  { label: "Orders", href: "/dashboard/orders", icon: ReceiptIcon, roles: ["admin", "manager", "staff"], blurb: "Open tabs and sales history." },
   { label: "Menu", href: "/dashboard/menu", icon: MenuBookIcon, roles: ["admin", "manager"], blurb: "Build items, categories, public menu." },
   { label: "Daily sales", href: "/dashboard/sales", icon: CashIcon, roles: ["admin", "manager", "staff"], blurb: "Record the day's takings." },
   { label: "Expenses", href: "/dashboard/expenses", icon: WalletIcon, roles: ["admin", "manager", "staff"], blurb: "Track every cost." },
