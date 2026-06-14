@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Fizz — Brand Identity System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #0E1116;
+    --ink-soft: #1A1F28;
+    --ink-line: #2A313C;
+    --cream: #F4F1E9;
+    --fizz: #C6F432;       /* electric lime — the signature */
+    --bubble: #38E1D6;     /* soda cyan — secondary */
+    --muted: #8A93A1;
+    --r: 18px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ink);
+    color: var(--cream);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.02em; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  section { padding: 96px 0; border-bottom: 1px solid var(--ink-line); }
+  .eyebrow {
+    font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--fizz); margin-bottom: 18px;
+  }
+  .lead { color: var(--muted); font-size: 18px; max-width: 60ch; }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    min-height: 92vh; display: flex; flex-direction: column; justify-content: center;
+    position: relative; overflow: hidden; border-bottom: 1px solid var(--ink-line);
+  }
+  .bubbles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+  .bubbles span {
+    position: absolute; bottom: -40px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(198,244,50,.5), rgba(56,225,214,.15));
+    animation: rise linear infinite; opacity: 0;
+  }
+  @keyframes rise {
+    0%   { transform: translateY(0) scale(.6); opacity: 0; }
+    10%  { opacity: .9; }
+    90%  { opacity: .5; }
+    100% { transform: translateY(-105vh) scale(1.1); opacity: 0; }
+  }
+  .hero .wrap { position: relative; z-index: 1; }
+  .logo-lockup { display: flex; align-items: baseline; gap: 4px; margin-bottom: 28px; }
+  .logo-lockup .mark {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(56px, 11vw, 132px);
+    color: var(--cream); letter-spacing: -0.04em; line-height: .9;
+  }
+  .logo-lockup .mark b { color: var(--fizz); position: relative; }
+  .logo-lockup .mark .dot {
+    color: var(--bubble); font-size: .5em; vertical-align: super; margin-left: 2px;
+  }
+  .hero h1 { font-size: clamp(28px, 5vw, 56px); font-weight: 600; max-width: 18ch; margin-bottom: 22px; }
+  .hero h1 em { font-style: normal; color: var(--fizz); }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 34px; }
+  .pill {
+    font-size: 13px; font-weight: 500; color: var(--cream);
+    border: 1px solid var(--ink-line); padding: 8px 16px; border-radius: 999px;
+    background: var(--ink-soft);
+  }
+  .pill b { color: var(--bubble); }
+
+  /* ---------- GRID HELPERS ---------- */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card {
+    background: var(--ink-soft); border: 1px solid var(--ink-line);
+    border-radius: var(--r); padding: 28px;
+  }
+  .card h3 { font-size: 19px; margin-bottom: 10px; }
+  .card p { color: var(--muted); font-size: 15px; }
+
+  /* ---------- POSITIONING ---------- */
+  .sectitle { font-size: clamp(26px, 4vw, 40px); font-weight: 700; margin-bottom: 16px; }
+  .fromto { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--ink-line); border-radius: var(--r); overflow: hidden; margin-top: 28px; }
+  .fromto > div { padding: 22px 24px; border-bottom: 1px solid var(--ink-line); }
+  .fromto .h { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600; }
+  .fromto .from { background: var(--ink); color: var(--muted); border-right: 1px solid var(--ink-line); }
+  .fromto .to { background: rgba(198,244,50,.06); color: var(--cream); }
+  .fromto .to.h { color: var(--fizz); }
+  .fromto .from.h { color: var(--muted); }
+
+  /* ---------- POV NARRATIVE ---------- */
+  .pov { display: grid; gap: 14px; }
+  .pov .row { display: grid; grid-template-columns: 160px 1fr; gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--ink-line); }
+  .pov .row:last-child { border-bottom: 0; }
+  .pov .k { color: var(--fizz); font-family: 'Space Grotesk'; font-weight: 600; font-size: 14px; letter-spacing: .04em; padding-top: 2px; }
+  .pov .v { font-size: 17px; }
+
+  /* ---------- COLOR ---------- */
+  .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 28px; }
+  .sw { border-radius: 14px; overflow: hidden; border: 1px solid var(--ink-line); }
+  .sw .chip { height: 120px; }
+  .sw .meta { padding: 14px; background: var(--ink-soft); }
+  .sw .meta .n { font-weight: 600; font-size: 14px; font-family: 'Space Grotesk'; }
+  .sw .meta .hex { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  /* ---------- TYPE ---------- */
+  .typeblock { padding: 28px; background: var(--ink-soft); border: 1px solid var(--ink-line); border-radius: var(--r); }
+  .type-display { font-family: 'Space Grotesk'; font-weight: 700; font-size: clamp(38px, 7vw, 76px); letter-spacing: -.03em; line-height: 1; }
+  .type-row { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--ink-line); color: var(--muted); font-size: 13px; }
+  .type-row span:first-child { color: var(--cream); }
+
+  /* ---------- VOICE ---------- */
+  .voice { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .voice .v { border: 1px solid var(--ink-line); border-radius: var(--r); padding: 24px; background: var(--ink-soft); }
+  .voice .v .attr { font-family: 'Space Grotesk'; font-weight: 700; font-size: 22px; color: var(--fizz); margin-bottom: 12px; }
+  .voice .v .is { font-size: 14px; }
+  .voice .v .isnt { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .voice .v .is b, .voice .v .isnt b { font-family: 'Space Grotesk'; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; display: inline-block; width: 46px; }
+  .voice .v .is b { color: var(--bubble); }
+
+  /* ---------- MESSAGING ---------- */
+  .msg .oneliner { font-family: 'Space Grotesk'; font-weight: 600; font-size: clamp(24px, 4vw, 38px); line-height: 1.2; letter-spacing: -.02em; }
+  .msg .oneliner em { font-style: normal; color: var(--fizz); }
+
+  /* ---------- PHONO ---------- */
+  .phono { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 26px; }
+  .phono .p { border: 1px solid var(--ink-line); border-radius: 14px; padding: 20px; background: var(--ink-soft); text-align: center; }
+  .phono .p .big { font-family: 'Space Grotesk'; font-weight: 700; font-size: 40px; color: var(--fizz); }
+  .phono .p .lab { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  /* ---------- DOMAINS ---------- */
+  table.dom { width: 100%; border-collapse: collapse; margin-top: 22px; }
+  table.dom td, table.dom th { text-align: left; padding: 14px 16px; border-bottom: 1px solid var(--ink-line); font-size: 15px; }
+  table.dom th { font-family: 'Space Grotesk'; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  table.dom td.d { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .ok { color: var(--fizz); font-weight: 600; }
+  .no { color: #E2655A; }
+  .star { display: inline-block; margin-left: 8px; font-size: 11px; background: var(--fizz); color: var(--ink); padding: 2px 8px; border-radius: 999px; font-weight: 700; letter-spacing: .04em; }
+
+  footer { padding: 60px 0; color: var(--muted); font-size: 13px; text-align: center; }
+  .accent { color: var(--fizz); }
+  @media (max-width: 760px) {
+    .grid2, .grid3, .fromto, .voice, .swatches, .phono { grid-template-columns: 1fr; }
+    .swatches { grid-template-columns: repeat(2,1fr); }
+    .phono { grid-template-columns: repeat(2,1fr); }
+    .pov .row { grid-template-columns: 1fr; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="bubbles" id="bubbles"></div>
+  <div class="wrap">
+    <div class="logo-lockup">
+      <span class="mark">Fi<b>zz</b><span class="dot">●</span></span>
+    </div>
+    <h1>The café runs on <em>Fizz</em>. The spreadsheet is dead.</h1>
+    <p class="lead">A point-of-sale and inventory system built for independent cafés and restaurants — fast at the counter, sharp in the back office, effervescent everywhere.</p>
+    <div class="pill-row">
+      <span class="pill">Sound class: <b>Fricative</b> — speed &amp; air</span>
+      <span class="pill">Vowel: <b>front "i"</b> — sharp &amp; light</span>
+      <span class="pill">Category: <b>Café Operating System</b></span>
+    </div>
+  </div>
+</header>
+
+<!-- POSITIONING -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">01 — Positioning · Dunford From→To</div>
+    <h2 class="sectitle">We don't sell a register. We replace the chaos.</h2>
+    <p class="lead">The competitor isn't Toast or Square. It's the notebook, the spreadsheet, the "I'll remember it." Fizz attacks the status quo of running a café on guesswork.</p>
+    <div class="fromto">
+      <div class="from h">From — the old way</div>
+      <div class="to h">To — Fizz</div>
+      <div class="from">Sales in one app, stock counted by hand, costs in a spreadsheet that's already wrong.</div>
+      <div class="to">One live system: every sale auto-depletes inventory in real time.</div>
+      <div class="from">"Did we run out of oat milk?" — found out at 8am rush.</div>
+      <div class="to">Low-stock alerts before you open. Reorder in two taps.</div>
+      <div class="from">Owner does the books at midnight, exhausted.</div>
+      <div class="to">Margins, waste, and best-sellers visible on the phone, anytime.</div>
+    </div>
+  </div>
+</section>
+
+<!-- POV NARRATIVE -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">02 — Category POV · Play Bigger</div>
+    <h2 class="sectitle">The Point of View</h2>
+    <div class="pov" style="margin-top:18px;">
+      <div class="row"><div class="k">OBSERVATION</div><div class="v">Independent cafés finally went cashless and cloud — but their back office is still pen, paper, and panic.</div></div>
+      <div class="row"><div class="k">THE GAP</div><div class="v">Selling fast means nothing if you can't see what it costs you. POS and inventory living apart is why thin-margin cafés quietly bleed out.</div></div>
+      <div class="row"><div class="k">RAMIFICATION</div><div class="v">Run on disconnected tools and you over-order, run out, mis-price, and never know which drink actually makes money.</div></div>
+      <div class="row"><div class="k">THE VISION</div><div class="v">The counter and the storeroom should be one nervous system — every tap of "sell" updating what you own.</div></div>
+      <div class="row"><div class="k">THE SOLUTION</div><div class="v">Fizz — the <b class="accent">Café Operating System</b>. POS, inventory, and margins in one effervescent live loop.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- MESSAGING -->
+<section class="msg">
+  <div class="wrap">
+    <div class="eyebrow">03 — Messaging Hierarchy</div>
+    <h2 class="sectitle">How Fizz talks</h2>
+    <div class="grid2" style="margin-top:8px;">
+      <div class="card">
+        <h3>One-liner (dinner-party test)</h3>
+        <p class="oneliner" style="margin-top:8px;">"Fizz runs the till <em>and</em> tracks every ingredient — so cafés stop guessing."</p>
+      </div>
+      <div class="card">
+        <h3>Elevator pitch</h3>
+        <p>Fizz is the operating system for independent cafés and restaurants. Ring up an order and your stock updates itself — flat white sold, beans and milk deducted. No spreadsheets, no midnight stock-counts, no surprise shortages. Just a counter that's fast and a back office that finally tells the truth.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NAME SCIENCE -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">04 — Lexicon · Why "Fizz" works</div>
+    <h2 class="sectitle">The sound is the strategy</h2>
+    <p class="lead">"Fizz" is a near-total fricative — forced, continuous airflow. Phonosemantically that reads as <span class="accent">speed, air, and effervescence</span>. The front vowel "i" reads small, fast, sharp. And it's beverage-native without ever saying "POS" — it breaks every category code (no Pay-, no -Touch, no -Bistro).</p>
+    <div class="phono">
+      <div class="p"><div class="big">F</div><div class="lab">Fricative · friction-free speed</div></div>
+      <div class="p"><div class="big">i</div><div class="lab">Front vowel · sharp &amp; light</div></div>
+      <div class="p"><div class="big">zz</div><div class="lab">Fricative buzz · energy, life</div></div>
+      <div class="p"><div class="big">1</div><div class="lab">Syllable · instant recall</div></div>
+    </div>
+    <div class="grid3" style="margin-top:24px;">
+      <div class="card"><h3>Distinctive</h3><p>Zero overlap with Toast, Square, Clover, Lavu. Owns white space in a literal-named category.</p></div>
+      <div class="card"><h3>Fluent</h3><p>One syllable, four letters, impossible to misspell. Maximum processing fluency.</p></div>
+      <div class="card"><h3>Suggestive</h3><p>Effervescent, alive, refreshing — a feeling, not a description. Room for a whole brand world.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- COLOR -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">05 — Visual System · Color</div>
+    <h2 class="sectitle">Electric lime on ink</h2>
+    <p class="lead">Competitors crowd warm orange/red (Toast) and safe green (Clover). Fizz takes the white space: a near-black ink base with one high-voltage <span class="accent">lime</span> — effervescent, energetic, slightly polarizing. Tension = energy.</p>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#C6F432;"></div><div class="meta"><div class="n">Fizz Lime</div><div class="hex">#C6F432 · Primary</div></div></div>
+      <div class="sw"><div class="chip" style="background:#38E1D6;"></div><div class="meta"><div class="n">Soda Cyan</div><div class="hex">#38E1D6 · Secondary</div></div></div>
+      <div class="sw"><div class="chip" style="background:#0E1116;"></div><div class="meta"><div class="n">Ink</div><div class="hex">#0E1116 · Base</div></div></div>
+      <div class="sw"><div class="chip" style="background:#F4F1E9;"></div><div class="meta"><div class="n">Cream</div><div class="hex">#F4F1E9 · Surface</div></div></div>
+      <div class="sw"><div class="chip" style="background:#8A93A1;"></div><div class="meta"><div class="n">Steam</div><div class="hex">#8A93A1 · Muted</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">06 — Visual System · Typography</div>
+    <h2 class="sectitle">Geometric, with a pulse</h2>
+    <div class="grid2" style="margin-top:8px; align-items:stretch;">
+      <div class="typeblock">
+        <div class="type-display">Fizz</div>
+        <div class="type-row"><span>Space Grotesk</span><span>Display / Wordmark · 600–700</span></div>
+        <div class="type-row"><span>Sharp, technical, characterful</span><span>Headlines, UI numerals</span></div>
+      </div>
+      <div class="typeblock">
+        <div style="font-family:'Inter'; font-weight:600; font-size:34px;">The counter is fast.</div>
+        <div style="font-family:'Inter'; color:var(--muted); font-size:17px; margin-top:6px;">The back office is sharp. The margins are finally visible — in plain, readable Inter.</div>
+        <div class="type-row" style="margin-top:18px;"><span>Inter</span><span>Body / UI · 400–600</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">07 — Voice &amp; Tone</div>
+    <h2 class="sectitle">Fast. Sharp. Effervescent. Honest.</h2>
+    <div class="voice" style="margin-top:24px;">
+      <div class="v"><div class="attr">Fast</div><div class="is"><b>Is</b> short sentences, verbs first, no jargon.</div><div class="isnt"><b>Not</b> clipped or cold.</div></div>
+      <div class="v"><div class="attr">Sharp</div><div class="is"><b>Is</b> specific numbers, real café language.</div><div class="isnt"><b>Not</b> vague "synergy" SaaS-speak.</div></div>
+      <div class="v"><div class="attr">Effervescent</div><div class="is"><b>Is</b> light, a little playful, alive.</div><div class="isnt"><b>Not</b> goofy or unserious about money.</div></div>
+      <div class="v"><div class="attr">Honest</div><div class="is"><b>Is</b> tells owners the hard numbers plainly.</div><div class="isnt"><b>Not</b> flattering or sugar-coated.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- DOMAINS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow">08 — Domain Availability · Verified</div>
+    <h2 class="sectitle">Where Fizz lives</h2>
+    <p class="lead">Checked live via DNS + RDAP. Single-word <span class="no">fizz.com</span> is taken — recommended stack below.</p>
+    <table class="dom">
+      <thead><tr><th>Domain</th><th>Status</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td class="d">fizzpos.com</td><td class="ok">✅ Available</td><td>Primary marketing site <span class="star">PICK</span></td></tr>
+        <tr><td class="d">getfizz.io</td><td class="ok">✅ Available</td><td>App / product apex <span class="star">PICK</span></td></tr>
+        <tr><td class="d">fizz.bar</td><td class="ok">✅ Available</td><td>Hospitality-native redirect <span class="star">PICK</span></td></tr>
+        <tr><td class="d">tryfizz.app</td><td class="ok">✅ Available</td><td>Trial / signup funnel</td></tr>
+        <tr><td class="d">fizz.menu</td><td class="ok">✅ Available</td><td>Niche on-brand TLD</td></tr>
+        <tr><td class="d">fizz.com / getfizz.com / tryfizz.com</td><td class="no">✕ Taken</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top:18px; font-size:14px;">⚠️ Trademark note: "Fizz" exists in telecom (mobile carrier) and social apps — different Nice classes than POS/inventory software (cl. 9 / 42). Run a formal trademark search before filing.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="accent">Fizz</span> — Café Operating System &nbsp;·&nbsp; Brand identity generated via Brand Alchemy &nbsp;·&nbsp; Positioning (Dunford) · Category POV (Play Bigger) · Phonosemantics (Lexicon)
+  </div>
+</footer>
+
+<script>
+  // effervescent rising bubbles
+  const layer = document.getElementById('bubbles');
+  const N = 26;
+  for (let i = 0; i < N; i++) {
+    const b = document.createElement('span');
+    const size = 6 + Math.floor((i * 37) % 30);        // deterministic-ish spread
+    const left = (i * 53) % 100;
+    const dur = 7 + ((i * 31) % 9);
+    const delay = ((i * 17) % 11);
+    b.style.width = b.style.height = size + 'px';
+    b.style.left = left + 'vw';
+    b.style.animationDuration = dur + 's';
+    b.style.animationDelay = '-' + delay + 's';
+    layer.appendChild(b);
+  }
+</script>
+</body>
+</html>
