@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { logout } from "@/app/actions/auth";
 import { getCurrentUser } from "@/lib/auth/dal";
 import type { UserRole } from "@/lib/db/schema";
@@ -15,11 +16,11 @@ const ROLE_LABEL: Record<UserRole, string> = {
 
 // What each role gets to touch. admin sees all; manager loses owner-only tiles;
 // staff sees the till only.
-const TILES: { title: string; blurb: string; roles: UserRole[] }[] = [
+const TILES: { title: string; blurb: string; roles: UserRole[]; href?: string }[] = [
   { title: "Till", blurb: "Ring orders, take payment.", roles: ["admin", "manager", "staff"] },
   { title: "Inventory", blurb: "Track every ingredient, live.", roles: ["admin", "manager"] },
   { title: "Margins", blurb: "Real cost per cup, no guessing.", roles: ["admin", "manager"] },
-  { title: "Team & roles", blurb: "Add staff, set permissions.", roles: ["admin"] },
+  { title: "Store settings", blurb: "Profile, hours, invoice numbering.", roles: ["admin"], href: "/dashboard/store" },
 ];
 
 export default async function DashboardPage() {
@@ -65,17 +66,27 @@ export default async function DashboardPage() {
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {tiles.map((t) => (
-            <div
-              key={t.title}
-              className="rounded-fizz border border-ink-line bg-ink-soft p-7 transition-transform hover:scale-[1.02]"
-            >
-              <h2 className="font-display text-xl font-bold tracking-tight">
-                {t.title}
-              </h2>
-              <p className="mt-2 text-sm text-steam">{t.blurb}</p>
-            </div>
-          ))}
+          {tiles.map((t) => {
+            const inner = (
+              <>
+                <h2 className="font-display text-xl font-bold tracking-tight">
+                  {t.title}
+                </h2>
+                <p className="mt-2 text-sm text-steam">{t.blurb}</p>
+              </>
+            );
+            const cls =
+              "block rounded-fizz border border-ink-line bg-ink-soft p-7 transition-transform hover:scale-[1.02]";
+            return t.href ? (
+              <Link key={t.title} href={t.href} className={`${cls} hover:border-fizz/40`}>
+                {inner}
+              </Link>
+            ) : (
+              <div key={t.title} className={cls}>
+                {inner}
+              </div>
+            );
+          })}
         </div>
       </div>
     </main>
