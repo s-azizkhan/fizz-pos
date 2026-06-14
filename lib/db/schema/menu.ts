@@ -13,6 +13,7 @@ export const menuCategories = pgTable("menu_categories", {
   name: text("name").notNull(),
   icon: text("icon").notNull().default("☕"),
   position: integer("position").notNull().default(0),
+  available: boolean("available").notNull().default(true),
   enteredBy: uuid("entered_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -78,6 +79,7 @@ export const categoryForm = z.object({
     .max(8, "Use a single emoji")
     .optional()
     .transform((v) => v || "☕"),
+  available: z.coerce.boolean().default(true),
 });
 export type CategoryInput = z.infer<typeof categoryForm>;
 

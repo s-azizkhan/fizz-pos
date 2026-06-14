@@ -15,6 +15,13 @@
       "when": 1781469467074,
       "tag": "0001_bitter_stardust",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781469717276,
+      "tag": "0002_bent_nightcrawler",
+      "breakpoints": true
     }
   ]
 }
