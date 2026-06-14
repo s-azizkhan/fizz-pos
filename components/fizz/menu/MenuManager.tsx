@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import {
-  createCategory,
   updateCategory,
   deleteCategory,
   reorderCategories,
@@ -338,21 +337,7 @@ export default function MenuManager({
   currency: string;
 }) {
   const [categories, setCategories] = useState(initial);
-  const [newName, setNewName] = useState("");
-  const [newIcon, setNewIcon] = useState<string>("☕");
-  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  function addCategory() {
-    setError(null);
-    startTransition(async () => {
-      const res = await createCategory({ ok: false }, toFormData({ name: newName, icon: newIcon }));
-      if (res.ok) {
-        setNewName("");
-        setNewIcon("☕");
-      } else setError(res.error ?? "Failed");
-    });
-  }
 
   function move(index: number, dir: -1 | 1) {
     const next = [...categories];
@@ -367,23 +352,6 @@ export default function MenuManager({
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="rounded-fizz border border-ink-line bg-ink-soft p-6">
-        <h2 className="font-display text-xl font-bold tracking-tight">New category</h2>
-        <div className="mt-4 flex flex-wrap items-end gap-3">
-          <label className="flex flex-1 flex-col gap-2 min-w-[200px]">
-            <span className={labelCls}>Name</span>
-            <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="e.g. Hot Coffee" className={inputCls} />
-          </label>
-          <button type="button" onClick={addCategory} disabled={pending || !newName.trim()} className={btnPrimary}>
-            {pending ? "Adding…" : "Add category"}
-          </button>
-        </div>
-        <div className="mt-4 flex flex-col gap-2">
-          <IconPicker value={newIcon} onChange={setNewIcon} />
-        </div>
-        {error && <p className="mt-3 text-sm text-[#E2655A]">{error}</p>}
-      </section>
-
       {categories.length === 0 ? (
         <div className="rounded-fizz border border-ink-line bg-ink-soft p-10 text-center text-steam">
           No categories yet. Create one above to start building your menu.

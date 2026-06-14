@@ -4,6 +4,7 @@ import { useState } from "react";
 import MenuManager from "@/components/fizz/menu/MenuManager";
 import PublicMenuModal from "@/components/fizz/menu/PublicMenuModal";
 import PublicMenuSectionsModal from "@/components/fizz/menu/PublicMenuSectionsModal";
+import NewCategoryModal from "@/components/fizz/menu/NewCategoryModal";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
 import type { Store } from "@/lib/db/schema";
 
@@ -18,6 +19,7 @@ export default function MenuPageClient({
 }) {
   const [isPublicMenuOpen, setIsPublicMenuOpen] = useState(false);
   const [isPublicSectionsOpen, setIsPublicSectionsOpen] = useState(false);
+  const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false);
 
   const shapeKey = categories
     .map((c) => `${c.id}:${c.items.map((i) => i.id).join(",")}`)
@@ -37,6 +39,12 @@ export default function MenuPageClient({
       </p>
 
       <div className="mt-8 flex flex-wrap gap-3">
+        <button
+          onClick={() => setIsNewCategoryOpen(true)}
+          className="rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105"
+        >
+          + New category
+        </button>
         <button
           onClick={() => setIsPublicMenuOpen(true)}
           className="rounded-fizz border border-fizz bg-fizz/10 px-5 py-2.5 font-semibold text-fizz transition-colors hover:bg-fizz/20"
@@ -65,6 +73,10 @@ export default function MenuPageClient({
         categories={categories}
         isOpen={isPublicSectionsOpen}
         onClose={() => setIsPublicSectionsOpen(false)}
+      />
+      <NewCategoryModal
+        isOpen={isNewCategoryOpen}
+        onClose={() => setIsNewCategoryOpen(false)}
       />
     </div>
   );
