@@ -17,7 +17,13 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-export default function DailySaleForm({ currency }: { currency: string }) {
+export default function DailySaleForm({
+  currency,
+  onSuccess,
+}: {
+  currency: string;
+  onSuccess?: () => void;
+}) {
   const [state, action, pending] = useActionState(createDailySale, initial);
   const [saved, setSaved] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -35,6 +41,7 @@ export default function DailySaleForm({ currency }: { currency: string }) {
       setCash("0");
       setOnline("0");
       setCredit("0");
+      onSuccess?.();
       const t = setTimeout(() => setSaved(false), 3000);
       return () => clearTimeout(t);
     }

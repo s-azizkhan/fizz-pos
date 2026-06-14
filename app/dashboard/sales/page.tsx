@@ -3,8 +3,8 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { getStore } from "@/lib/store/data";
 import { listDailySales } from "@/lib/store/daily-sales";
 import { formatMoney } from "@/lib/store/format";
-import DailySaleForm from "@/components/fizz/DailySaleForm";
 import DailySalesTable from "@/components/fizz/DailySalesTable";
+import RecordSaleModal from "@/components/fizz/RecordSaleModal";
 
 export const metadata: Metadata = {
   title: "Daily sales — Fizz",
@@ -27,13 +27,12 @@ export default async function DailySalesPage() {
       <h1 className="mt-3 font-display text-[clamp(28px,5vw,44px)] font-bold tracking-tight">
         Daily sales
       </h1>
-      <p className="mt-3 max-w-[60ch] text-lg text-steam">
-        Log each day&apos;s takings — cash, online, and credit — and keep a clean
-        running history.
-      </p>
-
-      <div className="mt-10">
-        <DailySaleForm currency={store.currency} />
+      <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
+        <p className="max-w-[60ch] text-lg text-steam">
+          Log each day&apos;s takings — cash, online, and credit — and keep a
+          clean running history.
+        </p>
+        <RecordSaleModal currency={store.currency} />
       </div>
 
       <div className="mt-12 flex items-end justify-between gap-4">
