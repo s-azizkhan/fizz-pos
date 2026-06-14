@@ -1,4 +1,4 @@
-import { numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
@@ -60,7 +60,10 @@ export const inventoryItems = pgTable("inventory_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
-});
+}, (t) => [
+  // Inventory is listed per store (active rows).
+  index("inventory_items_store_idx").on(t.storeId),
+]);
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 
 // Why a stock level changed. `receive` adds, `waste`/`sale` remove, `adjust`
@@ -93,7 +96,10 @@ export const stockMovements = pgTable("stock_movements", {
   note: text("note"),
   enteredBy: uuid("entered_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  // Movement history is read per item, newest first.
+  index("stock_movements_item_idx").on(t.itemId),
+]);
 export type StockMovement = typeof stockMovements.$inferSelect;
 
 // ---- Validation ---------------------------------------------------------

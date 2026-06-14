@@ -39,6 +39,7 @@ export default function ExpenseForm({
 
   useEffect(() => {
     if (state.ok) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSaved(true);
       formRef.current?.reset();
       setAmount("");
@@ -46,7 +47,7 @@ export default function ExpenseForm({
       const t = setTimeout(() => setSaved(false), 3000);
       return () => clearTimeout(t);
     }
-  }, [state.ok]);
+  }, [state.ok, onSuccess]);
 
   return (
     <form

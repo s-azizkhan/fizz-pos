@@ -1,4 +1,5 @@
 import {
+  index,
   integer,
   numeric,
   pgEnum,
@@ -60,7 +61,14 @@ export const orders = pgTable("orders", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   // When it was settled (paid). Null while open.
   paidAt: timestamp("paid_at"),
-});
+}, (t) => [
+  // Open-tab / paid-history listings filter by store + status.
+  index("orders_store_status_idx").on(t.storeId, t.status),
+  // Analytics aggregate paid orders over a paidAt window.
+  index("orders_store_paid_at_idx").on(t.storeId, t.paidAt),
+  // Recent-orders feeds order by createdAt within a store.
+  index("orders_store_created_at_idx").on(t.storeId, t.createdAt),
+]);
 export type Order = typeof orders.$inferSelect;
 
 // One row per line in the cart. Name/price are snapshotted so the receipt is
@@ -78,7 +86,12 @@ export const orderItems = pgTable("order_items", {
   unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
   quantity: integer("quantity").notNull().default(1),
   lineTotal: numeric("line_total", { precision: 12, scale: 2 }).notNull(),
-});
+}, (t) => [
+  // Lines are always fetched/joined by their order.
+  index("order_items_order_id_idx").on(t.orderId),
+  // Top-seller / category analytics group by the source menu item.
+  index("order_items_menu_item_id_idx").on(t.menuItemId),
+]);
 export type OrderItem = typeof orderItems.$inferSelect;
 
 // --- Checkout payload (client -> server action) -----------------------------

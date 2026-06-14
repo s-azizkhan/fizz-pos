@@ -374,7 +374,7 @@ export default function MenuManager({
   currency: string;
 }) {
   const [categories, setCategories] = useState(initial);
-  const [pending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   function move(index: number, dir: -1 | 1) {
     const next = [...categories];

@@ -1,4 +1,4 @@
-import { date, numeric, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
+import { date, index, numeric, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
@@ -20,7 +20,10 @@ export const dailySales = pgTable("daily_sales", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   // Soft delete — null means active.
   deletedAt: timestamp("deleted_at"),
-});
+}, (t) => [
+  // Listed per store, newest first by trading date.
+  index("daily_sales_store_date_idx").on(t.storeId, t.saleDate),
+]);
 
 export type DailySale = typeof dailySales.$inferSelect;
 

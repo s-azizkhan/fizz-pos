@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { updateStore, type StoreState } from "@/app/actions/store";
 import { formatDocNumber } from "@/lib/store/format";
 import { CURRENCIES } from "@/lib/store/currencies";
 import { COUNTRIES } from "@/lib/store/countries";
+import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { Store } from "@/lib/db/schema";
 
 const initial: StoreState = { ok: false };
@@ -64,7 +65,7 @@ function Section({
 
 export default function StoreSettingsForm({ store }: { store: Store }) {
   const [state, action, pending] = useActionState(updateStore, initial);
-  const [saved, setSaved] = useState(false);
+  const saved = useSavedFlag(state.ok);
 
   // Live preview state for the numbering section.
   const [invPrefix, setInvPrefix] = useState(store.invoicePrefix);
@@ -73,14 +74,6 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
   const [ordPrefix, setOrdPrefix] = useState(store.orderPrefix);
   const [ordFmt, setOrdFmt] = useState(store.orderNumberFormat);
   const [ordSeq, setOrdSeq] = useState(store.nextOrderSeq);
-
-  useEffect(() => {
-    if (state.ok) {
-      setSaved(true);
-      const t = setTimeout(() => setSaved(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [state.ok]);
 
   const now = new Date();
   const invPreview = formatDocNumber(invFmt, {

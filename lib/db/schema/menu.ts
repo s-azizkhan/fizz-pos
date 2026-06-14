@@ -1,4 +1,4 @@
-import { boolean, integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
@@ -18,7 +18,10 @@ export const menuCategories = pgTable("menu_categories", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
-});
+}, (t) => [
+  // The whole menu is loaded per store, active rows ordered by position.
+  index("menu_categories_store_idx").on(t.storeId),
+]);
 export type MenuCategory = typeof menuCategories.$inferSelect;
 
 // A menu item belonging to a category. Base price; variants override it.
@@ -37,7 +40,10 @@ export const menuItems = pgTable("menu_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
-});
+}, (t) => [
+  // Items are grouped under their category when building the menu tree.
+  index("menu_items_category_idx").on(t.categoryId),
+]);
 export type MenuItem = typeof menuItems.$inferSelect;
 
 // A variant of an item (e.g. "Small", "Large"). Has its own price.
@@ -52,7 +58,10 @@ export const menuItemVariants = pgTable("menu_item_variants", {
   cost: numeric("cost", { precision: 12, scale: 2 }).notNull().default("0"),
   position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  // Variants are loaded per item when assembling the menu.
+  index("menu_item_variants_item_idx").on(t.itemId),
+]);
 export type MenuItemVariant = typeof menuItemVariants.$inferSelect;
 
 // Curated emoji suggestions surfaced in the picker. NOT a constraint — any

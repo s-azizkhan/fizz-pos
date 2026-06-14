@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { updateMenuAppearance, type MenuState } from "@/app/actions/menu";
 import { MENU_FONTS, MENU_FONT_SCALES } from "@/lib/db/schema";
+import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { Store } from "@/lib/db/schema";
 
 const initial: MenuState = { ok: false };
@@ -35,21 +36,13 @@ export default function PublicMenuModal({
   onClose: () => void;
 }) {
   const [state, action, pending] = useActionState(updateMenuAppearance, initial);
-  const [saved, setSaved] = useState(false);
+  const saved = useSavedFlag(state.ok);
 
   const [slug, setSlug] = useState(store.menuSlug ?? (slugify(store.name) || "menu"));
   const [published, setPublished] = useState(store.menuPublished);
   const [font, setFont] = useState(store.menuFont);
   const [scale, setScale] = useState(store.menuFontScale);
   const [accent, setAccent] = useState(store.menuAccent);
-
-  useEffect(() => {
-    if (state.ok) {
-      setSaved(true);
-      const t = setTimeout(() => setSaved(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [state.ok]);
 
   const url = `${origin}/m/${slug}`;
 

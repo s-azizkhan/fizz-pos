@@ -1,4 +1,4 @@
-import { date, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { date, index, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
@@ -39,7 +39,10 @@ export const expenses = pgTable("expenses", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   // Soft delete — null means active.
   deletedAt: timestamp("deleted_at"),
-});
+}, (t) => [
+  // Expenses are listed and summed per store over a date window.
+  index("expenses_store_date_idx").on(t.storeId, t.expenseDate),
+]);
 
 export type Expense = typeof expenses.$inferSelect;
 

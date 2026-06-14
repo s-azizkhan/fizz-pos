@@ -32,6 +32,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Inventory", href: "/dashboard/inventory", icon: BoxIcon, roles: ["admin", "manager"], blurb: "Track every ingredient, live." },
   { label: "Margins", href: "/dashboard/margins", icon: ChartIcon, roles: ["admin", "manager"], blurb: "Real cost per cup, no guessing." },
   { label: "Analytics", href: "/dashboard/analytics", icon: TrendIcon, roles: ["admin", "manager"], blurb: "Sales trends and what's selling." },
+  { label: "Daily report", href: "/dashboard/report", icon: ReceiptIcon, roles: ["admin", "manager"], blurb: "Today at a glance, with what to do." },
   { label: "Team", href: "/dashboard/team", icon: UsersIcon, roles: ["admin"], blurb: "Add staff, set permissions." },
   { label: "Store settings", href: "/dashboard/store", icon: GearIcon, roles: ["admin"], blurb: "Profile, hours, invoice numbering." },
   { label: "Help & docs", href: "/dashboard/docs", icon: HelpIcon, roles: ["admin", "manager", "staff"], blurb: "How every page works, step by step." },

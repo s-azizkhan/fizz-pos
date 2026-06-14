@@ -42,6 +42,10 @@ export type HomeSnapshot = {
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
+// Truncate time buckets in the server's local zone so they match the rendered
+// wall-clock (timestamps may be stored in UTC).
+const SERVER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
 async function paid(start: Date, end: Date) {
   const [row] = await db
     .select({
@@ -78,10 +82,10 @@ export async function getHomeSnapshot(): Promise<HomeSnapshot> {
   ] = await Promise.all([
     paid(today.start, today.end),
     paid(yesterday.start, yesterday.end),
-    // Hourly revenue for today.
+    // Hourly revenue for today (bucketed in the server timezone).
     db
       .select({
-        h: sql<number>`extract(hour from ${orders.paidAt})`.mapWith(Number),
+        h: sql<number>`extract(hour from (${orders.paidAt} at time zone 'UTC') at time zone ${SERVER_TZ})`.mapWith(Number),
         v: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
       })
       .from(orders)
@@ -94,10 +98,10 @@ export async function getHomeSnapshot(): Promise<HomeSnapshot> {
         ),
       )
       .groupBy(sql`1`),
-    // Daily revenue this week.
+    // Daily revenue this week (bucketed in the server timezone).
     db
       .select({
-        d: sql<string>`to_char(date_trunc('day', ${orders.paidAt}), 'YYYY-MM-DD')`,
+        d: sql<string>`to_char(date_trunc('day', (${orders.paidAt} at time zone 'UTC') at time zone ${SERVER_TZ}), 'YYYY-MM-DD')`,
         v: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
       })
       .from(orders)

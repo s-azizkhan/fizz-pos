@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { createCategory, type MenuState } from "@/app/actions/menu";
-import { MenuCategoryIconGlyph } from "./category-icons";
+import { createCategory } from "@/app/actions/menu";
 import IconPicker from "./IconPicker";
 
 const inputCls =

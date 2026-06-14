@@ -57,6 +57,12 @@ export type Analytics = {
 const n = (v: string | number | null | undefined) => Number(v ?? 0);
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
+// The server's IANA timezone. Time buckets are truncated in this zone so they
+// line up with the local wall-clock the dashboard renders (the DB may store
+// timestamps in UTC). Falls back to UTC if the runtime can't resolve a zone.
+const SERVER_TZ =
+  Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
 // Sum paid-order revenue/tax/discount and order count in a window.
 async function paidTotals(start: Date, end: Date) {
   const [row] = await db
@@ -200,8 +206,8 @@ export async function getAnalytics(
       db
         .select({
           bucket: hourly
-            ? sql<string>`to_char(date_trunc('hour', ${orders.paidAt}), 'YYYY-MM-DD HH24:00')`
-            : sql<string>`to_char(date_trunc('day', ${orders.paidAt}), 'YYYY-MM-DD')`,
+            ? sql<string>`to_char(date_trunc('hour', (${orders.paidAt} at time zone 'UTC') at time zone ${SERVER_TZ}), 'YYYY-MM-DD HH24:00')`
+            : sql<string>`to_char(date_trunc('day', (${orders.paidAt} at time zone 'UTC') at time zone ${SERVER_TZ}), 'YYYY-MM-DD')`,
           value: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
           count: sql<number>`count(*)`.mapWith(Number),
           high: sql<number>`coalesce(max(${orders.total}), 0)`.mapWith(Number),

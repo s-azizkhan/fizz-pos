@@ -1,12 +1,9 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { updateCategory, type MenuState } from "@/app/actions/menu";
+import { updateCategory } from "@/app/actions/menu";
 import { MenuCategoryIconGlyph } from "./category-icons";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
-
-const btnGhost =
-  "rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz";
 
 function toFormData(obj: Record<string, string | number | boolean>): FormData {
   const fd = new FormData();

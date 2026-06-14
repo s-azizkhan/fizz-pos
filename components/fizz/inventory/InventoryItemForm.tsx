@@ -35,6 +35,7 @@ export default function InventoryItemForm({
 
   useEffect(() => {
     if (state.ok) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSaved(true);
       if (!item) formRef.current?.reset();
       onSuccess?.();
