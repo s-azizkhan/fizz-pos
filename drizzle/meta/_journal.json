@@ -15,6 +15,13 @@
       "when": 1781466753856,
       "tag": "0001_concerned_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781467582473,
+      "tag": "0002_gorgeous_wolfsbane",
+      "breakpoints": true
     }
   ]
 }

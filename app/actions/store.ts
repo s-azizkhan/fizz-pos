@@ -5,10 +5,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { store, storeSettingsForm } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { STORE_ID } from "@/lib/store/constants";
 
 export type StoreState = { ok: boolean; error?: string };
-
-const STORE_ID = 1;
 
 export async function updateStore(
   _prev: StoreState,

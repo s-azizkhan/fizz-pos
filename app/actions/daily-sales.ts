@@ -5,6 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { dailySales, dailySaleForm } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { STORE_ID } from "@/lib/store/constants";
 
 export type DailySaleState = { ok: boolean; error?: string };
 
@@ -21,7 +22,7 @@ export async function createDailySale(
   }
 
   try {
-    await db.insert(dailySales).values({ ...parsed.data, enteredBy: user.id });
+    await db.insert(dailySales).values({ ...parsed.data, storeId: STORE_ID, enteredBy: user.id });
     revalidatePath("/dashboard/sales");
     return { ok: true };
   } catch {
@@ -48,7 +49,7 @@ export async function deleteDailySale(
     await db
       .update(dailySales)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(dailySales.id, id), isNull(dailySales.deletedAt)));
+      .where(and(eq(dailySales.id, id), eq(dailySales.storeId, STORE_ID), isNull(dailySales.deletedAt)));
     revalidatePath("/dashboard/sales");
     return { ok: true };
   } catch {

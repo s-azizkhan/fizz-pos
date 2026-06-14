@@ -1,6 +1,7 @@
 import { date, integer, numeric, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
+import { store } from "./store";
 
 // How an expense was paid. First value is the column default.
 export const expenseMethod = pgEnum("expense_method", ["cash", "online", "credit", "other"]);
@@ -23,6 +24,10 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 // One row per expense. Money stored as numeric(12,2) strings to avoid drift.
 export const expenses = pgTable("expenses", {
   id: serial("id").primaryKey(),
+  storeId: integer("store_id")
+    .notNull()
+    .default(1)
+    .references(() => store.id, { onDelete: "cascade" }),
   expenseDate: date("expense_date").notNull(),
   category: text("category").notNull().default("Other"),
   description: text("description"),

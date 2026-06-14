@@ -2,6 +2,7 @@ import "server-only";
 import { desc, eq, isNull, and } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { dailySales, users, type DailySale } from "@/lib/db/schema";
+import { STORE_ID } from "@/lib/store/constants";
 
 export type DailySaleRow = DailySale & {
   enteredByName: string | null;
@@ -18,7 +19,7 @@ export async function listDailySales(): Promise<DailySaleRow[]> {
     })
     .from(dailySales)
     .leftJoin(users, eq(dailySales.enteredBy, users.id))
-    .where(isNull(dailySales.deletedAt))
+    .where(and(eq(dailySales.storeId, STORE_ID), isNull(dailySales.deletedAt)))
     .orderBy(desc(dailySales.saleDate), desc(dailySales.id));
 
   return rows.map(({ sale, enteredByName }) => ({
@@ -36,7 +37,13 @@ export async function getDailySale(id: number): Promise<DailySale | undefined> {
   const [row] = await db
     .select()
     .from(dailySales)
-    .where(and(eq(dailySales.id, id), isNull(dailySales.deletedAt)))
+    .where(
+      and(
+        eq(dailySales.id, id),
+        eq(dailySales.storeId, STORE_ID),
+        isNull(dailySales.deletedAt),
+      ),
+    )
     .limit(1);
   return row;
 }

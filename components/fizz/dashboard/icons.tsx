@@ -78,6 +78,16 @@ export function WalletIcon({ className }: P) {
   );
 }
 
+export function MenuBookIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M4 5a2 2 0 0 1 2-2h5v16H6a2 2 0 0 0-2 2V5Z" />
+      <path d="M20 5a2 2 0 0 0-2-2h-5v16h5a2 2 0 0 1 2 2V5Z" />
+      <path d="M7 7h2M7 10h2M15 7h2M15 10h2" />
+    </svg>
+  );
+}
+
 export function ChevronIcon({ className }: P) {
   return (
     <svg {...base} className={className} aria-hidden>

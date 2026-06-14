@@ -1,11 +1,16 @@
 import { date, integer, numeric, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { users } from "./user";
+import { store } from "./store";
 
 // One row per trading day: how the day's takings split across payment types.
 // Money stored as numeric(12,2) strings to avoid float drift.
 export const dailySales = pgTable("daily_sales", {
   id: serial("id").primaryKey(),
+  storeId: integer("store_id")
+    .notNull()
+    .default(1)
+    .references(() => store.id, { onDelete: "cascade" }),
   saleDate: date("sale_date").notNull(),
   cashSale: numeric("cash_sale", { precision: 12, scale: 2 }).notNull().default("0"),
   onlineSale: numeric("online_sale", { precision: 12, scale: 2 }).notNull().default("0"),

@@ -5,6 +5,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { expenses, expenseForm } from "@/lib/db/schema";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { STORE_ID } from "@/lib/store/constants";
 
 export type ExpenseState = { ok: boolean; error?: string };
 
@@ -21,7 +22,7 @@ export async function createExpense(
   }
 
   try {
-    await db.insert(expenses).values({ ...parsed.data, enteredBy: user.id });
+    await db.insert(expenses).values({ ...parsed.data, storeId: STORE_ID, enteredBy: user.id });
     revalidatePath("/dashboard/expenses");
     return { ok: true };
   } catch {
@@ -48,7 +49,7 @@ export async function deleteExpense(
     await db
       .update(expenses)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(expenses.id, id), isNull(expenses.deletedAt)));
+      .where(and(eq(expenses.id, id), eq(expenses.storeId, STORE_ID), isNull(expenses.deletedAt)));
     revalidatePath("/dashboard/expenses");
     return { ok: true };
   } catch {

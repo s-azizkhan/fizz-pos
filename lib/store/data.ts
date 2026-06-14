@@ -4,8 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { store, type Store } from "@/lib/db/schema";
 import { formatDocNumber } from "@/lib/store/format";
-
-const STORE_ID = 1;
+import { STORE_ID } from "@/lib/store/constants";
 
 // Lazily create the singleton store row, then return it. Memoized per render.
 export const getStore = cache(async (): Promise<Store> => {
