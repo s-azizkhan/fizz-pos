@@ -24,7 +24,7 @@ export default function MenuGrid({
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto p-4">
+    <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-24 lg:pb-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         {items.map((it, i) => {
           const fromPrice =

@@ -64,41 +64,83 @@ export default function DailySalesTable({
   const cls = "px-4 py-3 text-left";
 
   return (
-    <div className="overflow-x-auto rounded-fizz border border-ink-line bg-ink-soft">
-      <table className="w-full min-w-[760px] border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-ink-line text-xs uppercase tracking-[0.14em] text-steam">
-            <th className={cls}>Sale date</th>
-            <th className={`${cls} text-right`}>Cash</th>
-            <th className={`${cls} text-right`}>Online</th>
-            <th className={`${cls} text-right`}>Credit</th>
-            <th className={`${cls} text-right`}>Total</th>
-            <th className={cls}>Entered by</th>
-            <th className={cls}>Created</th>
-            {canDelete && <th className={`${cls} text-right`}>Actions</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
-              <td className={`${cls} font-medium text-cream`}>{fmtDate(r.saleDate)}</td>
-              <td className={`${cls} text-right text-cream`}>{formatMoney(r.cashSale, currency)}</td>
-              <td className={`${cls} text-right text-cream`}>{formatMoney(r.onlineSale, currency)}</td>
-              <td className={`${cls} text-right text-cream`}>{formatMoney(r.creditSale, currency)}</td>
-              <td className={`${cls} text-right font-display font-semibold text-fizz`}>
+    <>
+      {/* Mobile: stacked cards */}
+      <ul className="flex flex-col gap-3 sm:hidden">
+        {rows.map((r) => (
+          <li
+            key={r.id}
+            className="rounded-fizz border border-ink-line bg-ink-soft p-4"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className="font-medium text-cream">{fmtDate(r.saleDate)}</span>
+              <span className="font-display text-lg font-semibold text-fizz">
                 {formatMoney(r.total, currency)}
-              </td>
-              <td className={`${cls} text-steam`}>{r.enteredByName ?? "—"}</td>
-              <td className={`${cls} text-steam`}>{fmtDateTime(r.createdAt)}</td>
-              {canDelete && (
-                <td className={`${cls} text-right`}>
-                  <DeleteButton id={r.id} />
-                </td>
-              )}
+              </span>
+            </div>
+
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div className="flex justify-between gap-2">
+                <dt className="text-steam">Cash</dt>
+                <dd className="text-cream">{formatMoney(r.cashSale, currency)}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-steam">Online</dt>
+                <dd className="text-cream">{formatMoney(r.onlineSale, currency)}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-steam">Credit</dt>
+                <dd className="text-cream">{formatMoney(r.creditSale, currency)}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink-line/60 pt-3 text-xs text-steam">
+              <span>
+                by {r.enteredByName ?? "—"} · {fmtDateTime(r.createdAt)}
+              </span>
+              {canDelete && <DeleteButton id={r.id} />}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* sm and up: table */}
+      <div className="hidden overflow-x-auto rounded-fizz border border-ink-line bg-ink-soft sm:block">
+        <table className="w-full min-w-[760px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-ink-line text-xs uppercase tracking-[0.14em] text-steam">
+              <th className={cls}>Sale date</th>
+              <th className={`${cls} text-right`}>Cash</th>
+              <th className={`${cls} text-right`}>Online</th>
+              <th className={`${cls} text-right`}>Credit</th>
+              <th className={`${cls} text-right`}>Total</th>
+              <th className={cls}>Entered by</th>
+              <th className={cls}>Created</th>
+              {canDelete && <th className={`${cls} text-right`}>Actions</th>}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
+                <td className={`${cls} font-medium text-cream`}>{fmtDate(r.saleDate)}</td>
+                <td className={`${cls} text-right text-cream`}>{formatMoney(r.cashSale, currency)}</td>
+                <td className={`${cls} text-right text-cream`}>{formatMoney(r.onlineSale, currency)}</td>
+                <td className={`${cls} text-right text-cream`}>{formatMoney(r.creditSale, currency)}</td>
+                <td className={`${cls} text-right font-display font-semibold text-fizz`}>
+                  {formatMoney(r.total, currency)}
+                </td>
+                <td className={`${cls} text-steam`}>{r.enteredByName ?? "—"}</td>
+                <td className={`${cls} text-steam`}>{fmtDateTime(r.createdAt)}</td>
+                {canDelete && (
+                  <td className={`${cls} text-right`}>
+                    <DeleteButton id={r.id} />
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }

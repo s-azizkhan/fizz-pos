@@ -68,7 +68,7 @@ export default function MarginsClient({
   }, [summary.items, sort, onlyMissing]);
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8 lg:py-10">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
@@ -153,8 +153,71 @@ export default function MarginsClient({
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto rounded-fizz border border-ink-line">
-          <table className="w-full min-w-[720px] text-sm">
+        <>
+          {/* Mobile cards */}
+          <div className="mt-6 grid gap-3 sm:hidden">
+            {rows.map((it: ItemMargin) => (
+              <div
+                key={it.id}
+                className="rounded-fizz border border-ink-line bg-ink-soft p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-cream">{it.name}</span>
+                      {!it.available && (
+                        <span className="rounded-full border border-ink-line px-2 py-0.5 text-[10px] uppercase text-steam">
+                          Hidden
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-steam">{it.category}</span>
+                  </div>
+                  <span
+                    className={`shrink-0 font-display text-xl font-bold ${marginClass(it.marginPct, it.hasCost)}`}
+                  >
+                    {it.hasCost ? `${it.marginPct.toFixed(0)}%` : "—"}
+                  </span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div>
+                    <p className="text-xs text-steam">Price</p>
+                    <p className="text-cream">{money(it.price)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-steam">Cost</p>
+                    <p>
+                      {it.hasCost ? (
+                        <span className="text-cream">{money(it.cost)}</span>
+                      ) : (
+                        <span className="text-[#E2655A]">set cost</span>
+                      )}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-steam">Margin</p>
+                    <p className="text-cream">{it.hasCost ? money(it.margin) : "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-steam">Sold</p>
+                    <p className="text-cream">{it.unitsSold}</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex items-center justify-between border-t border-ink-line pt-3">
+                  <span className="text-xs uppercase tracking-wide text-steam">
+                    Profit
+                  </span>
+                  <span className="font-display font-bold text-cream">
+                    {it.unitsSold > 0 ? money(it.profit) : "—"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Table (sm and up) */}
+          <div className="mt-6 hidden overflow-x-auto rounded-fizz border border-ink-line sm:block">
+            <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b border-ink-line bg-ink-soft text-left text-xs uppercase tracking-wide text-steam">
                 <th className="px-4 py-3 font-semibold">Item</th>
@@ -207,7 +270,8 @@ export default function MarginsClient({
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       <p className="mt-4 text-xs text-steam">

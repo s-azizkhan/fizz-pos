@@ -22,7 +22,7 @@ export default async function DashboardPage() {
     CURRENCIES.find((c) => c.code === store.currency)?.symbol ?? store.currency;
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
         {ROLE_LABEL[user.role]} view · {store.name}
       </p>
@@ -30,25 +30,25 @@ export default async function DashboardPage() {
         Morning, {user.name.split(" ")[0]}.
       </h1>
 
-      <div className="mt-8 grid auto-rows-[150px] grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mt-6 grid auto-rows-[140px] grid-cols-2 gap-3 sm:mt-8 sm:gap-4 lg:grid-cols-4">
         {/* Hero tile */}
-        <section className="relative col-span-2 row-span-2 flex flex-col justify-between overflow-hidden rounded-fizz border border-fizz/30 bg-fizz/[0.07] p-7">
+        <section className="relative col-span-2 row-span-2 flex flex-col justify-between overflow-hidden rounded-fizz border border-fizz/30 bg-fizz/[0.07] p-5 sm:p-7">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
               The floor&apos;s yours
             </p>
-            <h2 className="mt-3 max-w-[16ch] font-display text-2xl font-bold leading-tight tracking-tight lg:text-3xl">
+            <h2 className="mt-3 max-w-[16ch] font-display text-xl font-bold leading-tight tracking-tight sm:text-2xl lg:text-3xl">
               Fast at the counter. Sharp in the back office.
             </h2>
           </div>
           <div className="flex items-end justify-between">
             <div>
               <p className="text-sm text-steam">Open today</p>
-              <p className="font-display text-xl font-bold text-cream">
+              <p className="font-display text-lg font-bold text-cream sm:text-xl">
                 {store.openingTime} — {store.closingTime}
               </p>
             </div>
-            <span className="font-display text-5xl font-bold text-fizz/30">
+            <span className="font-display text-4xl font-bold text-fizz/30 sm:text-5xl">
               {currency}
             </span>
           </div>
@@ -69,18 +69,18 @@ export default async function DashboardPage() {
             <Link
               key={t.href}
               href={t.href}
-              className={`group flex flex-col justify-between rounded-fizz border border-ink-line bg-ink-soft p-6 transition-all hover:-translate-y-0.5 hover:border-fizz/40 ${
+              className={`group flex flex-col justify-between rounded-fizz border border-ink-line bg-ink-soft p-5 transition-all hover:-translate-y-0.5 hover:border-fizz/40 sm:p-6 ${
                 wide ? "col-span-2" : ""
               }`}
             >
-              <span className="grid h-11 w-11 place-items-center rounded-fizz border border-ink-line bg-ink text-fizz transition-colors group-hover:border-fizz/40">
+              <span className="grid h-10 w-10 place-items-center rounded-fizz border border-ink-line bg-ink text-fizz transition-colors group-hover:border-fizz/40 sm:h-11 sm:w-11">
                 <Icon />
               </span>
               <div>
-                <h3 className="font-display text-lg font-bold tracking-tight">
+                <h3 className="font-display text-base font-bold tracking-tight sm:text-lg">
                   {t.label}
                 </h3>
-                <p className="mt-1 text-sm text-steam">{t.blurb}</p>
+                <p className="mt-1 text-xs text-steam sm:text-sm">{t.blurb}</p>
               </div>
             </Link>
           );
@@ -92,11 +92,11 @@ export default async function DashboardPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex flex-col justify-between rounded-fizz border border-ink-line bg-ink-soft p-6">
+    <div className="flex flex-col justify-between rounded-fizz border border-ink-line bg-ink-soft p-5 sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-steam">
         {label}
       </p>
-      <p className="truncate font-display text-2xl font-bold tracking-tight text-cream">
+      <p className="truncate font-display text-xl font-bold tracking-tight text-cream sm:text-2xl">
         {value}
       </p>
     </div>

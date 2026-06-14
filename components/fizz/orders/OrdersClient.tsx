@@ -82,7 +82,7 @@ export default function OrdersClient({
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8 lg:py-10">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">

@@ -55,6 +55,8 @@ export default function PosTerminal({
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Mobile-only: the ticket lives in a slide-up sheet behind a bottom bar.
+  const [cartOpen, setCartOpen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const money = (n: number | string) => formatMoney(n, currency);
@@ -77,6 +79,7 @@ export default function PosTerminal({
     setOrderType("dine_in");
     setEditingId(null);
     setEditingNumber(null);
+    setCartOpen(false);
     if (loaded) router.replace("/dashboard/till");
   }
 
@@ -273,26 +276,53 @@ export default function PosTerminal({
           <KeyboardHints />
         </div>
 
-        {/* Ticket side */}
-        <Ticket
-          lines={cart.lines}
-          subtotal={cart.subtotal}
-          count={cart.count}
-          money={money}
-          orderType={orderType}
-          onOrderType={setOrderType}
-          reference={reference}
-          onReference={setReference}
-          editingNumber={editingNumber}
-          saving={saving}
-          onInc={cart.inc}
-          onDec={cart.dec}
-          onRemove={cart.remove}
-          onClear={resetTerminal}
-          onSave={handleSave}
-          onPay={() => setPayOpen(true)}
-        />
+        {/* Ticket side — right column on desktop, slide-up sheet on mobile */}
+        <div
+          className={[
+            // Desktop: in-flow right column.
+            "lg:relative lg:z-auto lg:flex lg:translate-y-0",
+            // Mobile: fixed full-height sheet that slides up.
+            "fixed inset-x-0 bottom-0 top-16 z-40 flex flex-col transition-transform duration-300 ease-out lg:inset-auto",
+            cartOpen ? "translate-y-0" : "translate-y-full lg:translate-y-0",
+          ].join(" ")}
+        >
+          <Ticket
+            lines={cart.lines}
+            subtotal={cart.subtotal}
+            count={cart.count}
+            money={money}
+            orderType={orderType}
+            onOrderType={setOrderType}
+            reference={reference}
+            onReference={setReference}
+            editingNumber={editingNumber}
+            saving={saving}
+            onInc={cart.inc}
+            onDec={cart.dec}
+            onRemove={cart.remove}
+            onClear={resetTerminal}
+            onSave={handleSave}
+            onPay={() => setPayOpen(true)}
+            onCloseMobile={() => setCartOpen(false)}
+          />
+        </div>
       </div>
+
+      {/* Mobile bottom bar: view the order / current total. Hidden on desktop. */}
+      {cart.count > 0 && !cartOpen && (
+        <button
+          onClick={() => setCartOpen(true)}
+          className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-ink-line bg-fizz px-5 py-4 font-display font-bold text-ink lg:hidden"
+        >
+          <span className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-ink/15 text-sm">
+              {cart.count}
+            </span>
+            View order
+          </span>
+          <span className="text-lg">{money(cart.subtotal)}</span>
+        </button>
+      )}
 
       {variantFor && (
         <VariantPicker

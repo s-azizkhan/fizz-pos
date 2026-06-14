@@ -17,7 +17,7 @@ export default async function InventoryPage() {
   const canEdit = user.role === "admin" || user.role === "manager";
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10 lg:py-14">
+    <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
         Stock
       </p>

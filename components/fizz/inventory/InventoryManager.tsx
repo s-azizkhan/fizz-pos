@@ -69,24 +69,16 @@ export default function InventoryManager({
           No stock items yet.{canEdit ? " Add your first one above." : ""}
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-fizz border border-ink-line bg-ink-soft">
-          <table className="w-full min-w-[900px] border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-ink-line text-xs uppercase tracking-[0.14em] text-steam">
-                <th className={cls}>Item</th>
-                <th className={cls}>Category</th>
-                <th className={`${cls} text-right`}>On hand</th>
-                <th className={`${cls} text-right`}>Reorder at</th>
-                <th className={`${cls} text-right`}>Cost / unit</th>
-                <th className={`${cls} text-right`}>Stock value</th>
-                <th className={cls}>Supplier</th>
-                {canEdit && <th className={`${cls} text-right`}>Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
-                  <td className={cls}>
+        <>
+          {/* Mobile: stacked cards */}
+          <ul className="flex flex-col gap-3 sm:hidden">
+            {rows.map((r) => (
+              <li
+                key={r.id}
+                className="rounded-fizz border border-ink-line bg-ink-soft p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-cream">{r.name}</span>
                       {r.lowStock && (
@@ -96,31 +88,104 @@ export default function InventoryManager({
                       )}
                     </div>
                     {r.sku && <span className="text-xs text-steam">{r.sku}</span>}
-                  </td>
-                  <td className={cls}>
-                    <span className="rounded-full border border-ink-line px-2.5 py-0.5 text-xs text-cream">{r.category}</span>
-                  </td>
-                  <td className={`${cls} text-right ${r.lowStock ? "text-[#E2655A]" : "text-cream"}`}>
-                    {Number(r.quantity)} <span className="text-xs text-steam">{INVENTORY_UNIT_LABELS[r.unit].replace(/ .*/, "")}</span>
-                  </td>
-                  <td className={`${cls} text-right text-steam`}>{Number(r.reorderLevel)}</td>
-                  <td className={`${cls} text-right text-cream`}>{formatMoney(r.costPerUnit, currency)}</td>
-                  <td className={`${cls} text-right font-display font-semibold text-fizz`}>{formatMoney(r.stockValue, currency)}</td>
-                  <td className={`${cls} text-steam`}>{r.supplier ?? "—"}</td>
-                  {canEdit && (
-                    <td className={`${cls} text-right`}>
-                      <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => setModal({ kind: "move", item: r })} className={btnGhost}>Adjust</button>
-                        <button type="button" onClick={() => setModal({ kind: "edit", item: r })} className={btnGhost}>Edit</button>
-                        <DeleteButton id={r.id} />
-                      </div>
-                    </td>
-                  )}
+                    <span className="w-fit rounded-full border border-ink-line px-2.5 py-0.5 text-xs text-cream">
+                      {r.category}
+                    </span>
+                  </div>
+                  <span className="font-display text-lg font-semibold text-fizz">
+                    {formatMoney(r.stockValue, currency)}
+                  </span>
+                </div>
+
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-steam">On hand</dt>
+                    <dd className={r.lowStock ? "text-[#E2655A]" : "text-cream"}>
+                      {Number(r.quantity)}{" "}
+                      <span className="text-xs text-steam">
+                        {INVENTORY_UNIT_LABELS[r.unit].replace(/ .*/, "")}
+                      </span>
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-steam">Reorder at</dt>
+                    <dd className="text-cream">{Number(r.reorderLevel)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-steam">Cost / unit</dt>
+                    <dd className="text-cream">{formatMoney(r.costPerUnit, currency)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-steam">Supplier</dt>
+                    <dd className="text-right text-cream">{r.supplier ?? "—"}</dd>
+                  </div>
+                </dl>
+
+                {canEdit && (
+                  <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-ink-line/60 pt-3">
+                    <button type="button" onClick={() => setModal({ kind: "move", item: r })} className={btnGhost}>Adjust</button>
+                    <button type="button" onClick={() => setModal({ kind: "edit", item: r })} className={btnGhost}>Edit</button>
+                    <DeleteButton id={r.id} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          {/* sm and up: table */}
+          <div className="hidden overflow-x-auto rounded-fizz border border-ink-line bg-ink-soft sm:block">
+            <table className="w-full min-w-[900px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-ink-line text-xs uppercase tracking-[0.14em] text-steam">
+                  <th className={cls}>Item</th>
+                  <th className={cls}>Category</th>
+                  <th className={`${cls} text-right`}>On hand</th>
+                  <th className={`${cls} text-right`}>Reorder at</th>
+                  <th className={`${cls} text-right`}>Cost / unit</th>
+                  <th className={`${cls} text-right`}>Stock value</th>
+                  <th className={cls}>Supplier</th>
+                  {canEdit && <th className={`${cls} text-right`}>Actions</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
+                    <td className={cls}>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-cream">{r.name}</span>
+                        {r.lowStock && (
+                          <span className="rounded-full border border-[#E2655A]/50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#E2655A]">
+                            Low
+                          </span>
+                        )}
+                      </div>
+                      {r.sku && <span className="text-xs text-steam">{r.sku}</span>}
+                    </td>
+                    <td className={cls}>
+                      <span className="rounded-full border border-ink-line px-2.5 py-0.5 text-xs text-cream">{r.category}</span>
+                    </td>
+                    <td className={`${cls} text-right ${r.lowStock ? "text-[#E2655A]" : "text-cream"}`}>
+                      {Number(r.quantity)} <span className="text-xs text-steam">{INVENTORY_UNIT_LABELS[r.unit].replace(/ .*/, "")}</span>
+                    </td>
+                    <td className={`${cls} text-right text-steam`}>{Number(r.reorderLevel)}</td>
+                    <td className={`${cls} text-right text-cream`}>{formatMoney(r.costPerUnit, currency)}</td>
+                    <td className={`${cls} text-right font-display font-semibold text-fizz`}>{formatMoney(r.stockValue, currency)}</td>
+                    <td className={`${cls} text-steam`}>{r.supplier ?? "—"}</td>
+                    {canEdit && (
+                      <td className={`${cls} text-right`}>
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={() => setModal({ kind: "move", item: r })} className={btnGhost}>Adjust</button>
+                          <button type="button" onClick={() => setModal({ kind: "edit", item: r })} className={btnGhost}>Edit</button>
+                          <DeleteButton id={r.id} />
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       <Modal open={modal.kind === "new"} onClose={close}>

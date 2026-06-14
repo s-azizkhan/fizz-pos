@@ -27,6 +27,7 @@ export default function Ticket({
   onClear,
   onSave,
   onPay,
+  onCloseMobile,
 }: {
   lines: CartLine[];
   subtotal: number;
@@ -44,9 +45,23 @@ export default function Ticket({
   onClear: () => void;
   onSave: () => void;
   onPay: () => void;
+  onCloseMobile?: () => void;
 }) {
   return (
-    <aside className="flex min-h-0 flex-col border-t border-ink-line bg-ink-soft/30 lg:border-t-0">
+    <aside className="flex min-h-0 flex-1 flex-col border-ink-line bg-ink-soft lg:flex-none lg:border-t-0 lg:bg-ink-soft/30">
+      {/* Mobile-only sheet header with a close affordance */}
+      {onCloseMobile && (
+        <div className="flex shrink-0 items-center justify-between border-b border-ink-line px-4 py-3 lg:hidden">
+          <span className="font-display text-lg font-bold text-cream">Order</span>
+          <button
+            onClick={onCloseMobile}
+            aria-label="Back to menu"
+            className="rounded-full border border-ink-line px-3 py-1 text-sm text-steam transition-colors hover:border-fizz hover:text-fizz"
+          >
+            ✕ Close
+          </button>
+        </div>
+      )}
       {/* Editing banner — shown when revisiting / after saving a tab */}
       {editingNumber && (
         <div className="shrink-0 border-b border-fizz/40 bg-fizz/10 px-4 py-2 text-sm">
