@@ -11,6 +11,7 @@ import {
   MenuBookIcon,
   ReceiptIcon,
   TrendIcon,
+  HelpIcon,
 } from "./icons";
 
 export type NavItem = {
@@ -33,6 +34,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Analytics", href: "/dashboard/analytics", icon: TrendIcon, roles: ["admin", "manager"], blurb: "Sales trends and what's selling." },
   { label: "Team", href: "/dashboard/team", icon: UsersIcon, roles: ["admin"], blurb: "Add staff, set permissions." },
   { label: "Store settings", href: "/dashboard/store", icon: GearIcon, roles: ["admin"], blurb: "Profile, hours, invoice numbering." },
+  { label: "Help & docs", href: "/dashboard/docs", icon: HelpIcon, roles: ["admin", "manager", "staff"], blurb: "How every page works, step by step." },
 ];
 
 export function navForRole(role: UserRole): NavItem[] {
