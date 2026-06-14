@@ -31,3 +31,17 @@ export function formatDocNumber(template: string, parts: DocNumberParts): string
     .replace(/\{MM\}/gi, mm)
     .replace(/\{DD\}/gi, dd);
 }
+
+// Format a money amount (string or number) in the store currency. Falls back
+// to a plain 2-decimal string if the currency is unknown to Intl.
+export function formatMoney(amount: string | number, currency: string): string {
+  const n = Number(amount) || 0;
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency,
+    }).format(n);
+  } catch {
+    return n.toFixed(2);
+  }
+}
