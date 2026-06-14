@@ -1,6 +1,7 @@
 import { integer, pgEnum, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { CURRENCY_CODES } from "@/lib/store/currencies";
 
 export const waitlist = pgTable("waitlist", {
   id: serial("id").primaryKey(),
@@ -113,7 +114,7 @@ export const storeSettingsForm = z.object({
   country: optionalText(80),
   taxId: optionalText(60),
   timezone: z.string().trim().min(1).max(60),
-  currency: z.string().trim().min(1).max(8),
+  currency: z.enum(CURRENCY_CODES, "Pick a currency"),
   openingTime: z.string().regex(TIME_RE, "Use HH:MM (24h)"),
   closingTime: z.string().regex(TIME_RE, "Use HH:MM (24h)"),
   invoicePrefix: z.string().trim().min(1).max(12),

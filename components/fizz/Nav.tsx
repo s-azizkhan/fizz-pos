@@ -30,6 +30,12 @@ export default function Nav() {
             </a>
           ))}
           <a
+            href="/login"
+            className="text-sm text-steam transition-colors hover:text-cream"
+          >
+            Sign in
+          </a>
+          <a
             href="#waitlist"
             className="rounded-full bg-fizz px-4 py-2 text-sm font-semibold text-ink transition-transform hover:scale-105"
           >
@@ -60,6 +66,13 @@ export default function Nav() {
                 {l.label}
               </a>
             ))}
+            <a
+              href="/login"
+              onClick={closeMobileNav}
+              className="text-sm text-steam hover:text-cream"
+            >
+              Sign in
+            </a>
             <a
               href="#waitlist"
               onClick={closeMobileNav}

@@ -3,6 +3,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { updateStore, type StoreState } from "@/app/actions/store";
 import { formatDocNumber } from "@/lib/store/format";
+import { CURRENCIES } from "@/lib/store/currencies";
+import { COUNTRIES } from "@/lib/store/countries";
 import type { Store } from "@/lib/db/schema";
 
 const initial: StoreState = { ok: false };
@@ -104,10 +106,40 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
         <Field label="City" name="city" defaultValue={store.city} />
         <Field label="State / region" name="state" defaultValue={store.state} />
         <Field label="Postal code" name="postalCode" defaultValue={store.postalCode} />
-        <Field label="Country" name="country" defaultValue={store.country} />
+        <label className="flex flex-col gap-2">
+          <span className={labelCls}>Country</span>
+          <select
+            name="country"
+            defaultValue={store.country ?? ""}
+            className={`${inputCls} appearance-none`}
+          >
+            <option value="" className="bg-ink-soft text-steam">
+              — Select country —
+            </option>
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c} className="bg-ink-soft text-cream">
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
         <Field label="Tax ID" name="taxId" defaultValue={store.taxId} />
         <Field label="Timezone" name="timezone" defaultValue={store.timezone} placeholder="UTC" required />
-        <Field label="Currency" name="currency" defaultValue={store.currency} placeholder="USD" required />
+        <label className="flex flex-col gap-2">
+          <span className={labelCls}>Currency</span>
+          <select
+            name="currency"
+            required
+            defaultValue={store.currency}
+            className={`${inputCls} appearance-none`}
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code} className="bg-ink-soft text-cream">
+                {c.code} — {c.label} ({c.symbol})
+              </option>
+            ))}
+          </select>
+        </label>
       </Section>
 
       <Section title="Opening hours" hint="Store-local 24h time.">
