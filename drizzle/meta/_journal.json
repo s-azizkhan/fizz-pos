@@ -8,6 +8,13 @@
       "when": 1781468666207,
       "tag": "0000_white_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781469467074,
+      "tag": "0001_bitter_stardust",
+      "breakpoints": true
     }
   ]
 }

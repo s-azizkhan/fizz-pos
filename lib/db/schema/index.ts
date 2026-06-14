@@ -7,3 +7,4 @@ export * from "./waitlist";
 export * from "./dailySales";
 export * from "./expenses";
 export * from "./menu";
+export * from "./inventory";
