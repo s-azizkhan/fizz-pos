@@ -114,14 +114,11 @@ export default function PosTerminal({
     });
     setSaving(false);
     if (res.ok) {
-      setEditingId(res.orderId);
-      setEditingNumber(res.orderNumber);
-      // Keep editing this tab so further saves update it; reflect in the URL.
-      if (!loaded || loaded.id !== res.orderId) {
-        router.replace(`/dashboard/till?order=${res.orderId}`);
-      }
-      setToast(`Saved tab ${res.orderNumber}`);
-      setTimeout(() => setToast(null), 2200);
+      // Tab is saved — clear the terminal so the next order can be rung right
+      // away. Revisit/settle the saved tab from the orders page.
+      setToast(`Saved tab ${res.orderNumber} — ready for the next order`);
+      setTimeout(() => setToast(null), 2600);
+      resetTerminal();
     } else {
       setToast(res.error);
       setTimeout(() => setToast(null), 2600);
