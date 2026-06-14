@@ -30,6 +30,8 @@ export const menuItems = pgTable("menu_items", {
   name: text("name").notNull(),
   description: text("description"),
   price: numeric("price", { precision: 12, scale: 2 }).notNull().default("0"),
+  // Cost of goods to make this item. Margin = price - cost. Set per item.
+  cost: numeric("cost", { precision: 12, scale: 2 }).notNull().default("0"),
   available: boolean("available").notNull().default(true),
   position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -46,6 +48,8 @@ export const menuItemVariants = pgTable("menu_item_variants", {
     .references(() => menuItems.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   price: numeric("price", { precision: 12, scale: 2 }).notNull().default("0"),
+  // Cost of goods for this variant; overrides the item cost when set.
+  cost: numeric("cost", { precision: 12, scale: 2 }).notNull().default("0"),
   position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -65,6 +69,14 @@ const money = z
   .coerce.number({ error: "Enter a valid price" })
   .min(0, "Cannot be negative")
   .max(99999999.99, "Too large")
+  .transform((n) => n.toFixed(2));
+
+// Like `money` but tolerant of an empty/missing field — defaults to 0.00.
+// Used for cost inputs that are optional in older forms.
+const costMoney = z
+  .union([z.coerce.number(), z.literal(""), z.undefined()])
+  .transform((v) => (v === "" || v === undefined ? 0 : v))
+  .pipe(z.number().min(0, "Cannot be negative").max(99999999.99, "Too large"))
   .transform((n) => n.toFixed(2));
 
 const optionalText = (max: number) =>
@@ -87,6 +99,7 @@ export type CategoryInput = z.infer<typeof categoryForm>;
 const variantSchema = z.object({
   name: z.string().trim().min(1, "Variant name required").max(60),
   price: money,
+  cost: costMoney,
 });
 
 export const itemForm = z.object({
@@ -94,6 +107,7 @@ export const itemForm = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   description: optionalText(280),
   price: money,
+  cost: costMoney,
   available: z.coerce.boolean().default(true),
   // Variants arrive as a JSON string from the client form.
   variants: z

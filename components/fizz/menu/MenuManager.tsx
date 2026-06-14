@@ -34,7 +34,7 @@ function toFormData(obj: Record<string, string | number | boolean>): FormData {
   return fd;
 }
 
-type VariantDraft = { name: string; price: string };
+type VariantDraft = { name: string; price: string; cost: string };
 
 function VariantEditor({
   variants,
@@ -61,11 +61,23 @@ function VariantEditor({
             type="number"
             min={0}
             step="0.01"
-            placeholder="0.00"
+            placeholder="Price"
             onChange={(e) =>
               setVariants(variants.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))
             }
-            className={`${inputCls} max-w-[120px]`}
+            className={`${inputCls} max-w-[110px]`}
+          />
+          <input
+            value={v.cost}
+            type="number"
+            min={0}
+            step="0.01"
+            placeholder="Cost"
+            title="Cost of goods for this variant"
+            onChange={(e) =>
+              setVariants(variants.map((x, j) => (j === i ? { ...x, cost: e.target.value } : x)))
+            }
+            className={`${inputCls} max-w-[110px]`}
           />
           <button
             type="button"
@@ -78,7 +90,7 @@ function VariantEditor({
       ))}
       <button
         type="button"
-        onClick={() => setVariants([...variants, { name: "", price: "" }])}
+        onClick={() => setVariants([...variants, { name: "", price: "", cost: "" }])}
         className={`${btnGhost} self-start`}
       >
         + Add variant
@@ -101,23 +113,35 @@ function ItemForm({
   const [name, setName] = useState(item?.name ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
   const [price, setPrice] = useState(item?.price ?? "");
+  const [cost, setCost] = useState(item?.cost ?? "");
   const [available, setAvailable] = useState(item?.available ?? true);
   const [variants, setVariants] = useState<VariantDraft[]>(
-    item?.variants.map((v) => ({ name: v.name, price: v.price })) ?? [],
+    item?.variants.map((v) => ({ name: v.name, price: v.price, cost: v.cost })) ?? [],
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Live margin preview from the base price/cost.
+  const priceN = Number(price) || 0;
+  const costN = Number(cost) || 0;
+  const marginN = priceN - costN;
+  const marginPct = priceN > 0 ? (marginN / priceN) * 100 : 0;
 
   function submit() {
     setError(null);
     const cleanVariants = variants
       .filter((v) => v.name.trim())
-      .map((v) => ({ name: v.name.trim(), price: v.price === "" ? "0" : v.price }));
+      .map((v) => ({
+        name: v.name.trim(),
+        price: v.price === "" ? "0" : v.price,
+        cost: v.cost === "" ? "0" : v.cost,
+      }));
     const payload = toFormData({
       categoryId,
       name,
       description,
       price: price === "" ? "0" : price,
+      cost: cost === "" ? "0" : cost,
       available,
       variants: JSON.stringify(cleanVariants),
     });
@@ -146,7 +170,20 @@ function ItemForm({
           <span className={labelCls}>Base price ({currency})</span>
           <input value={price} type="number" min={0} step="0.01" onChange={(e) => setPrice(e.target.value)} className={inputCls} />
         </label>
-        <label className="flex items-center gap-3 pt-7">
+        <label className="flex flex-col gap-2">
+          <span className={labelCls}>Item cost ({currency})</span>
+          <input value={cost} type="number" min={0} step="0.01" placeholder="0.00" onChange={(e) => setCost(e.target.value)} className={inputCls} />
+        </label>
+        {priceN > 0 && (
+          <div className="rounded-fizz border border-ink-line bg-ink px-4 py-3 text-sm sm:col-span-2">
+            <span className="text-steam">Margin: </span>
+            <span className={marginN >= 0 ? "font-semibold text-fizz" : "font-semibold text-[#E2655A]"}>
+              {formatMoney(marginN, currency)} ({marginPct.toFixed(0)}%)
+            </span>
+            <span className="text-steam"> · food cost {priceN > 0 ? ((costN / priceN) * 100).toFixed(0) : 0}%</span>
+          </div>
+        )}
+        <label className="flex items-center gap-3 sm:col-span-2">
           <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="h-5 w-5 accent-[#C6F432]" />
           <span className="text-sm text-cream">Available</span>
         </label>

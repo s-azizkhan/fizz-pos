@@ -1,0 +1,223 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { formatMoney } from "@/lib/store/format";
+import type { ItemMargin, MarginsSummary } from "@/lib/store/margins";
+
+type SortKey = "marginPct" | "profit" | "unitsSold" | "price" | "name";
+
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: "profit", label: "Most profit" },
+  { value: "marginPct", label: "Best margin %" },
+  { value: "unitsSold", label: "Best sellers" },
+  { value: "price", label: "Price" },
+  { value: "name", label: "Name" },
+];
+
+// Colour a margin percentage by health: green = healthy, amber = thin,
+// red = losing money. Café rule of thumb: aim for 65%+ gross margin.
+function marginClass(pct: number, hasCost: boolean): string {
+  if (!hasCost) return "text-steam";
+  if (pct < 0) return "text-[#E2655A]";
+  if (pct < 50) return "text-[#E2655A]";
+  if (pct < 65) return "text-bubble";
+  return "text-fizz";
+}
+
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+}) {
+  return (
+    <div className="rounded-fizz border border-ink-line bg-ink-soft p-5">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-steam">
+        {label}
+      </p>
+      <p className="mt-2 font-display text-2xl font-bold text-cream">{value}</p>
+      {hint && <p className="mt-1 text-xs text-steam">{hint}</p>}
+    </div>
+  );
+}
+
+// Margins dashboard. Theoretical margin per menu item (price vs cost) alongside
+// realized profit pulled from paid orders. Set item costs on the Menu page.
+export default function MarginsClient({
+  summary,
+  currency,
+}: {
+  summary: MarginsSummary;
+  currency: string;
+}) {
+  const [sort, setSort] = useState<SortKey>("profit");
+  const [onlyMissing, setOnlyMissing] = useState(false);
+  const money = (n: number) => formatMoney(n, currency);
+
+  const rows = useMemo(() => {
+    let list = [...summary.items];
+    if (onlyMissing) list = list.filter((i) => !i.hasCost);
+    list.sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      return (b[sort] as number) - (a[sort] as number);
+    });
+    return list;
+  }, [summary.items, sort, onlyMissing]);
+
+  return (
+    <div className="mx-auto max-w-6xl px-6 py-8 lg:py-10">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
+            Profit
+          </p>
+          <h1 className="mt-2 font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
+            Margins
+          </h1>
+          <p className="mt-1 text-steam">
+            Real cost per item. Know your margin before you pour.
+          </p>
+        </div>
+        <a
+          href="/dashboard/menu"
+          className="rounded-fizz border border-ink-line bg-ink-soft px-5 py-3 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+        >
+          Set item costs →
+        </a>
+      </div>
+
+      {/* Summary */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat
+          label="Revenue (paid)"
+          value={money(summary.totalRevenue)}
+          hint="From settled orders"
+        />
+        <Stat
+          label="Cost of goods"
+          value={money(summary.totalCost)}
+          hint="Sold units × item cost"
+        />
+        <Stat
+          label="Gross profit"
+          value={money(summary.totalProfit)}
+          hint={`${summary.blendedMarginPct.toFixed(0)}% blended margin`}
+        />
+        <Stat
+          label="Avg menu margin"
+          value={`${summary.avgMarginPct.toFixed(0)}%`}
+          hint="Across priced items"
+        />
+      </div>
+
+      {summary.itemsWithoutCost > 0 && (
+        <button
+          onClick={() => setOnlyMissing((v) => !v)}
+          className={`mt-4 inline-flex items-center gap-2 rounded-fizz border px-4 py-2 text-sm transition-colors ${
+            onlyMissing
+              ? "border-[#E2655A] bg-[#E2655A]/10 text-[#E2655A]"
+              : "border-ink-line bg-ink-soft text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
+          }`}
+        >
+          ⚠ {summary.itemsWithoutCost} item
+          {summary.itemsWithoutCost === 1 ? "" : "s"} missing a cost
+          {onlyMissing ? " — showing only these" : " — click to filter"}
+        </button>
+      )}
+
+      {/* Sort */}
+      <div className="mt-6 flex flex-wrap gap-2">
+        {SORTS.map((s) => (
+          <button
+            key={s.value}
+            onClick={() => setSort(s.value)}
+            className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
+              sort === s.value
+                ? "border-fizz bg-fizz text-ink"
+                : "border-ink-line bg-ink-soft text-cream hover:border-fizz"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Table */}
+      {rows.length === 0 ? (
+        <div className="mt-8 flex min-h-[30vh] items-center justify-center rounded-fizz border border-dashed border-ink-line bg-ink-soft/40">
+          <p className="text-steam">
+            {onlyMissing ? "Every item has a cost. Nice." : "No menu items yet."}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 overflow-x-auto rounded-fizz border border-ink-line">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead>
+              <tr className="border-b border-ink-line bg-ink-soft text-left text-xs uppercase tracking-wide text-steam">
+                <th className="px-4 py-3 font-semibold">Item</th>
+                <th className="px-4 py-3 text-right font-semibold">Price</th>
+                <th className="px-4 py-3 text-right font-semibold">Cost</th>
+                <th className="px-4 py-3 text-right font-semibold">Margin</th>
+                <th className="px-4 py-3 text-right font-semibold">Margin %</th>
+                <th className="px-4 py-3 text-right font-semibold">Sold</th>
+                <th className="px-4 py-3 text-right font-semibold">Profit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((it: ItemMargin) => (
+                <tr
+                  key={it.id}
+                  className="border-b border-ink-line last:border-0 hover:bg-ink-soft/40"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-cream">{it.name}</span>
+                      {!it.available && (
+                        <span className="rounded-full border border-ink-line px-2 py-0.5 text-[10px] uppercase text-steam">
+                          Hidden
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-steam">{it.category}</span>
+                  </td>
+                  <td className="px-4 py-3 text-right text-cream">{money(it.price)}</td>
+                  <td className="px-4 py-3 text-right">
+                    {it.hasCost ? (
+                      <span className="text-cream">{money(it.cost)}</span>
+                    ) : (
+                      <span className="text-[#E2655A]">set cost</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right font-medium text-cream">
+                    {it.hasCost ? money(it.margin) : "—"}
+                  </td>
+                  <td
+                    className={`px-4 py-3 text-right font-display font-bold ${marginClass(it.marginPct, it.hasCost)}`}
+                  >
+                    {it.hasCost ? `${it.marginPct.toFixed(0)}%` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right text-steam">{it.unitsSold}</td>
+                  <td className="px-4 py-3 text-right font-display font-bold text-cream">
+                    {it.unitsSold > 0 ? money(it.profit) : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <p className="mt-4 text-xs text-steam">
+        Margins use each item&apos;s cost of goods. Realized profit and units
+        come from settled orders. Set or update costs on the{" "}
+        <a href="/dashboard/menu" className="text-fizz hover:underline">
+          Menu
+        </a>{" "}
+        page.
+      </p>
+    </div>
+  );
+}
