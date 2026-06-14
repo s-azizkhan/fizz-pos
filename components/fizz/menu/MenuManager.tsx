@@ -12,9 +12,9 @@ import {
   toggleItemAvailable,
   type MenuState,
 } from "@/app/actions/menu";
-import { MENU_CATEGORY_ICONS } from "@/lib/db/schema";
 import { formatMoney } from "@/lib/store/format";
 import { MenuCategoryIconGlyph } from "./category-icons";
+import IconPicker from "./IconPicker";
 import type {
   MenuCategoryWithItems,
   MenuItemWithVariants,
@@ -273,7 +273,7 @@ function CategoryCard({
             <button type="button" disabled={index === 0} onClick={() => onMove(-1)} className="text-steam hover:text-fizz disabled:opacity-30" aria-label="Move up">▲</button>
             <button type="button" disabled={index === count - 1} onClick={() => onMove(1)} className="text-steam hover:text-fizz disabled:opacity-30" aria-label="Move down">▼</button>
           </div>
-          <span className="text-fizz"><MenuCategoryIconGlyph name={category.icon} /></span>
+          <span className="text-2xl"><MenuCategoryIconGlyph name={category.icon} /></span>
           {editing ? (
             <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} max-w-[220px]`} />
           ) : (
@@ -309,20 +309,7 @@ function CategoryCard({
 
       {editing && (
         <div className="mt-4 flex flex-col gap-2">
-          <span className={labelCls}>Icon</span>
-          <div className="flex flex-wrap gap-2">
-            {MENU_CATEGORY_ICONS.map((ic) => (
-              <button
-                key={ic}
-                type="button"
-                onClick={() => setIcon(ic)}
-                className={`rounded-fizz border p-2 transition-colors ${icon === ic ? "border-fizz text-fizz" : "border-ink-line text-steam hover:text-cream"}`}
-                aria-label={ic}
-              >
-                <MenuCategoryIconGlyph name={ic} />
-              </button>
-            ))}
-          </div>
+          <IconPicker value={icon} onChange={setIcon} />
           {error && <span className="text-sm text-[#E2655A]">{error}</span>}
         </div>
       )}
@@ -352,7 +339,7 @@ export default function MenuManager({
 }) {
   const [categories, setCategories] = useState(initial);
   const [newName, setNewName] = useState("");
-  const [newIcon, setNewIcon] = useState<string>("cup");
+  const [newIcon, setNewIcon] = useState<string>("☕");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -362,7 +349,7 @@ export default function MenuManager({
       const res = await createCategory({ ok: false }, toFormData({ name: newName, icon: newIcon }));
       if (res.ok) {
         setNewName("");
-        setNewIcon("cup");
+        setNewIcon("☕");
       } else setError(res.error ?? "Failed");
     });
   }
@@ -392,20 +379,7 @@ export default function MenuManager({
           </button>
         </div>
         <div className="mt-4 flex flex-col gap-2">
-          <span className={labelCls}>Icon</span>
-          <div className="flex flex-wrap gap-2">
-            {MENU_CATEGORY_ICONS.map((ic) => (
-              <button
-                key={ic}
-                type="button"
-                onClick={() => setNewIcon(ic)}
-                className={`rounded-fizz border p-2 transition-colors ${newIcon === ic ? "border-fizz text-fizz" : "border-ink-line text-steam hover:text-cream"}`}
-                aria-label={ic}
-              >
-                <MenuCategoryIconGlyph name={ic} />
-              </button>
-            ))}
-          </div>
+          <IconPicker value={newIcon} onChange={setNewIcon} />
         </div>
         {error && <p className="mt-3 text-sm text-[#E2655A]">{error}</p>}
       </section>

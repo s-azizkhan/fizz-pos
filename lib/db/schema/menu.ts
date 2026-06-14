@@ -12,7 +12,7 @@ export const menuCategories = pgTable("menu_categories", {
     .default(1)
     .references(() => store.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  icon: text("icon").notNull().default("cup"),
+  icon: text("icon").notNull().default("☕"),
   position: integer("position").notNull().default(0),
   enteredBy: integer("entered_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -51,24 +51,15 @@ export const menuItemVariants = pgTable("menu_item_variants", {
 });
 export type MenuItemVariant = typeof menuItemVariants.$inferSelect;
 
-// Icons a category can use. Keys map to inline SVGs in the menu icon set.
-export const MENU_CATEGORY_ICONS = [
-  "cup",
-  "coffee",
-  "tea",
-  "cold",
-  "pastry",
-  "cake",
-  "sandwich",
-  "salad",
-  "breakfast",
-  "bottle",
-  "wine",
-  "star",
-  "leaf",
-  "fire",
+// Curated emoji suggestions surfaced in the picker. NOT a constraint — any
+// emoji (or short symbol) is accepted; this list is just a quick-pick palette.
+export const MENU_ICON_SUGGESTIONS = [
+  "☕", "🍵", "🧋", "🥤", "🧊", "🍶", "🍷", "🍺", "🥂", "🍹",
+  "🥐", "🍞", "🥖", "🧁", "🍰", "🎂", "🍪", "🍩", "🥧", "🍫",
+  "🥪", "🍔", "🌮", "🌯", "🥗", "🍕", "🍝", "🍜", "🍳", "🥞",
+  "🧇", "🥯", "🥓", "🧀", "🍦", "🍨", "🍧", "🍓", "🍎", "🥑",
+  "🌿", "🔥", "⭐", "✨", "💧", "🌅", "🥥", "🍯", "🧂", "🍴",
 ] as const;
-export type MenuCategoryIcon = (typeof MENU_CATEGORY_ICONS)[number];
 
 const money = z
   .coerce.number({ error: "Enter a valid price" })
@@ -81,7 +72,13 @@ const optionalText = (max: number) =>
 
 export const categoryForm = z.object({
   name: z.string().trim().min(1, "Name is required").max(80),
-  icon: z.enum(MENU_CATEGORY_ICONS, "Pick an icon"),
+  // Free-form: any emoji or short symbol. Empty falls back to a default.
+  icon: z
+    .string()
+    .trim()
+    .max(8, "Use a single emoji")
+    .optional()
+    .transform((v) => v || "☕"),
 });
 export type CategoryInput = z.infer<typeof categoryForm>;
 
