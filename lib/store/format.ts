@@ -32,12 +32,14 @@ export function formatDocNumber(template: string, parts: DocNumberParts): string
     .replace(/\{DD\}/gi, dd);
 }
 
-// Format a money amount (string or number) in the store currency. Falls back
-// to a plain 2-decimal string if the currency is unknown to Intl.
+// Format a money amount (string or number) in the store currency. Uses a fixed
+// locale ("en-US") so server-rendered and client-rendered output match exactly
+// (avoids React hydration mismatches); the currency code still drives the
+// symbol. Falls back to a plain 2-decimal string if the currency is unknown.
 export function formatMoney(amount: string | number, currency: string): string {
   const n = Number(amount) || 0;
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
     }).format(n);

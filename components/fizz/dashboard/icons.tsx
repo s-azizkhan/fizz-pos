@@ -123,3 +123,12 @@ export function ReceiptIcon({ className }: P) {
     </svg>
   );
 }
+
+export function TrendIcon({ className }: P) {
+  return (
+    <svg {...base} className={className} aria-hidden>
+      <path d="M3 17l6-6 4 4 7-7" />
+      <path d="M17 7h4v4" />
+    </svg>
+  );
+}

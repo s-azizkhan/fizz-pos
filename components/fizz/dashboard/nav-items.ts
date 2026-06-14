@@ -10,6 +10,7 @@ import {
   WalletIcon,
   MenuBookIcon,
   ReceiptIcon,
+  TrendIcon,
 } from "./icons";
 
 export type NavItem = {
@@ -29,6 +30,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Expenses", href: "/dashboard/expenses", icon: WalletIcon, roles: ["admin", "manager", "staff"], blurb: "Track every cost." },
   { label: "Inventory", href: "/dashboard/inventory", icon: BoxIcon, roles: ["admin", "manager"], blurb: "Track every ingredient, live." },
   { label: "Margins", href: "/dashboard/margins", icon: ChartIcon, roles: ["admin", "manager"], blurb: "Real cost per cup, no guessing." },
+  { label: "Analytics", href: "/dashboard/analytics", icon: TrendIcon, roles: ["admin", "manager"], blurb: "Sales trends and what's selling." },
   { label: "Team", href: "/dashboard/team", icon: UsersIcon, roles: ["admin"], blurb: "Add staff, set permissions." },
   { label: "Store settings", href: "/dashboard/store", icon: GearIcon, roles: ["admin"], blurb: "Profile, hours, invoice numbering." },
 ];
