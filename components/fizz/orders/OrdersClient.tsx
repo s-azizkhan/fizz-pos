@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
 import { voidOrder } from "@/app/actions/order";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
+import { toast } from "@/lib/store/toast";
 import type { OrderRow, StatusFilter } from "./types";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -76,9 +77,15 @@ export default function OrdersClient({
     if (!confirm("Void this open tab? This cannot be undone.")) return;
     setBusyId(id);
     startTransition(async () => {
-      await voidOrder(id);
-      setBusyId(null);
-      router.refresh();
+      try {
+        await voidOrder(id);
+        toast.success("Order voided");
+        router.refresh();
+      } catch {
+        toast.error("Couldn't void the order");
+      } finally {
+        setBusyId(null);
+      }
     });
   }
 

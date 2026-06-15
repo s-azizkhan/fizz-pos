@@ -2,11 +2,13 @@
 
 import { useActionState, useState } from "react";
 import { login, type LoginState } from "@/app/actions/auth";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 
 const initial: LoginState = {};
 
 export default function LoginForm() {
   const [state, action, pending] = useActionState(login, initial);
+  useActionToast(state, {});
   const [showPw, setShowPw] = useState(false);
 
   return (

@@ -12,6 +12,7 @@ import {
   type MenuState,
 } from "@/app/actions/menu";
 import { formatMoney } from "@/lib/store/format";
+import { toast } from "@/lib/store/toast";
 import { MenuCategoryIconGlyph } from "./category-icons";
 import IconPicker from "./IconPicker";
 import RecipeEditor from "./RecipeEditor";
@@ -290,7 +291,9 @@ function ItemRow({
           type="button"
           onClick={() =>
             startTransition(async () => {
-              await deleteItem({ ok: false }, toFormData({ id: item.id }));
+              const res = await deleteItem({ ok: false }, toFormData({ id: item.id }));
+              if (res?.ok) toast.success("Item deleted");
+              else toast.error(res?.error ?? "Couldn't delete item");
             })
           }
           disabled={pending}
@@ -365,7 +368,9 @@ function CategoryCard({
                 type="button"
                 onClick={() =>
                   startTransition(async () => {
-                    await deleteCategory({ ok: false }, toFormData({ id: category.id }));
+                    const res = await deleteCategory({ ok: false }, toFormData({ id: category.id }));
+                    if (res?.ok) toast.success("Category deleted");
+                    else toast.error(res?.error ?? "Couldn't delete category");
                   })
                 }
                 disabled={pending}

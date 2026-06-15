@@ -9,6 +9,7 @@ import { deleteInventoryItem } from "@/app/actions/inventory";
 import { INVENTORY_UNIT_LABELS } from "@/lib/db/schema";
 import { formatMoney } from "@/lib/store/format";
 import { Chip, ChipBar, SearchInput } from "@/components/fizz/ui/controls";
+import { toast } from "@/lib/store/toast";
 import type { InventoryItemRow } from "@/lib/store/inventory";
 
 const btnPrimary =
@@ -36,7 +37,9 @@ function DeleteButton({ id }: { id: string }) {
         const fd = new FormData();
         fd.set("id", id);
         startTransition(async () => {
-          await deleteInventoryItem({ ok: false }, fd);
+          const res = await deleteInventoryItem({ ok: false }, fd);
+          if (res?.ok) toast.success("Item deleted");
+          else toast.error(res?.error ?? "Couldn't delete item");
         });
       }}
       className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"

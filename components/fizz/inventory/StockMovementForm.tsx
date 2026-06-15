@@ -4,6 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { recordStockMovement, type InventoryState } from "@/app/actions/inventory";
 import { stockMovementType, STOCK_MOVEMENT_LABELS } from "@/lib/db/schema";
 import type { InventoryItem } from "@/lib/db/schema";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 
 const initial: InventoryState = { ok: false };
 
@@ -19,6 +20,7 @@ export default function StockMovementForm({
   onSuccess?: () => void;
 }) {
   const [state, action, pending] = useActionState(recordStockMovement, initial);
+  useActionToast(state, { success: "Stock updated" });
   const [type, setType] = useState<string>("receive");
   const [amount, setAmount] = useState("");
 

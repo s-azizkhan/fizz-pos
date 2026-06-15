@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
 import { checkout, saveOrder, type CheckoutResult } from "@/app/actions/order";
+import { toast } from "@/lib/store/toast";
 import { useCart } from "./useCart";
 import type {
   LoadedOrder,
@@ -57,7 +58,6 @@ export default function PosTerminal({
   >(null);
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   // Mobile-only: the ticket lives in a slide-up sheet behind a bottom bar.
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -122,12 +122,10 @@ export default function PosTerminal({
     if (res.ok) {
       // Tab is saved — clear the terminal so the next order can be rung right
       // away. Revisit/settle the saved tab from the orders page.
-      setToast(`Saved tab ${res.orderNumber} — ready for the next order`);
-      setTimeout(() => setToast(null), 2600);
+      toast.success(`Saved tab ${res.orderNumber} — ready for the next order`);
       resetTerminal();
     } else {
-      setToast(res.error);
-      setTimeout(() => setToast(null), 2600);
+      toast.error(res.error ?? "Couldn't save the tab");
     }
   }
 
@@ -217,6 +215,7 @@ export default function PosTerminal({
     if (res.ok) {
       setPayOpen(false);
       setReceipt(res);
+      toast.success("Order settled");
       resetTerminal();
     } else {
       // Surface the error inside the pay modal.
@@ -363,11 +362,6 @@ export default function PosTerminal({
         />
       )}
 
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-fizz border border-fizz bg-ink-soft px-5 py-3 text-sm font-medium text-cream shadow-lg">
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

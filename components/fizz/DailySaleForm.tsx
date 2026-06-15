@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createDailySale, type DailySaleState } from "@/app/actions/daily-sales";
 import { formatMoney } from "@/lib/store/format";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 
 const initial: DailySaleState = { ok: false };
 
@@ -25,6 +26,7 @@ export default function DailySaleForm({
   onSuccess?: () => void;
 }) {
   const [state, action, pending] = useActionState(createDailySale, initial);
+  useActionToast(state, { success: "Sale recorded" });
   const [saved, setSaved] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 

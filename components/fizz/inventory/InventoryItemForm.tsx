@@ -12,6 +12,7 @@ import {
   inventoryUnit,
 } from "@/lib/db/schema";
 import type { InventoryItem } from "@/lib/db/schema";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 
 const initial: InventoryState = { ok: false };
 
@@ -30,6 +31,7 @@ export default function InventoryItemForm({
 }) {
   const action = item ? updateInventoryItem : createInventoryItem;
   const [state, formAction, pending] = useActionState(action, initial);
+  useActionToast(state, { success: item ? "Item saved" : "Item added" });
   const formRef = useRef<HTMLFormElement>(null);
   const [saved, setSaved] = useState(false);
 

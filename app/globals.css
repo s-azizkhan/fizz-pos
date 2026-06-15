@@ -111,13 +111,21 @@ body {
 }
 .fizz-orbit { animation: orbit 9s linear infinite; }
 
+/* Toast slide/fade in. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.fizz-toast { animation: toast-in 0.22s ease-out; }
+
 @media (prefers-reduced-motion: reduce) {
   .fizz-glow,
   .fizz-marquee,
   .fizz-float,
   .fizz-drain,
   .fizz-orbit,
-  .fizz-bubble {
+  .fizz-bubble,
+  .fizz-toast {
     animation: none !important;
   }
 }

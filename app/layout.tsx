@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
+import Toaster from "@/components/fizz/Toaster";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -34,7 +35,10 @@ export default function RootLayout({
       lang="en"
       className={`${display.variable} ${sans.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-ink text-cream">{children}</body>
+      <body className="min-h-full bg-ink text-cream">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

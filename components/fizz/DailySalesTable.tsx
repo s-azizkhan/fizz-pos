@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { deleteDailySale, type DailySaleState } from "@/app/actions/daily-sales";
 import { formatMoney } from "@/lib/store/format";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 import type { DailySaleRow } from "@/lib/store/daily-sales";
 
 const initial: DailySaleState = { ok: false };
@@ -29,7 +30,8 @@ function fmtDateTime(d: Date | string): string {
 }
 
 function DeleteButton({ id }: { id: string }) {
-  const [, action, pending] = useActionState(deleteDailySale, initial);
+  const [state, action, pending] = useActionState(deleteDailySale, initial);
+  useActionToast(state, { success: "Sale deleted" });
   return (
     <form action={action} className="inline">
       <input type="hidden" name="id" value={id} />

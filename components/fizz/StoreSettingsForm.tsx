@@ -6,6 +6,7 @@ import { formatDocNumber } from "@/lib/store/format";
 import { CURRENCIES } from "@/lib/store/currencies";
 import { COUNTRIES } from "@/lib/store/countries";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 import type { Store } from "@/lib/db/schema";
 
 const initial: StoreState = { ok: false };
@@ -65,6 +66,7 @@ function Section({
 
 export default function StoreSettingsForm({ store }: { store: Store }) {
   const [state, action, pending] = useActionState(updateStore, initial);
+  useActionToast(state, { success: "Settings saved" });
   const saved = useSavedFlag(state.ok);
 
   // Live preview state for the numbering section.

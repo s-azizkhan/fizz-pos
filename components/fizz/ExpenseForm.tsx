@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { createExpense, type ExpenseState } from "@/app/actions/expenses";
 import { EXPENSE_CATEGORIES, expenseMethod } from "@/lib/db/schema";
 import { formatMoney } from "@/lib/store/format";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 
 const initial: ExpenseState = { ok: false };
 
@@ -33,6 +34,7 @@ export default function ExpenseForm({
   onSuccess?: () => void;
 }) {
   const [state, action, pending] = useActionState(createExpense, initial);
+  useActionToast(state, { success: "Expense recorded" });
   const [saved, setSaved] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [amount, setAmount] = useState("");

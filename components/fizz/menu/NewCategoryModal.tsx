@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createCategory } from "@/app/actions/menu";
+import { toast } from "@/lib/store/toast";
 import IconPicker from "./IconPicker";
 
 const inputCls =
@@ -35,8 +36,12 @@ export default function NewCategoryModal({
       if (res.ok) {
         setNewName("");
         setNewIcon("☕");
+        toast.success("Category added");
         onClose();
-      } else setError(res.error ?? "Failed");
+      } else {
+        setError(res.error ?? "Failed");
+        toast.error(res.error ?? "Couldn't add category");
+      }
     });
   }
 

@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { updateMenuAppearance, type MenuState } from "@/app/actions/menu";
 import { MENU_FONTS, MENU_FONT_SCALES } from "@/lib/db/schema";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 import type { Store } from "@/lib/db/schema";
 
 const initial: MenuState = { ok: false };
@@ -36,6 +37,7 @@ export default function PublicMenuModal({
   onClose: () => void;
 }) {
   const [state, action, pending] = useActionState(updateMenuAppearance, initial);
+  useActionToast(state, { success: "Menu settings saved" });
   const saved = useSavedFlag(state.ok);
 
   const [slug, setSlug] = useState(store.menuSlug ?? (slugify(store.name) || "menu"));

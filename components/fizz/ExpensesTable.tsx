@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { deleteExpense, type ExpenseState } from "@/app/actions/expenses";
 import { formatMoney } from "@/lib/store/format";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
+import { useActionToast } from "@/lib/hooks/useActionToast";
 import type { ExpenseRow } from "@/lib/store/expenses";
 
 const initial: ExpenseState = { ok: false };
@@ -36,7 +37,8 @@ function fmtDateTime(d: Date | string): string {
 }
 
 function DeleteButton({ id }: { id: string }) {
-  const [, action, pending] = useActionState(deleteExpense, initial);
+  const [state, action, pending] = useActionState(deleteExpense, initial);
+  useActionToast(state, { success: "Expense deleted" });
   return (
     <form action={action} className="inline">
       <input type="hidden" name="id" value={id} />

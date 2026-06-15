@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { saveRecipe, type RecipeState } from "@/app/actions/recipe";
+import { toast } from "@/lib/store/toast";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { MenuItemWithVariants } from "@/lib/store/menu";
 import type { RecipeComponent } from "@/lib/db/schema";
@@ -71,8 +72,13 @@ export default function RecipeEditor({
 
     startTransition(async () => {
       const res: RecipeState = await saveRecipe({ ok: false }, fd);
-      if (res.ok) onDone();
-      else setError(res.error ?? "Failed");
+      if (res.ok) {
+        toast.success("Recipe saved");
+        onDone();
+      } else {
+        setError(res.error ?? "Failed");
+        toast.error(res.error ?? "Couldn't save recipe");
+      }
     });
   }
 
