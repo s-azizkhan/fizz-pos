@@ -5,6 +5,7 @@ import MenuManager from "@/components/fizz/menu/MenuManager";
 import PublicMenuModal from "@/components/fizz/menu/PublicMenuModal";
 import PublicMenuSectionsModal from "@/components/fizz/menu/PublicMenuSectionsModal";
 import NewCategoryModal from "@/components/fizz/menu/NewCategoryModal";
+import ExportMenuPdfModal from "@/components/fizz/menu/ExportMenuPdfModal";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { RecipeComponent, Store } from "@/lib/db/schema";
@@ -25,6 +26,7 @@ export default function MenuPageClient({
   const [isPublicMenuOpen, setIsPublicMenuOpen] = useState(false);
   const [isPublicSectionsOpen, setIsPublicSectionsOpen] = useState(false);
   const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false);
+  const [isExportPdfOpen, setIsExportPdfOpen] = useState(false);
 
   const shapeKey = categories
     .map((c) => `${c.id}:${c.items.map((i) => i.id).join(",")}`)
@@ -62,6 +64,12 @@ export default function MenuPageClient({
         >
           Menu Sections
         </button>
+        <button
+          onClick={() => setIsExportPdfOpen(true)}
+          className="rounded-fizz border border-ink-line px-5 py-2.5 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+        >
+          Printable PDF
+        </button>
       </div>
 
       <div className="mt-10">
@@ -88,6 +96,10 @@ export default function MenuPageClient({
       <NewCategoryModal
         isOpen={isNewCategoryOpen}
         onClose={() => setIsNewCategoryOpen(false)}
+      />
+      <ExportMenuPdfModal
+        isOpen={isExportPdfOpen}
+        onClose={() => setIsExportPdfOpen(false)}
       />
     </div>
   );
