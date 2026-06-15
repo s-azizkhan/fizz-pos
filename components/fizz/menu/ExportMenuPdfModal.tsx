@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   MENU_COLOR_SCHEMES,
   DEFAULT_MENU_COLOR_SCHEME,
@@ -14,9 +14,27 @@ import {
   DEFAULT_MENU_BG_PACK,
 } from "@/components/fizz/menu/bg-packs";
 
-// Picks a color scheme + layout + background, shows a live preview (the real
-// /menu-pdf route in an embed iframe), then opens it full-screen for browser
-// print / Save-as-PDF.
+type Combo = {
+  scheme: string;
+  layout: string;
+  pack: string;
+  op: number;
+  fs: number;
+};
+
+// Curated one-tap combos — the fast path. Mixing your own is still one row away.
+const PRESETS: { name: string; combo: Combo }[] = [
+  { name: "Fizz Classic", combo: { scheme: "fizz", layout: "modern", pack: "bubbles", op: 14, fs: 100 } },
+  { name: "Diner Cards", combo: { scheme: "diner", layout: "cards", pack: "cafe", op: 12, fs: 100 } },
+  { name: "Neon Receipt", combo: { scheme: "vapor", layout: "receipt", pack: "none", op: 0, fs: 95 } },
+  { name: "Fine Dining", combo: { scheme: "cream", layout: "elegant", pack: "none", op: 0, fs: 105 } },
+  { name: "Street Poster", combo: { scheme: "punch", layout: "poster", pack: "cafe", op: 18, fs: 100 } },
+  { name: "Chalk Board", combo: { scheme: "chalk", layout: "bistro", pack: "brew", op: 16, fs: 100 } },
+  { name: "Sepia Press", combo: { scheme: "sepia", layout: "boutique", pack: "bakery", op: 14, fs: 100 } },
+];
+
+const pick = <T,>(arr: T[], i: number) => arr[i % arr.length];
+
 export default function ExportMenuPdfModal({
   isOpen,
   onClose,
@@ -24,230 +42,324 @@ export default function ExportMenuPdfModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const [schemeId, setSchemeId] = useState(DEFAULT_MENU_COLOR_SCHEME);
-  const [layoutId, setLayoutId] = useState(DEFAULT_MENU_LAYOUT);
-  const [packId, setPackId] = useState(DEFAULT_MENU_BG_PACK);
-  // Live slider values (label/thumb) vs. committed values (drive the preview
-  // iframe). Commit on release so dragging doesn't reload the iframe per step.
-  const [op, setOp] = useState(16);
+  const [scheme, setScheme] = useState(DEFAULT_MENU_COLOR_SCHEME);
+  const [layout, setLayout] = useState(DEFAULT_MENU_LAYOUT);
+  const [pack, setPack] = useState(DEFAULT_MENU_BG_PACK);
+  const [op, setOp] = useState(14);
   const [fs, setFs] = useState(100);
-  const [committed, setCommitted] = useState({ op: 16, fs: 100 });
-  const commit = () => setCommitted({ op, fs });
+  // Committed slider values drive the preview iframe (commit on release so a
+  // drag doesn't reload it per step). Scheme/layout/pack reload immediately.
+  const [cOp, setCOp] = useState(14);
+  const [cFs, setCFs] = useState(100);
+
+  // Bump this to force a fresh preview src even when slider commit lands on the
+  // same value (e.g. after a preset/shuffle).
+  const [rev, setRev] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   if (!isOpen) return null;
 
   const qs = (o: number, f: number) =>
-    `scheme=${schemeId}&layout=${layoutId}&pack=${packId}&op=${o}&fs=${f}`;
-  const previewSrc = `/menu-pdf?${qs(committed.op, committed.fs)}&embed=1`;
-  const openPrintable = () =>
+    `scheme=${scheme}&layout=${layout}&pack=${pack}&op=${o}&fs=${f}`;
+  const previewSrc = `/menu-pdf?${qs(cOp, cFs)}&embed=1`;
+
+  const applyCombo = (c: Combo) => {
+    setScheme(c.scheme);
+    setLayout(c.layout);
+    setPack(c.pack);
+    setOp(c.op);
+    setFs(c.fs);
+    setCOp(c.op);
+    setCFs(c.fs);
+    setRev((r) => r + 1);
+  };
+
+  const shuffle = () => {
+    // Click-time randomness (not render) — SSR stays deterministic.
+    const r = () => Math.floor(Math.random() * 1e6);
+    applyCombo({
+      scheme: pick(MENU_COLOR_SCHEMES, r()).id,
+      layout: pick(MENU_LAYOUTS, r()).id,
+      pack: pick(MENU_BG_PACKS, r()).id,
+      op: 8 + (r() % 5) * 6,
+      fs: 90 + (r() % 5) * 5,
+    });
+  };
+
+  const commitOp = () => setCOp(op);
+  const commitFs = () => setCFs(fs);
+
+  const printNow = () => iframeRef.current?.contentWindow?.print();
+  const openFull = () =>
     window.open(`/menu-pdf?${qs(op, fs)}`, "_blank", "noopener");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-fizz bg-ink shadow-lg">
-        <div className="flex items-start justify-between border-b border-ink-line p-6">
+      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-fizz border border-ink-line bg-ink shadow-lg">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-4 border-b border-ink-line px-6 py-5">
           <div>
             <h2 className="font-display text-2xl font-bold tracking-tight">
               Printable menu
             </h2>
-            <p className="mt-1 text-sm text-steam">
-              Pick a style, preview it, then print or save as PDF.
+            <p className="mt-0.5 text-sm text-steam">
+              Tap a preset, or mix your own — then print.
             </p>
           </div>
-          <button
-            onClick={onClose}
-            className="text-2xl text-steam hover:text-fizz"
-            aria-label="Close modal"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={shuffle}
+              className="rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+              title="Random combo"
+            >
+              🎲 Shuffle
+            </button>
+            <button
+              onClick={onClose}
+              className="text-2xl leading-none text-steam hover:text-fizz"
+              aria-label="Close modal"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 gap-0 sm:grid-cols-[260px_1fr]">
-          {/* Pickers */}
-          <div className="overflow-y-auto border-b border-ink-line p-4 sm:border-b-0 sm:border-r">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-              Color scheme
-            </p>
-            <div className="flex flex-col gap-2">
-              {MENU_COLOR_SCHEMES.map((s) => {
-                const active = s.id === schemeId;
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSchemeId(s.id)}
-                    aria-pressed={active}
-                    className={`flex items-start gap-3 rounded-fizz border p-3 text-left transition-colors ${
-                      active
-                        ? "border-fizz bg-fizz/10"
-                        : "border-ink-line hover:border-fizz/50"
-                    }`}
-                  >
-                    <span
-                      className="mt-0.5 h-9 w-9 shrink-0 rounded-fizz border border-ink-line"
-                      style={{ background: s.bg }}
-                    >
-                      <span
-                        className="block h-full w-full rounded-fizz"
-                        style={{
-                          background: `linear-gradient(135deg, ${s.bg} 55%, ${s.accent} 55%)`,
-                        }}
-                      />
-                    </span>
-                    <span className="min-w-0">
-                      <span
-                        className={`block text-sm font-semibold ${
-                          active ? "text-fizz" : "text-cream"
-                        }`}
-                      >
-                        {s.name}
-                      </span>
-                      <span className="mt-0.5 block text-xs leading-snug text-steam">
-                        {s.blurb}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="mb-3 mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-              Layout
-            </p>
-            <div className="flex flex-col gap-2">
-              {MENU_LAYOUTS.map((l) => {
-                const active = l.id === layoutId;
-                return (
-                  <button
-                    key={l.id}
-                    type="button"
-                    onClick={() => setLayoutId(l.id)}
-                    aria-pressed={active}
-                    className={`rounded-fizz border p-3 text-left transition-colors ${
-                      active
-                        ? "border-fizz bg-fizz/10"
-                        : "border-ink-line hover:border-fizz/50"
-                    }`}
-                  >
-                    <span
-                      className={`block text-sm font-semibold ${
-                        active ? "text-fizz" : "text-cream"
-                      }`}
-                    >
-                      {l.name}
-                    </span>
-                    <span className="mt-0.5 block text-xs leading-snug text-steam">
-                      {l.blurb}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <p className="mb-3 mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-              Background
-            </p>
-            <div className="flex flex-col gap-2">
-              {MENU_BG_PACKS.map((p) => {
-                const active = p.id === packId;
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setPackId(p.id)}
-                    aria-pressed={active}
-                    className={`rounded-fizz border p-3 text-left transition-colors ${
-                      active
-                        ? "border-fizz bg-fizz/10"
-                        : "border-ink-line hover:border-fizz/50"
-                    }`}
-                  >
-                    <span
-                      className={`block text-sm font-semibold ${
-                        active ? "text-fizz" : "text-cream"
-                      }`}
+        <div className="grid min-h-0 flex-1 sm:grid-cols-[300px_1fr]">
+          {/* Controls */}
+          <div className="flex flex-col gap-5 overflow-y-auto border-b border-ink-line p-5 sm:border-b-0 sm:border-r">
+            {/* Presets */}
+            <Section label="Presets">
+              <div className="flex flex-wrap gap-2">
+                {PRESETS.map((p) => {
+                  const active =
+                    p.combo.scheme === scheme &&
+                    p.combo.layout === layout &&
+                    p.combo.pack === pack;
+                  return (
+                    <Chip
+                      key={p.name}
+                      active={active}
+                      onClick={() => applyCombo(p.combo)}
                     >
                       {p.name}
-                    </span>
-                    <span className="mt-0.5 block text-xs leading-snug text-steam">
-                      {p.blurb}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                    </Chip>
+                  );
+                })}
+              </div>
+            </Section>
 
-            <p className="mb-3 mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-              Menu font size · {fs}%
-            </p>
-            <input
-              type="range"
-              min={80}
-              max={140}
-              step={5}
-              value={fs}
-              onChange={(e) => setFs(Number(e.target.value))}
-              onMouseUp={commit}
-              onTouchEnd={commit}
-              onKeyUp={commit}
-              className="w-full accent-[#C6F432]"
-              aria-label="Menu font size"
-            />
+            {/* Color scheme — visual swatches */}
+            <Section label="Color">
+              <div className="flex flex-wrap gap-2">
+                {MENU_COLOR_SCHEMES.map((s) => (
+                  <Chip
+                    key={s.id}
+                    active={s.id === scheme}
+                    onClick={() => setScheme(s.id)}
+                    title={s.blurb}
+                  >
+                    <span
+                      className="h-4 w-4 shrink-0 rounded-full border border-ink-line"
+                      style={{
+                        background: `linear-gradient(135deg, ${s.bg} 50%, ${s.accent} 50%)`,
+                      }}
+                    />
+                    {s.name}
+                  </Chip>
+                ))}
+              </div>
+            </Section>
 
-            {packId !== "none" && (
-              <>
-                <p className="mb-3 mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-                  Background opacity · {op}%
-                </p>
-                <input
-                  type="range"
+            {/* Layout */}
+            <Section label="Layout">
+              <div className="flex flex-wrap gap-2">
+                {MENU_LAYOUTS.map((l) => (
+                  <Chip
+                    key={l.id}
+                    active={l.id === layout}
+                    onClick={() => setLayout(l.id)}
+                    title={l.blurb}
+                  >
+                    {l.name}
+                  </Chip>
+                ))}
+              </div>
+            </Section>
+
+            {/* Background */}
+            <Section label="Background">
+              <div className="flex flex-wrap gap-2">
+                {MENU_BG_PACKS.map((p) => (
+                  <Chip
+                    key={p.id}
+                    active={p.id === pack}
+                    onClick={() => setPack(p.id)}
+                    title={p.blurb}
+                  >
+                    {p.name}
+                  </Chip>
+                ))}
+              </div>
+            </Section>
+
+            {/* Fine-tune */}
+            <Section label="Fine-tune">
+              <Slider
+                label="Font size"
+                value={fs}
+                min={80}
+                max={140}
+                step={5}
+                suffix="%"
+                onChange={setFs}
+                onCommit={commitFs}
+              />
+              {pack !== "none" && (
+                <Slider
+                  label="Background"
+                  value={op}
                   min={0}
                   max={60}
                   step={2}
-                  value={op}
-                  onChange={(e) => setOp(Number(e.target.value))}
-                  onMouseUp={commit}
-                  onTouchEnd={commit}
-                  onKeyUp={commit}
-                  className="w-full accent-[#C6F432]"
-                  aria-label="Background opacity"
+                  suffix="%"
+                  onChange={setOp}
+                  onCommit={commitOp}
                 />
-              </>
-            )}
+              )}
+            </Section>
           </div>
 
           {/* Live preview */}
           <div className="min-h-0 overflow-hidden bg-[#4a4a4a] p-4">
             <iframe
-              key={`${schemeId}-${layoutId}-${packId}-${committed.op}-${committed.fs}`}
+              ref={iframeRef}
+              key={`${scheme}-${layout}-${pack}-${cOp}-${cFs}-${rev}`}
               src={previewSrc}
               title="Menu preview"
-              className="h-[60vh] w-full rounded-fizz border border-ink-line bg-white sm:h-full"
+              className="h-[58vh] w-full rounded-fizz border border-ink-line bg-white sm:h-full"
             />
           </div>
         </div>
 
-        <div className="flex items-center gap-4 border-t border-ink-line p-6">
+        {/* Footer */}
+        <div className="flex flex-wrap items-center gap-3 border-t border-ink-line px-6 py-4">
           <button
             type="button"
-            onClick={openPrintable}
+            onClick={printNow}
             className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105"
           >
-            Open &amp; print →
+            Print / Save PDF
           </button>
-          <p className="text-sm text-steam">
-            Opens full-screen — use your browser’s “Save as PDF”.
+          <button
+            type="button"
+            onClick={openFull}
+            className="rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+          >
+            Open full ↗
+          </button>
+          <p className="hidden text-sm text-steam sm:block">
+            Print uses your browser’s “Save as PDF”.
           </p>
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="ml-auto rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
             Close
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function Section({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
+
+function Chip({
+  active,
+  onClick,
+  title,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      aria-pressed={active}
+      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? "border-fizz bg-fizz/10 text-fizz"
+          : "border-ink-line text-cream hover:border-fizz/50"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Slider({
+  label,
+  value,
+  min,
+  max,
+  step,
+  suffix,
+  onChange,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  suffix: string;
+  onChange: (v: number) => void;
+  onCommit: () => void;
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="flex items-center justify-between text-sm text-cream">
+        {label}
+        <span className="rounded-full bg-ink-soft px-2 py-0.5 text-xs font-semibold text-fizz">
+          {value}
+          {suffix}
+        </span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        onMouseUp={onCommit}
+        onTouchEnd={onCommit}
+        onKeyUp={onCommit}
+        className="w-full accent-[#C6F432]"
+        aria-label={label}
+      />
+    </label>
   );
 }
