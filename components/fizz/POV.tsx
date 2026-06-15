@@ -23,10 +23,10 @@ const BEATS = [
 
 export default function POV() {
   return (
-    <section id="how" className="border-b border-ink-line">
+    <section id="vision" className="border-b border-ink-line">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-          How it works
+          The vision
         </div>
         <h2 className="font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
           One nervous system for the whole café

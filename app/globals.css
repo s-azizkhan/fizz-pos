@@ -56,3 +56,68 @@ body {
   animation: rise linear infinite;
   opacity: 0;
 }
+
+/* ===== Landing-page motion (deterministic, SSR-safe) ===== */
+
+/* Soft lime glow behind the hero — effervescent, not a SaaS gradient. */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.08); }
+}
+.fizz-glow {
+  background: radial-gradient(
+    closest-side,
+    rgba(198, 244, 50, 0.22),
+    rgba(198, 244, 50, 0.06) 60%,
+    transparent 75%
+  );
+  animation: glow-pulse 7s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* Infinite logo/trust marquee. Track is duplicated; shift by half. */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.fizz-marquee { animation: marquee 26s linear infinite; }
+
+/* Gentle float for the floating product mock. */
+@keyframes float-y {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.fizz-float { animation: float-y 6s ease-in-out infinite; }
+
+/* Stock bar draining then refilling — the "live deduct" beat. */
+@keyframes drain {
+  0% { width: 92%; }
+  45% { width: 28%; }
+  55% { width: 28%; }
+  100% { width: 92%; }
+}
+.fizz-drain { animation: drain 5s ease-in-out infinite; }
+
+/* New line popping onto the ticket. */
+@keyframes pop-in {
+  0%, 12% { opacity: 0; transform: translateY(6px); }
+  22%, 100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Orbiting dot on the loop diagram. */
+@keyframes orbit {
+  from { transform: rotate(0deg) translateX(var(--orbit-r)) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(var(--orbit-r)) rotate(-360deg); }
+}
+.fizz-orbit { animation: orbit 9s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fizz-glow,
+  .fizz-marquee,
+  .fizz-float,
+  .fizz-drain,
+  .fizz-orbit,
+  .fizz-bubble {
+    animation: none !important;
+  }
+}

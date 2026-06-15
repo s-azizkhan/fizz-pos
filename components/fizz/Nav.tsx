@@ -4,7 +4,7 @@ import { useUi } from "@/lib/store/ui";
 
 const LINKS = [
   { href: "#problem", label: "The problem" },
-  { href: "#how", label: "How it works" },
+  { href: "#how", label: "The loop" },
   { href: "#why", label: "Why Fizz" },
 ];
 

@@ -1,9 +1,12 @@
 import Nav from "@/components/fizz/Nav";
 import Hero from "@/components/fizz/Hero";
+import Marquee from "@/components/fizz/landing/Marquee";
 import FromTo from "@/components/fizz/FromTo";
-import POV from "@/components/fizz/POV";
+import Loop from "@/components/fizz/landing/Loop";
 import WhyFizz from "@/components/fizz/WhyFizz";
-import WaitlistForm from "@/components/fizz/WaitlistForm";
+import Stats from "@/components/fizz/landing/Stats";
+import POV from "@/components/fizz/POV";
+import Cta from "@/components/fizz/landing/Cta";
 import Footer from "@/components/fizz/Footer";
 
 export default function Home() {
@@ -12,25 +15,13 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
+        <Marquee />
         <FromTo />
-        <POV />
+        <Loop />
         <WhyFizz />
-
-        <section className="border-b border-ink-line">
-          <div className="mx-auto max-w-6xl px-6 py-24">
-            <h2 className="max-w-[20ch] font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
-              Stop guessing. Get early access to{" "}
-              <span className="text-fizz">Fizz</span>.
-            </h2>
-            <p className="mt-4 max-w-[55ch] text-lg text-steam">
-              We&apos;re onboarding independent cafés now. Drop your email and
-              we&apos;ll pour you a spot.
-            </p>
-            <div className="mt-8 max-w-2xl">
-              <WaitlistForm />
-            </div>
-          </div>
-        </section>
+        <Stats />
+        <POV />
+        <Cta />
       </main>
       <Footer />
     </>
