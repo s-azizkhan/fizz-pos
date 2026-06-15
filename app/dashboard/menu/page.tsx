@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getStore } from "@/lib/store/data";
 import { getFullMenu } from "@/lib/store/menu";
+import { listRecipeIngredients, recipesByMenuItem } from "@/lib/store/recipe";
 import MenuPageClient from "@/components/fizz/menu/MenuPageClient";
 
 export const metadata: Metadata = {
@@ -14,9 +15,11 @@ export default async function MenuPage() {
   const user = await getCurrentUser();
   if (user.role !== "admin" && user.role !== "manager") redirect("/dashboard");
 
-  const [store, categories, hdrs] = await Promise.all([
+  const [store, categories, ingredients, recipes, hdrs] = await Promise.all([
     getStore(),
     getFullMenu(),
+    listRecipeIngredients(),
+    recipesByMenuItem(),
     headers(),
   ]);
 
@@ -25,6 +28,12 @@ export default async function MenuPage() {
   const origin = `${proto}://${host}`;
 
   return (
-    <MenuPageClient store={store} categories={categories} origin={origin} />
+    <MenuPageClient
+      store={store}
+      categories={categories}
+      ingredients={ingredients}
+      recipes={recipes}
+      origin={origin}
+    />
   );
 }

@@ -14,10 +14,13 @@ import {
 import { formatMoney } from "@/lib/store/format";
 import { MenuCategoryIconGlyph } from "./category-icons";
 import IconPicker from "./IconPicker";
+import RecipeEditor from "./RecipeEditor";
 import type {
   MenuCategoryWithItems,
   MenuItemWithVariants,
 } from "@/lib/store/menu";
+import type { RecipeIngredient } from "@/lib/store/recipe";
+import type { RecipeComponent } from "@/lib/db/schema";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -208,16 +211,32 @@ function ItemRow({
   item,
   categoryId,
   currency,
+  ingredients,
+  recipe,
 }: {
   item: MenuItemWithVariants;
   categoryId: string;
   currency: string;
+  ingredients: RecipeIngredient[];
+  recipe: RecipeComponent[];
 }) {
   const [editing, setEditing] = useState(false);
+  const [recipeOpen, setRecipeOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   if (editing) {
     return <ItemForm categoryId={categoryId} item={item} currency={currency} onDone={() => setEditing(false)} />;
+  }
+
+  if (recipeOpen) {
+    return (
+      <RecipeEditor
+        item={item}
+        recipe={recipe}
+        ingredients={ingredients}
+        onDone={() => setRecipeOpen(false)}
+      />
+    );
   }
 
   return (
@@ -252,6 +271,18 @@ function ItemRow({
         >
           {item.available ? "Hide" : "Show"}
         </button>
+        <button
+          type="button"
+          onClick={() => setRecipeOpen(true)}
+          className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+            recipe.length > 0
+              ? "border-fizz/50 text-fizz hover:border-fizz"
+              : "border-ink-line text-steam hover:border-fizz hover:text-fizz"
+          }`}
+          title="Map this item to stock so sales auto-deduct"
+        >
+          Recipe{recipe.length > 0 ? ` · ${recipe.length}` : ""}
+        </button>
         <button type="button" onClick={() => setEditing(true)} className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam hover:border-fizz hover:text-fizz">
           Edit
         </button>
@@ -278,12 +309,16 @@ function CategoryCard({
   index,
   count,
   onMove,
+  ingredients,
+  recipes,
 }: {
   category: MenuCategoryWithItems;
   currency: string;
   index: number;
   count: number;
   onMove: (dir: -1 | 1) => void;
+  ingredients: RecipeIngredient[];
+  recipes: Record<string, RecipeComponent[]>;
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(category.name);
@@ -352,7 +387,14 @@ function CategoryCard({
 
       <div className="mt-5 flex flex-col gap-3">
         {category.items.map((it) => (
-          <ItemRow key={it.id} item={it} categoryId={category.id} currency={currency} />
+          <ItemRow
+            key={it.id}
+            item={it}
+            categoryId={category.id}
+            currency={currency}
+            ingredients={ingredients}
+            recipe={recipes[it.id] ?? []}
+          />
         ))}
         {adding ? (
           <ItemForm categoryId={category.id} currency={currency} onDone={() => setAdding(false)} />
@@ -369,9 +411,13 @@ function CategoryCard({
 export default function MenuManager({
   categories: initial,
   currency,
+  ingredients,
+  recipes,
 }: {
   categories: MenuCategoryWithItems[];
   currency: string;
+  ingredients: RecipeIngredient[];
+  recipes: Record<string, RecipeComponent[]>;
 }) {
   const [categories, setCategories] = useState(initial);
   const [, startTransition] = useTransition();
@@ -402,6 +448,8 @@ export default function MenuManager({
             index={i}
             count={categories.length}
             onMove={(dir) => move(i, dir)}
+            ingredients={ingredients}
+            recipes={recipes}
           />
         ))
       )}

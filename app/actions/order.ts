@@ -13,6 +13,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/dal";
 import { STORE_ID } from "@/lib/store/constants";
 import { nextOrderNumber, getStore } from "@/lib/store/data";
+import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
 
 export type CheckoutResult =
   | {
@@ -235,6 +236,9 @@ export async function checkout(payload: unknown): Promise<CheckoutResult> {
         id = o.id;
       }
       await writeItems(tx, id, lines);
+      // Settling is the point of sale — burn the recipe stock now. Open tabs
+      // (saveOrder) deliberately don't deduct, so this fires exactly once.
+      await applyRecipeDeductions(tx, lines, user.id);
     });
 
     bumpPaths();
@@ -274,4 +278,5 @@ function bumpPaths() {
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/till");
   revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/inventory");
 }

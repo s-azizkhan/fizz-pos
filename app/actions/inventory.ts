@@ -12,8 +12,34 @@ import {
 import { getCurrentUser } from "@/lib/auth/dal";
 import { STORE_ID } from "@/lib/store/constants";
 import { parseId } from "@/lib/store/ids";
+import {
+  getInventoryItem,
+  listMovements,
+  type StockMovementRow,
+} from "@/lib/store/inventory";
 
 export type InventoryState = { ok: boolean; error?: string };
+
+export type MovementsResult =
+  | { ok: true; movements: StockMovementRow[] }
+  | { ok: false; error: string };
+
+// Load the movement log for one item, on demand from the history modal. Any
+// signed-in user who can see inventory (non-staff, enforced by the page) may
+// read it; we re-check the item belongs to this store.
+export async function fetchMovements(itemId: unknown): Promise<MovementsResult> {
+  await getCurrentUser();
+  const id = parseId(itemId as never);
+  if (!id) return { ok: false, error: "Invalid item." };
+  const item = await getInventoryItem(id);
+  if (!item) return { ok: false, error: "Unknown item." };
+  try {
+    const movements = await listMovements(id, 200);
+    return { ok: true, movements };
+  } catch {
+    return { ok: false, error: "Could not load the log." };
+  }
+}
 
 // Inventory is shaped by admins and managers; staff have read-only access.
 async function requireEditor(): Promise<{ id: string } | { error: string }> {

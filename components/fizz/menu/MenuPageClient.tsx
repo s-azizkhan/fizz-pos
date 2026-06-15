@@ -6,15 +6,20 @@ import PublicMenuModal from "@/components/fizz/menu/PublicMenuModal";
 import PublicMenuSectionsModal from "@/components/fizz/menu/PublicMenuSectionsModal";
 import NewCategoryModal from "@/components/fizz/menu/NewCategoryModal";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
-import type { Store } from "@/lib/db/schema";
+import type { RecipeIngredient } from "@/lib/store/recipe";
+import type { RecipeComponent, Store } from "@/lib/db/schema";
 
 export default function MenuPageClient({
   store,
   categories,
+  ingredients,
+  recipes,
   origin,
 }: {
   store: Store;
   categories: MenuCategoryWithItems[];
+  ingredients: RecipeIngredient[];
+  recipes: Record<string, RecipeComponent[]>;
   origin: string;
 }) {
   const [isPublicMenuOpen, setIsPublicMenuOpen] = useState(false);
@@ -60,7 +65,13 @@ export default function MenuPageClient({
       </div>
 
       <div className="mt-10">
-        <MenuManager key={shapeKey} categories={categories} currency={store.currency} />
+        <MenuManager
+          key={shapeKey}
+          categories={categories}
+          currency={store.currency}
+          ingredients={ingredients}
+          recipes={recipes}
+        />
       </div>
 
       <PublicMenuModal

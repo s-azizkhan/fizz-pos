@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Modal from "@/components/fizz/Modal";
 import InventoryItemForm from "./InventoryItemForm";
 import StockMovementForm from "./StockMovementForm";
+import StockHistory from "./StockHistory";
 import { deleteInventoryItem } from "@/app/actions/inventory";
 import { INVENTORY_UNIT_LABELS } from "@/lib/db/schema";
 import { formatMoney } from "@/lib/store/format";
@@ -18,7 +19,11 @@ type ModalState =
   | { kind: "none" }
   | { kind: "new" }
   | { kind: "edit"; item: InventoryItemRow }
-  | { kind: "move"; item: InventoryItemRow };
+  | { kind: "move"; item: InventoryItemRow }
+  | { kind: "history"; item: InventoryItemRow };
+
+const nameBtn =
+  "text-left font-medium text-cream underline decoration-ink-line decoration-dotted underline-offset-4 transition-colors hover:text-fizz hover:decoration-fizz";
 
 function DeleteButton({ id }: { id: string }) {
   const [pending, startTransition] = useTransition();
@@ -80,7 +85,9 @@ export default function InventoryManager({
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-cream">{r.name}</span>
+                      <button type="button" onClick={() => setModal({ kind: "history", item: r })} className={nameBtn}>
+                        {r.name}
+                      </button>
                       {r.lowStock && (
                         <span className="rounded-full border border-[#E2655A]/50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#E2655A]">
                           Low
@@ -152,7 +159,9 @@ export default function InventoryManager({
                   <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
                     <td className={cls}>
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-cream">{r.name}</span>
+                        <button type="button" onClick={() => setModal({ kind: "history", item: r })} className={nameBtn}>
+                          {r.name}
+                        </button>
                         {r.lowStock && (
                           <span className="rounded-full border border-[#E2655A]/50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#E2655A]">
                             Low
@@ -200,6 +209,9 @@ export default function InventoryManager({
         {modal.kind === "move" && (
           <StockMovementForm item={modal.item} onSuccess={close} />
         )}
+      </Modal>
+      <Modal open={modal.kind === "history"} onClose={close}>
+        {modal.kind === "history" && <StockHistory item={modal.item} />}
       </Modal>
     </div>
   );
