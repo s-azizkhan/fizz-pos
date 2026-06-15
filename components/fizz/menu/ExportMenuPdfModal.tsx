@@ -13,6 +13,11 @@ import {
   MENU_BG_PACKS,
   DEFAULT_MENU_BG_PACK,
 } from "@/components/fizz/menu/bg-packs";
+import {
+  Chip,
+  ControlSection,
+  ValueSlider,
+} from "@/components/fizz/ui/controls";
 
 type Combo = {
   scheme: string;
@@ -129,7 +134,7 @@ export default function ExportMenuPdfModal({
           {/* Controls */}
           <div className="flex flex-col gap-5 overflow-y-auto border-b border-ink-line p-5 sm:border-b-0 sm:border-r">
             {/* Presets */}
-            <Section label="Presets">
+            <ControlSection label="Presets">
               <div className="flex flex-wrap gap-2">
                 {PRESETS.map((p) => {
                   const active =
@@ -147,10 +152,10 @@ export default function ExportMenuPdfModal({
                   );
                 })}
               </div>
-            </Section>
+            </ControlSection>
 
             {/* Color scheme — visual swatches */}
-            <Section label="Color">
+            <ControlSection label="Color">
               <div className="flex flex-wrap gap-2">
                 {MENU_COLOR_SCHEMES.map((s) => (
                   <Chip
@@ -169,10 +174,10 @@ export default function ExportMenuPdfModal({
                   </Chip>
                 ))}
               </div>
-            </Section>
+            </ControlSection>
 
             {/* Layout */}
-            <Section label="Layout">
+            <ControlSection label="Layout">
               <div className="flex flex-wrap gap-2">
                 {MENU_LAYOUTS.map((l) => (
                   <Chip
@@ -185,10 +190,10 @@ export default function ExportMenuPdfModal({
                   </Chip>
                 ))}
               </div>
-            </Section>
+            </ControlSection>
 
             {/* Background */}
-            <Section label="Background">
+            <ControlSection label="Background">
               <div className="flex flex-wrap gap-2">
                 {MENU_BG_PACKS.map((p) => (
                   <Chip
@@ -201,11 +206,11 @@ export default function ExportMenuPdfModal({
                   </Chip>
                 ))}
               </div>
-            </Section>
+            </ControlSection>
 
             {/* Fine-tune */}
-            <Section label="Fine-tune">
-              <Slider
+            <ControlSection label="Fine-tune">
+              <ValueSlider
                 label="Font size"
                 value={fs}
                 min={80}
@@ -216,7 +221,7 @@ export default function ExportMenuPdfModal({
                 onCommit={commitFs}
               />
               {pack !== "none" && (
-                <Slider
+                <ValueSlider
                   label="Background"
                   value={op}
                   min={0}
@@ -227,7 +232,7 @@ export default function ExportMenuPdfModal({
                   onCommit={commitOp}
                 />
               )}
-            </Section>
+            </ControlSection>
           </div>
 
           {/* Live preview */}
@@ -271,95 +276,5 @@ export default function ExportMenuPdfModal({
         </div>
       </div>
     </div>
-  );
-}
-
-function Section({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-2.5">
-      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  title,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  title?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      aria-pressed={active}
-      className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
-        active
-          ? "border-fizz bg-fizz/10 text-fizz"
-          : "border-ink-line text-cream hover:border-fizz/50"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Slider({
-  label,
-  value,
-  min,
-  max,
-  step,
-  suffix,
-  onChange,
-  onCommit,
-}: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  suffix: string;
-  onChange: (v: number) => void;
-  onCommit: () => void;
-}) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="flex items-center justify-between text-sm text-cream">
-        {label}
-        <span className="rounded-full bg-ink-soft px-2 py-0.5 text-xs font-semibold text-fizz">
-          {value}
-          {suffix}
-        </span>
-      </span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        onMouseUp={onCommit}
-        onTouchEnd={onCommit}
-        onKeyUp={onCommit}
-        className="w-full accent-[#C6F432]"
-        aria-label={label}
-      />
-    </label>
   );
 }

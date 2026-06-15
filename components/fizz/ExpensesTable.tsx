@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { deleteExpense, type ExpenseState } from "@/app/actions/expenses";
 import { formatMoney } from "@/lib/store/format";
+import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import type { ExpenseRow } from "@/lib/store/expenses";
 
 const initial: ExpenseState = { ok: false };
@@ -59,6 +60,8 @@ export default function ExpensesTable({
   currency: string;
   canDelete: boolean;
 }) {
+  const [cat, setCat] = useState<string>("all");
+
   if (rows.length === 0) {
     return (
       <div className="rounded-fizz border border-ink-line bg-ink-soft p-10 text-center text-steam">
@@ -67,13 +70,35 @@ export default function ExpensesTable({
     );
   }
 
+  const categories = Array.from(new Set(rows.map((r) => r.category)));
+  const shown = cat === "all" ? rows : rows.filter((r) => r.category === cat);
+  const total = shown.reduce((s, r) => s + Number(r.amount), 0);
+
   const cls = "px-4 py-3 text-left";
 
   return (
     <>
+      {/* Category filter */}
+      <ChipBar label="Category" className="mb-4">
+        <Chip active={cat === "all"} onClick={() => setCat("all")}>
+          All
+        </Chip>
+        {categories.map((c) => (
+          <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
+            {c}
+          </Chip>
+        ))}
+        <span className="ml-auto text-sm text-steam">
+          {shown.length} · {" "}
+          <span className="font-display font-semibold text-fizz">
+            {formatMoney(total.toFixed(2), currency)}
+          </span>
+        </span>
+      </ChipBar>
+
       {/* Mobile: stacked cards */}
       <ul className="flex flex-col gap-3 sm:hidden">
-        {rows.map((r) => (
+        {shown.map((r) => (
           <li
             key={r.id}
             className="rounded-fizz border border-ink-line bg-ink-soft p-4"
@@ -132,7 +157,7 @@ export default function ExpensesTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {shown.map((r) => (
               <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
                 <td className={`${cls} font-medium text-cream`}>{fmtDate(r.expenseDate)}</td>
                 <td className={cls}>

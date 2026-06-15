@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatMoney } from "@/lib/store/format";
 import { PRESET_LABELS, PRESET_ORDER, type RangePreset } from "@/lib/store/date-range";
+import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import type { Analytics, Metric, SeriesPoint, Slice } from "@/lib/store/analytics";
 
 // Percentage change between current and previous, guarding divide-by-zero.
@@ -70,31 +71,23 @@ export default function AnalyticsClient({
       </div>
 
       {/* Filter bar */}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
+      <ChipBar className="mt-6">
         {PRESET_ORDER.map((p) => (
-          <button
+          <Chip
             key={p}
+            active={preset === p && !showCustom}
             onClick={() => applyPreset(p)}
-            className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
-              preset === p && !showCustom
-                ? "border-fizz bg-fizz text-ink"
-                : "border-ink-line bg-ink-soft text-cream hover:border-fizz"
-            }`}
           >
             {PRESET_LABELS[p]}
-          </button>
+          </Chip>
         ))}
-        <button
+        <Chip
+          active={preset === "custom" || showCustom}
           onClick={() => setShowCustom((v) => !v)}
-          className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
-            preset === "custom" || showCustom
-              ? "border-fizz bg-fizz text-ink"
-              : "border-ink-line bg-ink-soft text-cream hover:border-fizz"
-          }`}
         >
           Custom range
-        </button>
-      </div>
+        </Chip>
+      </ChipBar>
 
       {showCustom && (
         <div className="mt-3 flex flex-wrap items-end gap-3 rounded-fizz border border-ink-line bg-ink-soft p-4">
@@ -159,22 +152,18 @@ export default function AnalyticsClient({
             </span>
           </div>
           {/* Chart-type toggle (stock-market style: candles) */}
-          <div className="flex gap-1 rounded-fizz border border-ink-line bg-ink p-1">
+          <ChipBar>
             {CHART_TYPES.map((c) => (
-              <button
+              <Chip
                 key={c.value}
+                active={chartType === c.value}
                 onClick={() => setChartType(c.value)}
                 title={c.label}
-                className={`rounded-[12px] px-3 py-1 text-xs font-semibold transition-colors ${
-                  chartType === c.value
-                    ? "bg-fizz text-ink"
-                    : "text-steam hover:text-cream"
-                }`}
               >
                 {c.label}
-              </button>
+              </Chip>
             ))}
-          </div>
+          </ChipBar>
         </div>
         {chartType === "candles" ? (
           <CandleChart data={analytics.trend} unit={analytics.trendUnit} money={money} />

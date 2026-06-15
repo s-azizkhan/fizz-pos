@@ -8,6 +8,7 @@ import StockHistory from "./StockHistory";
 import { deleteInventoryItem } from "@/app/actions/inventory";
 import { INVENTORY_UNIT_LABELS } from "@/lib/db/schema";
 import { formatMoney } from "@/lib/store/format";
+import { Chip, ChipBar, SearchInput } from "@/components/fizz/ui/controls";
 import type { InventoryItemRow } from "@/lib/store/inventory";
 
 const btnPrimary =
@@ -57,7 +58,22 @@ export default function InventoryManager({
   const [modal, setModal] = useState<ModalState>({ kind: "none" });
   const close = () => setModal({ kind: "none" });
 
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"all" | "low" | "ok">("all");
+  const [cat, setCat] = useState("all");
+
   const cls = "px-4 py-3 text-left align-middle";
+
+  const categories = Array.from(new Set(rows.map((r) => r.category)));
+  const lowCount = rows.filter((r) => r.lowStock).length;
+  const q = query.trim().toLowerCase();
+  const shown = rows.filter((r) => {
+    if (status === "low" && !r.lowStock) return false;
+    if (status === "ok" && r.lowStock) return false;
+    if (cat !== "all" && r.category !== cat) return false;
+    if (q && !`${r.name} ${r.sku ?? ""}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,9 +91,59 @@ export default function InventoryManager({
         </div>
       ) : (
         <>
+          {/* Filters */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <ChipBar>
+                <Chip active={status === "all"} onClick={() => setStatus("all")}>
+                  All
+                </Chip>
+                <Chip
+                  tone="danger"
+                  active={status === "low"}
+                  onClick={() => setStatus("low")}
+                >
+                  Low
+                  {lowCount > 0 && (
+                    <span className="rounded-full bg-[#E2655A]/15 px-1.5 text-xs">
+                      {lowCount}
+                    </span>
+                  )}
+                </Chip>
+                <Chip active={status === "ok"} onClick={() => setStatus("ok")}>
+                  In stock
+                </Chip>
+              </ChipBar>
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                placeholder="Search items…"
+                className="w-full sm:w-56"
+              />
+            </div>
+            {categories.length > 1 && (
+              <ChipBar label="Category">
+                <Chip active={cat === "all"} onClick={() => setCat("all")}>
+                  All
+                </Chip>
+                {categories.map((c) => (
+                  <Chip key={c} active={cat === c} onClick={() => setCat(c)}>
+                    {c}
+                  </Chip>
+                ))}
+              </ChipBar>
+            )}
+          </div>
+
+          {shown.length === 0 ? (
+            <div className="rounded-fizz border border-dashed border-ink-line bg-ink-soft/40 p-10 text-center text-steam">
+              No items match these filters.
+            </div>
+          ) : (
+            <>
           {/* Mobile: stacked cards */}
           <ul className="flex flex-col gap-3 sm:hidden">
-            {rows.map((r) => (
+            {shown.map((r) => (
               <li
                 key={r.id}
                 className="rounded-fizz border border-ink-line bg-ink-soft p-4"
@@ -155,7 +221,7 @@ export default function InventoryManager({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {shown.map((r) => (
                   <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
                     <td className={cls}>
                       <div className="flex items-center gap-2">
@@ -194,6 +260,8 @@ export default function InventoryManager({
               </tbody>
             </table>
           </div>
+            </>
+          )}
         </>
       )}
 

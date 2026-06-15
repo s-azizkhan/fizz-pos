@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatMoney } from "@/lib/store/format";
+import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import type { ItemMargin, MarginsSummary } from "@/lib/store/margins";
 
 type SortKey = "marginPct" | "profit" | "unitsSold" | "price" | "name";
@@ -114,36 +115,31 @@ export default function MarginsClient({
       </div>
 
       {summary.itemsWithoutCost > 0 && (
-        <button
-          onClick={() => setOnlyMissing((v) => !v)}
-          className={`mt-4 inline-flex items-center gap-2 rounded-fizz border px-4 py-2 text-sm transition-colors ${
-            onlyMissing
-              ? "border-[#E2655A] bg-[#E2655A]/10 text-[#E2655A]"
-              : "border-ink-line bg-ink-soft text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
-          }`}
-        >
-          ⚠ {summary.itemsWithoutCost} item
-          {summary.itemsWithoutCost === 1 ? "" : "s"} missing a cost
-          {onlyMissing ? " — showing only these" : " — click to filter"}
-        </button>
+        <ChipBar className="mt-4">
+          <Chip
+            tone="danger"
+            active={onlyMissing}
+            onClick={() => setOnlyMissing((v) => !v)}
+          >
+            ⚠ {summary.itemsWithoutCost} item
+            {summary.itemsWithoutCost === 1 ? "" : "s"} missing a cost
+            {onlyMissing ? " — showing only these" : " — filter"}
+          </Chip>
+        </ChipBar>
       )}
 
       {/* Sort */}
-      <div className="mt-6 flex flex-wrap gap-2">
+      <ChipBar label="Sort" className="mt-6">
         {SORTS.map((s) => (
-          <button
+          <Chip
             key={s.value}
+            active={sort === s.value}
             onClick={() => setSort(s.value)}
-            className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
-              sort === s.value
-                ? "border-fizz bg-fizz text-ink"
-                : "border-ink-line bg-ink-soft text-cream hover:border-fizz"
-            }`}
           >
             {s.label}
-          </button>
+          </Chip>
         ))}
-      </div>
+      </ChipBar>
 
       {/* Table */}
       {rows.length === 0 ? (

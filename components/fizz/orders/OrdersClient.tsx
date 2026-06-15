@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
 import { voidOrder } from "@/app/actions/order";
+import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import type { OrderRow, StatusFilter } from "./types";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -115,24 +116,22 @@ export default function OrdersClient({
       )}
 
       {/* Filters */}
-      <div className="mt-6 flex gap-2">
+      <ChipBar className="mt-6">
         {FILTERS.map((f) => (
-          <button
+          <Chip
             key={f.value}
+            active={filter === f.value}
             onClick={() => setFilter(f.value)}
-            className={`rounded-full border px-4 py-2 text-sm transition-colors ${
-              filter === f.value
-                ? "border-fizz bg-fizz text-ink"
-                : "border-ink-line bg-ink-soft text-cream hover:border-fizz"
-            }`}
           >
             {f.label}
             {f.value === "open" && counts.open > 0 && (
-              <span className="ml-1.5 opacity-70">{counts.open}</span>
+              <span className="rounded-full bg-fizz/15 px-1.5 text-xs">
+                {counts.open}
+              </span>
             )}
-          </button>
+          </Chip>
         ))}
-      </div>
+      </ChipBar>
 
       {/* Order cards */}
       {shown.length === 0 ? (
