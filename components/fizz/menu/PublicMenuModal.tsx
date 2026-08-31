@@ -54,8 +54,8 @@ export default function PublicMenuModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-fizz bg-ink p-8 shadow-lg">
-        <div className="flex items-center justify-between">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-fizz bg-ink shadow-lg">
+        <div className="flex items-center justify-between p-8 pb-0">
           <div>
             <h2 className="font-display text-2xl font-bold tracking-tight">Public menu</h2>
             <p className="mt-1 text-sm text-steam">
@@ -75,7 +75,8 @@ export default function PublicMenuModal({
         onSubmit={(e) => {
           e.preventDefault();
           save.mutate(fields(e.currentTarget));
-        }} className="mt-6 flex flex-col gap-6">
+        }} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto p-8">
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="flex flex-col gap-2 sm:col-span-2">
               <span className={labelCls}>Menu link</span>
@@ -247,8 +248,9 @@ export default function PublicMenuModal({
               </div>
             )}
           </div>
+          </div>
 
-          <div className="flex items-center gap-4 border-t border-ink-line pt-6">
+          <div className="flex items-center gap-4 border-t border-ink-line px-8 py-6">
             <button type="submit" disabled={save.isPending} className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
               {save.isPending ? "Saving…" : "Save menu settings"}
             </button>
