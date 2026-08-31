@@ -228,9 +228,11 @@ export default function PosTerminal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payOpen, receipt, variantFor, feesOpen, query, cart.count, visibleItems]);
 
-  // Focus search on mount for instant typing.
+  // Focus search on mount for instant typing — but only where there's a real
+  // pointer (mouse/trackpad = a keyboard too). On a touch till, autofocus
+  // throws up the on-screen keyboard over the menu grid before anyone asks.
   useEffect(() => {
-    searchRef.current?.focus();
+    if (window.matchMedia("(pointer: fine)").matches) searchRef.current?.focus();
   }, []);
 
   async function handlePay(input: {
