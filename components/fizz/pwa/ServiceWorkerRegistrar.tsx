@@ -4,7 +4,18 @@ import { useEffect } from "react";
 
 export default function ServiceWorkerRegistrar() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator) || process.env.NODE_ENV !== "production") {
+    if (!("serviceWorker" in navigator)) return;
+
+    // In dev, tear down any worker left behind by a prod build on this origin.
+    // Otherwise it keeps intercepting navigations and serves the offline page
+    // whenever the dev server isn't the one it was installed against.
+    if (process.env.NODE_ENV !== "production") {
+      navigator.serviceWorker
+        .getRegistrations()
+        .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+        .then(() => caches.keys())
+        .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+        .catch(console.error);
       return;
     }
 
