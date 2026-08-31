@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   orderItems,
@@ -61,9 +61,9 @@ export async function getOrder(id: string): Promise<OrderWithItems | null> {
 
 // Count of currently-open tabs — used for the Till/orders badge.
 export async function openOrderCount(): Promise<number> {
-  const rows = await db
-    .select({ id: orders.id })
+  const [row] = await db
+    .select({ count: sql<number>`count(*)`.mapWith(Number) })
     .from(orders)
     .where(and(eq(orders.storeId, STORE_ID), eq(orders.status, "open")));
-  return rows.length;
+  return row?.count ?? 0;
 }
