@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   inventoryItems,
@@ -31,22 +31,18 @@ export async function listRecipeIngredients(): Promise<RecipeIngredient[]> {
 export async function recipesByMenuItem(): Promise<
   Record<string, RecipeComponent[]>
 > {
-  // Scope to this store via its active menu items so a stray row can't leak.
-  const itemIds = await db
-    .select({ id: menuItems.id })
-    .from(menuItems)
+  // One join, not a two-step id fetch: scope to this store through the menu
+  // item -> category chain so a stray row can't leak.
+  const rows = await db
+    .select({ c: recipeComponents })
+    .from(recipeComponents)
+    .innerJoin(menuItems, eq(recipeComponents.menuItemId, menuItems.id))
     .innerJoin(menuCategories, eq(menuItems.categoryId, menuCategories.id))
     .where(and(eq(menuCategories.storeId, STORE_ID), isNull(menuItems.deletedAt)));
-  if (itemIds.length === 0) return {};
-
-  const rows = await db
-    .select()
-    .from(recipeComponents)
-    .where(inArray(recipeComponents.menuItemId, itemIds.map((r) => r.id)));
 
   const byItem: Record<string, RecipeComponent[]> = {};
-  for (const r of rows) {
-    (byItem[r.menuItemId] ??= []).push(r);
+  for (const { c } of rows) {
+    (byItem[c.menuItemId] ??= []).push(c);
   }
   return byItem;
 }
