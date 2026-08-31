@@ -2,10 +2,10 @@
 
 import type { CartLine, OrderType } from "./types";
 
-const ORDER_TYPES: { value: OrderType; label: string }[] = [
-  { value: "dine_in", label: "Dine in" },
-  { value: "takeaway", label: "Takeaway" },
-  { value: "delivery", label: "Delivery" },
+const ORDER_TYPES: { value: OrderType; label: string; hint: string }[] = [
+  { value: "dine_in", label: "Dine in", hint: "⇧I" },
+  { value: "takeaway", label: "Takeaway", hint: "⇧T" },
+  { value: "delivery", label: "Delivery", hint: "⇧D" },
 ];
 
 // The running order ticket. Lines stack quantity; +/- adjusts, ✕ removes. The
@@ -48,7 +48,7 @@ export default function Ticket({
   onCloseMobile?: () => void;
 }) {
   return (
-    <aside className="flex min-h-0 flex-1 flex-col border-ink-line bg-ink-soft lg:flex-none lg:border-t-0 lg:bg-ink-soft/30">
+    <aside className="flex min-h-0 flex-1 flex-col border-ink-line bg-ink-soft lg:border-t-0 lg:bg-ink-soft/30">
       {/* Mobile-only sheet header with a close affordance */}
       {onCloseMobile && (
         <div className="flex shrink-0 items-center justify-between border-b border-ink-line px-4 py-3 lg:hidden">
@@ -84,7 +84,10 @@ export default function Ticket({
                   : "border-ink-line bg-ink-soft text-cream hover:border-fizz"
               }`}
             >
-              {t.label}
+              <span className="block">{t.label}</span>
+              <kbd className="mt-0.5 block text-[10px] font-semibold opacity-60">
+                {t.hint}
+              </kbd>
             </button>
           ))}
         </div>
@@ -123,7 +126,7 @@ export default function Ticket({
                   <button
                     onClick={() => onRemove(l.key)}
                     aria-label="Remove line"
-                    className="rounded-full border border-ink-line px-2 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A]"
+                    className="-mr-1 -mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full border border-ink-line text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A]"
                   >
                     ✕
                   </button>
@@ -133,7 +136,7 @@ export default function Ticket({
                     <button
                       onClick={() => onDec(l.key)}
                       aria-label="Decrease"
-                      className="h-8 w-8 rounded-fizz border border-ink-line text-cream transition-colors hover:border-fizz hover:text-fizz"
+                      className="h-10 w-10 rounded-fizz border border-ink-line text-lg text-cream transition-colors hover:border-fizz hover:text-fizz lg:h-8 lg:w-8 lg:text-base"
                     >
                       −
                     </button>
@@ -143,7 +146,7 @@ export default function Ticket({
                     <button
                       onClick={() => onInc(l.key)}
                       aria-label="Increase"
-                      className="h-8 w-8 rounded-fizz border border-ink-line text-cream transition-colors hover:border-fizz hover:text-fizz"
+                      className="h-10 w-10 rounded-fizz border border-ink-line text-lg text-cream transition-colors hover:border-fizz hover:text-fizz lg:h-8 lg:w-8 lg:text-base"
                     >
                       +
                     </button>
@@ -159,7 +162,7 @@ export default function Ticket({
       </div>
 
       {/* Pay bar */}
-      <div className="shrink-0 border-t border-ink-line p-4">
+      <div className="shrink-0 border-t border-ink-line p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-steam">

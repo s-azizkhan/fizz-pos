@@ -169,6 +169,23 @@ export default function PosTerminal({
         return;
       }
 
+      // Shift+I / Shift+T / Shift+D: switch the order type.
+      if (!inField && e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        const t =
+          e.code === "KeyI"
+            ? "dine_in"
+            : e.code === "KeyT"
+              ? "takeaway"
+              : e.code === "KeyD"
+                ? "delivery"
+                : null;
+        if (t) {
+          e.preventDefault();
+          setOrderType(t);
+          return;
+        }
+      }
+
       // 1-9 while not typing: quick-add the Nth visible item.
       if (!inField && /^[1-9]$/.test(e.key)) {
         const idx = Number(e.key) - 1;
@@ -282,7 +299,7 @@ export default function PosTerminal({
         <div
           className={[
             // Desktop: in-flow right column.
-            "lg:relative lg:z-auto lg:flex lg:translate-y-0",
+            "lg:relative lg:z-auto lg:flex lg:min-h-0 lg:translate-y-0",
             // Mobile: fixed full-height sheet that slides up.
             "fixed inset-x-0 bottom-0 top-16 z-40 flex flex-col transition-transform duration-300 ease-out lg:inset-auto",
             cartOpen ? "translate-y-0" : "translate-y-full lg:translate-y-0",
@@ -314,7 +331,7 @@ export default function PosTerminal({
       {cart.count > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-ink-line bg-fizz px-5 py-4 font-display font-bold text-ink lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-ink-line bg-fizz px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 font-display font-bold text-ink lg:hidden"
         >
           <span className="flex items-center gap-2">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-ink/15 text-sm">
