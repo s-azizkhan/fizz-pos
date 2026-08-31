@@ -5,7 +5,8 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
-import { formatDocNumber } from "@/lib/store/format";
+import { formatDocNumber, upiPayLink } from "@/lib/store/format";
+import UpiQr from "@/components/fizz/UpiQr";
 import { CURRENCIES } from "@/lib/store/currencies";
 import { COUNTRIES } from "@/lib/store/countries";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
@@ -79,6 +80,11 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
   const [ordPrefix, setOrdPrefix] = useState(store.orderPrefix);
   const [ordFmt, setOrdFmt] = useState(store.orderNumberFormat);
   const [ordSeq, setOrdSeq] = useState(store.nextOrderSeq);
+
+  // Live UPI preview: the same code a customer scans, minus the amount.
+  const [upiId, setUpiId] = useState(store.upiId ?? "");
+  const [upiName, setUpiName] = useState(store.upiName ?? "");
+  const upiValid = /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(upiId.trim());
 
   const now = new Date();
   const invPreview = formatDocNumber(invFmt, {
@@ -184,6 +190,76 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
           </select>
         </label>
       </Section>
+
+
+      <section className="rounded-fizz border border-ink-line bg-ink-soft p-7">
+        <h2 className="font-display text-xl font-bold tracking-tight">
+          Online payments (UPI)
+        </h2>
+        <p className="mt-1 max-w-[60ch] text-sm text-steam">
+          Set your VPA and the till can throw a scannable QR — amount already
+          filled — the moment a customer picks Online.
+        </p>
+
+        <div className="mt-6 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-start">
+          <div className="flex flex-col gap-5">
+            <label className="flex flex-col gap-2">
+              <span className={labelCls}>UPI ID / VPA</span>
+              <input
+                name="upiId"
+                value={upiId}
+                onChange={(e) => setUpiId(e.target.value)}
+                placeholder="cafe@okhdfcbank"
+                autoCapitalize="none"
+                spellCheck={false}
+                className={inputCls}
+              />
+              {upiId.trim() !== "" && !upiValid && (
+                <span className="text-sm text-[#E2655A]">
+                  Use a VPA like cafe@okhdfcbank
+                </span>
+              )}
+            </label>
+            <label className="flex flex-col gap-2">
+              <span className={labelCls}>Payee name</span>
+              <input
+                name="upiName"
+                value={upiName}
+                onChange={(e) => setUpiName(e.target.value)}
+                placeholder={store.name}
+                className={inputCls}
+              />
+              <span className="text-sm text-steam">
+                What the customer sees in their UPI app before they pay.
+              </span>
+            </label>
+          </div>
+
+          {/* Preview */}
+          <div className="flex flex-col items-center gap-3 rounded-fizz border border-ink-line bg-ink p-5 sm:w-[220px]">
+            <span className={labelCls}>Preview</span>
+            {upiValid ? (
+              <>
+                <UpiQr
+                  value={upiPayLink({
+                    vpa: upiId.trim(),
+                    name: upiName.trim() || store.name,
+                  })}
+                  size={148}
+                />
+                <p className="text-center text-sm font-semibold text-cream">
+                  {upiName.trim() || store.name}
+                </p>
+                <p className="break-all text-center text-xs text-steam">{upiId.trim()}</p>
+              </>
+            ) : (
+              <p className="text-center text-sm text-steam">
+                Add a valid VPA and your code appears here.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
 
       <section className="rounded-fizz border border-ink-line bg-ink-soft p-7">
         <h2 className="font-display text-xl font-bold tracking-tight">

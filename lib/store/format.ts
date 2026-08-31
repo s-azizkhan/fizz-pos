@@ -47,3 +47,32 @@ export function formatMoney(amount: string | number, currency: string): string {
     return n.toFixed(2);
   }
 }
+
+// Build a UPI deep link (NPCI spec) that a customer's UPI app can scan to pay
+// a pre-filled amount. `pa` (VPA) is the only truly required field; `am` locks
+// the amount so the cashier never re-keys it. Values are URI-encoded because
+// payee names contain spaces and `&`.
+export type UpiLinkParts = {
+  vpa: string;
+  name?: string | null;
+  amount?: number;
+  note?: string | null;
+  currency?: string;
+};
+
+export function upiPayLink({
+  vpa,
+  name,
+  amount,
+  note,
+  currency = "INR",
+}: UpiLinkParts): string {
+  // Hand-built, not URLSearchParams: that encodes spaces as "+", which several
+  // UPI apps render literally in the payee name. %20 is the safe form.
+  const q: string[] = [`pa=${encodeURIComponent(vpa)}`];
+  if (name) q.push(`pn=${encodeURIComponent(name)}`);
+  if (amount && amount > 0) q.push(`am=${amount.toFixed(2)}`);
+  q.push(`cu=${encodeURIComponent(currency)}`);
+  if (note) q.push(`tn=${encodeURIComponent(note)}`);
+  return `upi://pay?${q.join("&")}`;
+}

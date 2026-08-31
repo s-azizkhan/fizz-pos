@@ -77,6 +77,11 @@ export default async function TillPage({
         label: store.taxLabel,
         inclusive: store.taxInclusive,
       }}
+      upi={
+        store.upiId
+          ? { vpa: store.upiId, name: store.upiName || store.name }
+          : null
+      }
       loaded={loaded}
     />
   );

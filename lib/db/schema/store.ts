@@ -24,6 +24,10 @@ export const store = pgTable("store", {
   // Whether menu prices already include tax (inclusive) or tax is added on top.
   taxInclusive: boolean("tax_inclusive").notNull().default(false),
   timezone: text("timezone").notNull().default("UTC"),
+  // Online payments. UPI VPA (e.g. cafe@okhdfcbank) + the payee name shown in
+  // the customer's UPI app. Both set = the till can render a pay-by-QR code.
+  upiId: text("upi_id"),
+  upiName: text("upi_name"),
   currency: text("currency").notNull().default("USD"),
   // Hours (HH:MM, store-local)
   openingTime: text("opening_time").notNull().default("08:00"),
@@ -90,6 +94,20 @@ export const storeSettingsForm = z.object({
   taxLabel: z.string().trim().min(1, "Name the tax").max(24),
   taxInclusive: flag(false),
   timezone: z.string().trim().min(1).max(60),
+  // VPA format: <account>@<handle>. Kept loose (handles vary by PSP) but
+  // rejects spaces and missing parts so a broken QR never reaches a customer.
+  upiId: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => v || null)
+    .refine(
+      (v) => v === null || /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(v),
+      "Use a VPA like cafe@okhdfcbank",
+    ),
+  upiName: optionalText(60),
   currency: z.enum(CURRENCY_CODES, "Pick a currency"),
   openingTime: z.string().regex(TIME_RE, "Use HH:MM (24h)"),
   closingTime: z.string().regex(TIME_RE, "Use HH:MM (24h)"),

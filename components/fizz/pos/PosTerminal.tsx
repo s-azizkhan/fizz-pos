@@ -17,6 +17,7 @@ import type {
   PosCategory,
   PosItem,
   TaxConfig,
+  UpiConfig,
 } from "./types";
 import MenuGrid from "./MenuGrid";
 import Ticket from "./Ticket";
@@ -34,11 +35,13 @@ export default function PosTerminal({
   categories,
   currency,
   tax,
+  upi,
   loaded,
 }: {
   categories: PosCategory[];
   currency: string;
   tax: TaxConfig;
+  upi: UpiConfig | null;
   loaded: LoadedOrder | null;
 }) {
   const router = useRouter();
@@ -280,8 +283,21 @@ export default function PosTerminal({
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search the menu — just start typing"
-                  className="w-full rounded-fizz border border-ink-line bg-ink-soft py-2.5 pl-10 pr-4 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+                  className="w-full rounded-fizz border border-ink-line bg-ink-soft py-2.5 pl-10 pr-10 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
                 />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery("");
+                      searchRef.current?.focus();
+                    }}
+                    aria-label="Clear search"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-steam transition-colors hover:text-fizz"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
               <a
                 href="/dashboard/orders"
@@ -383,6 +399,7 @@ export default function PosTerminal({
           subtotal={cart.subtotal}
           fees={fees}
           tax={tax}
+          upi={upi}
           money={money}
           submitting={settle.isPending}
           onPay={handlePay}

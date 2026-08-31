@@ -49,6 +49,12 @@ export type TaxConfig = {
   inclusive: boolean; // prices already include tax
 };
 
+// Store UPI configuration surfaced to the till. Null when unset in settings.
+export type UpiConfig = {
+  vpa: string;
+  name: string;
+};
+
 // An existing order loaded into the till for editing (a revisited tab).
 export type LoadedOrder = {
   id: string;
