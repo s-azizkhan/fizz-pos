@@ -8,12 +8,16 @@ type KotItem = {
   quantity: number;
 };
 
+// Locale is pinned, not `undefined`: the server default resolved to 24h while
+// the browser used 12h, so this text hydration-mismatched on every KOT. A
+// kitchen ticket wants an unambiguous 24h clock anyway.
 function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
+  return new Date(iso).toLocaleString("en-GB", {
     day: "2-digit",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
 }
 

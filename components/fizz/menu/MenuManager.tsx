@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/store/format";
 import { toast } from "@/lib/store/toast";
@@ -410,19 +410,33 @@ export default function MenuManager({
   ingredients: RecipeIngredient[];
   recipes: Record<string, RecipeComponent[]>;
 }) {
-  const [categories, setCategories] = useState(initial);
   const trpc = useTRPC();
   const reorder = useMutation(trpc.menu.reorderCategories.mutationOptions());
+
+  // Only the optimistic ORDER lives in state — never the category rows
+  // themselves. Holding the rows here meant a fresh server render (after any
+  // menu mutation) was ignored, so hiding or renaming an item looked like a
+  // no-op until a full page load.
+  const [order, setOrder] = useState<string[] | null>(null);
+  const categories = useMemo(() => {
+    if (!order) return initial;
+    const byId = new Map(initial.map((c) => [c.id, c]));
+    const ranked = order.map((id) => byId.get(id)).filter(Boolean) as typeof initial;
+    // Anything created since the reorder (not in `order`) goes on the end.
+    const seen = new Set(order);
+    return [...ranked, ...initial.filter((c) => !seen.has(c.id))];
+  }, [initial, order]);
 
   function move(index: number, dir: -1 | 1) {
     const next = [...categories];
     const target = index + dir;
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
-    setCategories(next);
+    const ids = next.map((c) => c.id);
+    setOrder(ids);
     // Optimistic: local order is already applied. The global router.refresh()
     // re-syncs from the server, and a failure surfaces via the global toast.
-    reorder.mutate(next.map((c) => c.id));
+    reorder.mutate(ids);
   }
 
   return (
