@@ -1,5 +1,5 @@
 import "server-only";
-import { inArray } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import type { db } from "@/lib/db";
 import { inventoryItems, recipeComponents, stockMovements } from "@/lib/db/schema";
 
@@ -71,29 +71,46 @@ export async function applyRecipeDeductions(
   }
   if (used.size === 0) return;
 
-  // Read current on-hand for the touched items, then write one sale movement
-  // and one quantity update each.
+  // Read current on-hand for the touched items, then write the movements and
+  // the new quantities in one statement each.
   const ids = [...used.keys()];
   const current = await tx
     .select({ id: inventoryItems.id, quantity: inventoryItems.quantity })
     .from(inventoryItems)
     .where(inArray(inventoryItems.id, ids));
 
-  for (const item of current) {
-    const amount = used.get(item.id) ?? 0;
-    if (amount <= 0) continue;
-    const resulting = Number(item.quantity) - amount;
-    await tx.insert(stockMovements).values({
-      itemId: item.id,
-      type: "sale",
-      delta: (-amount).toFixed(3),
-      resulting: resulting.toFixed(3),
+  // Batch both writes. This used to loop and await an insert + an update per
+  // touched ingredient — 2 round trips each, serialized inside the checkout
+  // transaction, on the till's hottest path.
+  const writes = current
+    .map((item) => {
+      const amount = used.get(item.id) ?? 0;
+      return { id: item.id, amount, resulting: Number(item.quantity) - amount };
+    })
+    .filter((w) => w.amount > 0);
+  if (writes.length === 0) return;
+
+  await tx.insert(stockMovements).values(
+    writes.map((w) => ({
+      itemId: w.id,
+      type: "sale" as const,
+      delta: (-w.amount).toFixed(3),
+      resulting: w.resulting.toFixed(3),
       note: "Auto: order settled",
       enteredBy,
-    });
-    await tx
-      .update(inventoryItems)
-      .set({ quantity: resulting.toFixed(3), updatedAt: new Date() })
-      .where(inArray(inventoryItems.id, [item.id]));
-  }
+    })),
+  );
+
+  // One UPDATE ... FROM (values …) rather than one statement per ingredient.
+  await tx.execute(sql`
+    update ${inventoryItems} as i
+    set quantity = v.quantity, updated_at = now()
+    from (values ${sql.join(
+      writes.map(
+        (w) => sql`(${w.id}::uuid, ${w.resulting.toFixed(3)}::numeric)`,
+      ),
+      sql`, `,
+    )}) as v(id, quantity)
+    where i.id = v.id
+  `);
 }
