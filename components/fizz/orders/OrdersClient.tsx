@@ -3,7 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
-import { voidOrder } from "@/app/actions/order";
+import { useMutation } from "@tanstack/react-query";
+import { useTRPC } from "@/lib/trpc/client";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import { toast } from "@/lib/store/toast";
 import type { OrderRow, StatusFilter } from "./types";
@@ -35,6 +36,8 @@ export default function OrdersClient({
   currency: string;
 }) {
   const router = useRouter();
+  const trpc = useTRPC();
+  const voidOrder = useMutation(trpc.orders.void.mutationOptions());
   const [filter, setFilter] = useState<StatusFilter>("open");
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -78,11 +81,11 @@ export default function OrdersClient({
     setBusyId(id);
     startTransition(async () => {
       try {
-        await voidOrder(id);
+        await voidOrder.mutateAsync(id);
         toast.success("Order voided");
         router.refresh();
-      } catch {
-        toast.error("Couldn't void the order");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Couldn't void the order");
       } finally {
         setBusyId(null);
       }

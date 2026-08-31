@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { FEE_FIELDS } from "./FeesModal";
 
 // Success confirmation after a sale. Shows the order number and, for cash, the
 // change owed in big type. Enter / Escape / click dismisses to start the next.
@@ -10,6 +11,7 @@ export default function ReceiptModal({
   discount,
   tax,
   taxLabel,
+  fees,
   total,
   changeDue,
   onClose,
@@ -19,6 +21,7 @@ export default function ReceiptModal({
   discount: string | null;
   tax: string | null;
   taxLabel: string;
+  fees: { service: string; packaging: string; delivery: string };
   total: string;
   changeDue: string | null;
   onClose: () => void;
@@ -55,7 +58,7 @@ export default function ReceiptModal({
         <p className="mt-1 text-sm text-steam">Order {orderNumber}</p>
 
         {/* Bill breakdown */}
-        {(discount || tax) && (
+        {(discount || tax || FEE_FIELDS.some((f) => Number(fees[f.key]) > 0)) && (
           <div className="mt-4 space-y-1 rounded-fizz border border-ink-line bg-ink p-4 text-left text-sm">
             <p className="flex justify-between text-steam">
               <span>Subtotal</span>
@@ -73,6 +76,12 @@ export default function ReceiptModal({
                 <span className="text-cream">{tax}</span>
               </p>
             )}
+            {FEE_FIELDS.filter((f) => Number(fees[f.key]) > 0).map((f) => (
+              <p key={f.key} className="flex justify-between text-steam">
+                <span>{f.label}</span>
+                <span className="text-cream">{fees[f.key]}</span>
+              </p>
+            ))}
             <p className="flex justify-between border-t border-ink-line pt-1 font-semibold">
               <span className="text-cream">Total</span>
               <span className="text-fizz">{total}</span>

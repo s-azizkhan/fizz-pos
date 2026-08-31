@@ -22,6 +22,20 @@
       "when": 1781469717276,
       "tag": "0002_bent_nightcrawler",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788157337420,
+      "tag": "0003_flowery_squirrel_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788168100971,
+      "tag": "0004_unique_nova",
+      "breakpoints": true
     }
   ]
 }

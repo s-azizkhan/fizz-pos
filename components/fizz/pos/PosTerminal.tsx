@@ -3,11 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
-import { checkout, saveOrder, type CheckoutResult } from "@/app/actions/order";
+import { useMutation } from "@tanstack/react-query";
+import type { inferRouterOutputs } from "@trpc/server";
+import { useTRPC } from "@/lib/trpc/client";
+import type { AppRouter } from "@/lib/trpc/root";
 import { toast } from "@/lib/store/toast";
 import { useCart } from "./useCart";
 import type {
   LoadedOrder,
+  OrderFees,
   OrderType,
   PaymentMethod,
   PosCategory,
@@ -18,6 +22,7 @@ import MenuGrid from "./MenuGrid";
 import Ticket from "./Ticket";
 import VariantPicker from "./VariantPicker";
 import PayModal from "./PayModal";
+import FeesModal from "./FeesModal";
 import ReceiptModal from "./ReceiptModal";
 import KeyboardHints from "./KeyboardHints";
 
@@ -37,11 +42,17 @@ export default function PosTerminal({
   loaded: LoadedOrder | null;
 }) {
   const router = useRouter();
+  const trpc = useTRPC();
+  const saveTab = useMutation(trpc.orders.save.mutationOptions());
+  const settle = useMutation(trpc.orders.checkout.mutationOptions());
   const cart = useCart(loaded?.lines ?? []);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string>(categories[0]?.id ?? "");
   const [orderType, setOrderType] = useState<OrderType>(loaded?.type ?? "dine_in");
   const [reference, setReference] = useState(loaded?.reference ?? "");
+  const NO_FEES: OrderFees = { service: 0, packaging: 0, delivery: 0 };
+  const [fees, setFees] = useState<OrderFees>(loaded?.fees ?? NO_FEES);
+  const [feesOpen, setFeesOpen] = useState(false);
 
   // The open tab being edited (if any) — drives "save" vs "create".
   const [editingId, setEditingId] = useState<string | null>(loaded?.id ?? null);
@@ -54,10 +65,8 @@ export default function PosTerminal({
   // Payment + receipt flow.
   const [payOpen, setPayOpen] = useState(false);
   const [receipt, setReceipt] = useState<
-    (CheckoutResult & { ok: true }) | null
+    inferRouterOutputs<AppRouter>["orders"]["checkout"] | null
   >(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [saving, setSaving] = useState(false);
   // Mobile-only: the ticket lives in a slide-up sheet behind a bottom bar.
   const [cartOpen, setCartOpen] = useState(false);
 
@@ -80,6 +89,7 @@ export default function PosTerminal({
     cart.clear();
     setReference("");
     setOrderType("dine_in");
+    setFees(NO_FEES);
     setEditingId(null);
     setEditingNumber(null);
     setCartOpen(false);
@@ -109,36 +119,44 @@ export default function PosTerminal({
   // Save the current cart as an OPEN tab (no payment). Used for dine-in: ring
   // dishes, save, settle later — and to add dishes mid-meal without a new order.
   async function handleSave() {
-    if (cart.lines.length === 0 || saving) return;
-    setSaving(true);
-    const res = await saveOrder({
-      orderId: editingId ?? undefined,
-      type: orderType,
-      reference,
-      discount: loaded?.discount ?? 0,
-      items: linePayload(),
-    });
-    setSaving(false);
-    if (res.ok) {
+    if (cart.lines.length === 0 || saveTab.isPending) return;
+    try {
+      const res = await saveTab.mutateAsync({
+        orderId: editingId ?? undefined,
+        type: orderType,
+        reference,
+        discount: loaded?.discount ?? 0,
+        fees,
+        items: linePayload(),
+      });
       // Tab is saved — clear the terminal so the next order can be rung right
       // away. Revisit/settle the saved tab from the orders page.
       toast.success(`Saved tab ${res.orderNumber} — ready for the next order`);
       resetTerminal();
-    } else {
-      toast.error(res.error ?? "Couldn't save the tab");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't save the tab");
     }
+  }
+
+  // Takeaway has nothing to reference — drop any table/address left behind.
+  function changeOrderType(t: OrderType) {
+    setOrderType(t);
+    if (t === "takeaway") setReference("");
+    // Delivery fee only belongs on a delivery order.
+    if (t !== "delivery") setFees((f) => ({ ...f, delivery: 0 }));
   }
 
   // Global keyboard handling. Typing focuses search; shortcuts drive the till.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const anyModalOpen = payOpen || receipt || variantFor;
+      const anyModalOpen = payOpen || receipt || variantFor || feesOpen;
       const target = e.target as HTMLElement;
       const inField =
         target.tagName === "INPUT" || target.tagName === "TEXTAREA";
 
       // Escape: close pickers / clear search.
       if (e.key === "Escape") {
+        if (feesOpen) return setFeesOpen(false);
         if (variantFor) return setVariantFor(null);
         if (payOpen) return setPayOpen(false);
         if (query) return setQuery("");
@@ -181,7 +199,7 @@ export default function PosTerminal({
                 : null;
         if (t) {
           e.preventDefault();
-          setOrderType(t);
+          changeOrderType(t);
           return;
         }
       }
@@ -205,7 +223,7 @@ export default function PosTerminal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [payOpen, receipt, variantFor, query, cart.count, visibleItems]);
+  }, [payOpen, receipt, variantFor, feesOpen, query, cart.count, visibleItems]);
 
   // Focus search on mount for instant typing.
   useEffect(() => {
@@ -217,26 +235,29 @@ export default function PosTerminal({
     discount: number;
     tendered?: number;
   }) {
-    if (cart.lines.length === 0) return;
-    setSubmitting(true);
-    const res = await checkout({
-      orderId: editingId ?? undefined,
-      type: orderType,
-      reference,
-      paymentMethod: input.paymentMethod,
-      discount: input.discount,
-      tendered: input.tendered,
-      items: linePayload(),
-    });
-    setSubmitting(false);
-    if (res.ok) {
+    // Re-entry guard. `nextOrderNumber()` increments the store row outside the
+    // transaction, so a double-fire settles two orders, burns two order
+    // numbers, and deducts stock twice. handleSave has always had this; this
+    // path never did.
+    if (cart.lines.length === 0 || settle.isPending) return;
+    try {
+      const res = await settle.mutateAsync({
+        orderId: editingId ?? undefined,
+        type: orderType,
+        reference,
+        paymentMethod: input.paymentMethod,
+        discount: input.discount,
+        fees,
+        tendered: input.tendered,
+        items: linePayload(),
+      });
       setPayOpen(false);
       setReceipt(res);
       toast.success("Order settled");
       resetTerminal();
-    } else {
+    } catch (e) {
       // Surface the error inside the pay modal.
-      return res.error;
+      return e instanceof Error ? e.message : "Something fizzled at the till.";
     }
   }
 
@@ -311,11 +332,13 @@ export default function PosTerminal({
             count={cart.count}
             money={money}
             orderType={orderType}
-            onOrderType={setOrderType}
+            onOrderType={changeOrderType}
             reference={reference}
             onReference={setReference}
+            fees={fees}
+            onOpenFees={() => setFeesOpen(true)}
             editingNumber={editingNumber}
-            saving={saving}
+            saving={saveTab.isPending}
             onInc={cart.inc}
             onDec={cart.dec}
             onRemove={cart.remove}
@@ -358,13 +381,23 @@ export default function PosTerminal({
       {payOpen && (
         <PayModal
           subtotal={cart.subtotal}
+          fees={fees}
           tax={tax}
           money={money}
-          submitting={submitting}
+          submitting={settle.isPending}
           onPay={handlePay}
           onClose={() => setPayOpen(false)}
         />
       )}
+
+      <FeesModal
+        open={feesOpen}
+        fees={fees}
+        orderType={orderType}
+        money={money}
+        onSave={setFees}
+        onClose={() => setFeesOpen(false)}
+      />
 
       {receipt && (
         <ReceiptModal
@@ -373,6 +406,7 @@ export default function PosTerminal({
           discount={Number(receipt.discount) > 0 ? money(receipt.discount) : null}
           tax={Number(receipt.tax) > 0 ? money(receipt.tax) : null}
           taxLabel={receipt.taxLabel}
+          fees={receipt.fees}
           total={money(receipt.total)}
           changeDue={receipt.changeDue ? money(receipt.changeDue) : null}
           onClose={() => setReceipt(null)}

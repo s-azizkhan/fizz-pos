@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { getStore } from "@/lib/store/data";
-import { getFullMenu } from "@/lib/store/menu";
-import { getOrder } from "@/lib/store/orders";
+import { trpc } from "@/lib/trpc/server";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
 
@@ -12,11 +10,12 @@ export default async function TillPage({
 }: {
   searchParams: Promise<{ order?: string }>;
 }) {
+  const api = await trpc();
   const { order: orderId } = await searchParams;
   const [store, menu, order] = await Promise.all([
-    getStore(),
-    getFullMenu(),
-    orderId ? getOrder(orderId) : Promise.resolve(null),
+    api.store.get(),
+    api.menu.full(),
+    orderId ? api.orders.byId(orderId) : Promise.resolve(null),
   ]);
 
   // Flatten to a client-safe shape: only available categories/items, prices as
@@ -52,6 +51,11 @@ export default async function TillPage({
           type: order.type,
           reference: order.reference,
           discount: Number(order.discount),
+          fees: {
+            service: Number(order.serviceFee),
+            packaging: Number(order.packagingFee),
+            delivery: Number(order.deliveryFee),
+          },
           lines: order.items.map((it) => ({
             key: it.variantId ? `${it.menuItemId}:${it.variantId}` : it.menuItemId ?? it.id,
             menuItemId: it.menuItemId ?? "",

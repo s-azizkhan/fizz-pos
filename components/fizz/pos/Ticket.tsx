@@ -1,6 +1,7 @@
 "use client";
 
-import type { CartLine, OrderType } from "./types";
+import { FEE_FIELDS, feesTotal } from "./FeesModal";
+import type { CartLine, OrderFees, OrderType } from "./types";
 
 const ORDER_TYPES: { value: OrderType; label: string; hint: string }[] = [
   { value: "dine_in", label: "Dine in", hint: "⇧I" },
@@ -19,6 +20,8 @@ export default function Ticket({
   onOrderType,
   reference,
   onReference,
+  fees,
+  onOpenFees,
   editingNumber,
   saving,
   onInc,
@@ -37,6 +40,8 @@ export default function Ticket({
   onOrderType: (t: OrderType) => void;
   reference: string;
   onReference: (v: string) => void;
+  fees: OrderFees;
+  onOpenFees: () => void;
   editingNumber: string | null;
   saving: boolean;
   onInc: (key: string) => void;
@@ -91,12 +96,38 @@ export default function Ticket({
             </button>
           ))}
         </div>
-        <input
-          value={reference}
-          onChange={(e) => onReference(e.target.value)}
-          placeholder="Table / tab name (optional)"
-          className="mt-2 w-full rounded-fizz border border-ink-line bg-ink-soft px-3 py-2 text-sm text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
-        />
+        {/* Takeaway needs no reference; delivery reuses the field for the address. */}
+        {orderType !== "takeaway" && (
+          <input
+            value={reference}
+            onChange={(e) => onReference(e.target.value)}
+            placeholder={
+              orderType === "delivery"
+                ? "Delivery address"
+                : "Table / tab name (optional)"
+            }
+            className="mt-2 w-full rounded-fizz border border-ink-line bg-ink-soft px-3 py-2 text-sm text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+          />
+        )}
+
+        {/* Fees — compact chips; tap to open the editor. */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={onOpenFees}
+            className="rounded-full border border-ink-line bg-ink-soft px-3 py-1 text-xs text-steam transition-colors hover:border-fizz hover:text-fizz"
+          >
+            ＋ Fees
+          </button>
+          {FEE_FIELDS.filter((f) => fees[f.key] > 0).map((f) => (
+            <button
+              key={f.key}
+              onClick={onOpenFees}
+              className="rounded-full border border-fizz/50 bg-fizz/10 px-3 py-1 text-xs text-fizz"
+            >
+              {f.label.replace(" fee", "")} {money(fees[f.key])}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Lines */}
@@ -134,11 +165,11 @@ export default function Ticket({
                 <div className="mt-2 flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => onDec(l.key)}
-                      aria-label="Decrease"
-                      className="h-10 w-10 rounded-fizz border border-ink-line text-lg text-cream transition-colors hover:border-fizz hover:text-fizz lg:h-8 lg:w-8 lg:text-base"
+                      onClick={() => (l.quantity === 1 ? onRemove(l.key) : onDec(l.key))}
+                      aria-label={l.quantity === 1 ? "Remove line" : "Decrease"}
+                      className="h-10 w-10 rounded-fizz border border-ink-line text-lg text-[#E2655A] transition-colors hover:border-[#E2655A] lg:h-8 lg:w-8 lg:text-base"
                     >
-                      −
+                      {l.quantity === 1 ? "🗑" : "−"}
                     </button>
                     <span className="w-8 text-center font-display font-bold">
                       {l.quantity}
@@ -167,6 +198,7 @@ export default function Ticket({
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-steam">
               {count} item{count === 1 ? "" : "s"}
+              {feesTotal(fees) > 0 && ` + ${money(feesTotal(fees))} fees`}
             </p>
             <p className="font-display text-3xl font-bold text-cream">
               {money(subtotal)}

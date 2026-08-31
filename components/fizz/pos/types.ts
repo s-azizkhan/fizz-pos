@@ -32,6 +32,13 @@ export type CartLine = {
   quantity: number;
 };
 
+// Flat fees added on top of the taxed total.
+export type OrderFees = {
+  service: number;
+  packaging: number;
+  delivery: number;
+};
+
 export type OrderType = "dine_in" | "takeaway" | "delivery";
 export type PaymentMethod = "cash" | "card" | "online";
 
@@ -49,5 +56,6 @@ export type LoadedOrder = {
   type: OrderType;
   reference: string | null;
   discount: number;
+  fees: OrderFees;
   lines: CartLine[];
 };

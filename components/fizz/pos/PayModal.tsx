@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { PaymentMethod, TaxConfig } from "./types";
+import { FEE_FIELDS, feesTotal } from "./FeesModal";
+import type { OrderFees, PaymentMethod, TaxConfig } from "./types";
 
 const METHODS: { value: PaymentMethod; label: string; key: string }[] = [
   { value: "cash", label: "Cash", key: "C" },
@@ -14,6 +15,7 @@ const METHODS: { value: PaymentMethod; label: string; key: string }[] = [
 // confirms; Escape cancels.
 export default function PayModal({
   subtotal,
+  fees,
   tax,
   money,
   submitting,
@@ -21,6 +23,7 @@ export default function PayModal({
   onClose,
 }: {
   subtotal: number;
+  fees: OrderFees;
   tax: TaxConfig;
   money: (n: number) => string;
   submitting: boolean;
@@ -44,7 +47,9 @@ export default function PayModal({
   // Mirror the server: inclusive tax is baked in; otherwise add on top.
   const taxAmount =
     rate > 0 ? (tax.inclusive ? r2(net - net / (1 + rate)) : r2(net * rate)) : 0;
-  const total = tax.inclusive ? net : r2(net + taxAmount);
+  // Mirror the server: flat fees land on top of the taxed total, untaxed.
+  const feeSum = feesTotal(fees);
+  const total = r2((tax.inclusive ? net : r2(net + taxAmount)) + feeSum);
   const tendered = Number(tenderedStr) || 0;
   const change = method === "cash" ? Math.round((tendered - total) * 100) / 100 : 0;
   const cashShort = method === "cash" && tenderedStr !== "" && tendered < total;
@@ -112,7 +117,7 @@ export default function PayModal({
         </p>
         {/* Breakdown: subtotal, discount, tax */}
         <div className="mt-2 space-y-0.5 text-sm text-steam">
-          {(discount > 0 || taxAmount > 0) && (
+          {(discount > 0 || taxAmount > 0 || feeSum > 0) && (
             <p className="flex justify-between">
               <span>Subtotal</span>
               <span className="text-cream">{money(subtotal)}</span>
@@ -132,6 +137,12 @@ export default function PayModal({
               <span className="text-cream">{money(taxAmount)}</span>
             </p>
           )}
+          {FEE_FIELDS.filter((f) => fees[f.key] > 0).map((f) => (
+            <p key={f.key} className="flex justify-between">
+              <span>{f.label}</span>
+              <span className="text-cream">{money(fees[f.key])}</span>
+            </p>
+          ))}
         </div>
 
         {/* Method */}

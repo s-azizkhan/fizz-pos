@@ -49,6 +49,10 @@ export const orders = pgTable("orders", {
   // Tax charged on the (discounted) subtotal. `taxRate` snapshots the % used.
   tax: numeric("tax", { precision: 12, scale: 2 }).notNull().default("0"),
   taxRate: numeric("tax_rate", { precision: 6, scale: 3 }).notNull().default("0"),
+  // Flat add-ons keyed at the till. Charged after tax, never taxed themselves.
+  serviceFee: numeric("service_fee", { precision: 12, scale: 2 }).notNull().default("0"),
+  packagingFee: numeric("packaging_fee", { precision: 12, scale: 2 }).notNull().default("0"),
+  deliveryFee: numeric("delivery_fee", { precision: 12, scale: 2 }).notNull().default("0"),
   total: numeric("total", { precision: 12, scale: 2 }).notNull().default("0"),
   // Null until settled. An open tab has no payment yet.
   paymentMethod: orderPaymentMethod("payment_method"),
@@ -110,6 +114,17 @@ const lineSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(999),
 });
 
+// Flat fees added to an order. Delivery is dropped server-side unless the order
+// type is `delivery`.
+const feesSchema = z
+  .object({
+    service: money.default(0),
+    packaging: money.default(0),
+    delivery: money.default(0),
+  })
+  .default({ service: 0, packaging: 0, delivery: 0 });
+export type OrderFees = z.infer<typeof feesSchema>;
+
 export const checkoutSchema = z.object({
   // When set, settle this existing open tab instead of creating a new order.
   orderId: z.uuid().optional(),
@@ -123,6 +138,7 @@ export const checkoutSchema = z.object({
     .transform((v) => v || null),
   paymentMethod: z.enum(orderPaymentMethod.enumValues).default("cash"),
   discount: money.default(0),
+  fees: feesSchema,
   tendered: money.optional(),
   items: z.array(lineSchema).min(1, "Add at least one item"),
 });
@@ -141,6 +157,7 @@ export const saveOrderSchema = z.object({
     .or(z.literal(""))
     .transform((v) => v || null),
   discount: money.default(0),
+  fees: feesSchema,
   items: z.array(lineSchema).min(1, "Add at least one item"),
 });
 export type SaveOrderInput = z.infer<typeof saveOrderSchema>;
