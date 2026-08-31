@@ -1,6 +1,7 @@
 import { boolean, integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/store/currencies";
+import { MENU_THEME_KEYS } from "@/lib/store/menu-themes";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -48,9 +49,14 @@ export const store = pgTable("store", {
   menuSlug: text("menu_slug").unique(),
   menuPublished: boolean("menu_published").notNull().default(false),
   menuTagline: text("menu_tagline"),
+  // Legacy: typography now comes from menuTheme. Column kept so the change
+  // needs no destructive migration; nothing reads it.
   menuFont: text("menu_font").notNull().default("sans"),
   menuFontScale: text("menu_font_scale").notNull().default("md"),
   menuAccent: text("menu_accent").notNull().default("#C6F432"),
+  // Preset look for the public menu. Keys live in lib/store/menu-themes.ts.
+  menuTheme: text("menu_theme").notNull().default("midnight"),
+  // Ordering config (cart, WhatsApp, delivery) lives in `order_settings`.
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -122,12 +128,10 @@ export type StoreSettingsInput = z.infer<typeof storeSettingsForm>;
 
 // Public menu page customization. Fonts/scales are constrained to keep the
 // public renderer simple and SSR-safe.
-export const MENU_FONTS = ["sans", "display", "serif", "mono"] as const;
-export type MenuFont = (typeof MENU_FONTS)[number];
 export const MENU_FONT_SCALES = ["sm", "md", "lg"] as const;
 export type MenuFontScale = (typeof MENU_FONT_SCALES)[number];
 
-export const menuAppearanceForm = z.object({
+export const menuAppearanceShape = {
   menuPublished: z.coerce.boolean().default(false),
   menuSlug: z
     .string()
@@ -137,11 +141,13 @@ export const menuAppearanceForm = z.object({
     .max(48)
     .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, and dashes only"),
   menuTagline: optionalText(160),
-  menuFont: z.enum(MENU_FONTS, "Pick a font"),
+  menuTheme: z.enum(MENU_THEME_KEYS, "Pick a theme"),
   menuFontScale: z.enum(MENU_FONT_SCALES, "Pick a size"),
   menuAccent: z
     .string()
     .trim()
     .regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #C6F432"),
-});
+};
+
+export const menuAppearanceForm = z.object(menuAppearanceShape);
 export type MenuAppearanceInput = z.infer<typeof menuAppearanceForm>;

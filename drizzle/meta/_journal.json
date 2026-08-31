@@ -36,6 +36,34 @@
       "when": 1788168100971,
       "tag": "0004_unique_nova",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788217497547,
+      "tag": "0005_cute_bedlam",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788217795276,
+      "tag": "0006_mature_sunset_bain",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788218106673,
+      "tag": "0007_broad_rafael_vega",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788218619886,
+      "tag": "0008_tiny_rage",
+      "breakpoints": true
     }
   ]
 }

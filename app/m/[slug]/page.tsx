@@ -3,15 +3,10 @@ import { notFound } from "next/navigation";
 import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
 import { MenuCategoryIconGlyph } from "@/components/fizz/menu/category-icons";
+import { AddToCart, FloatingCart } from "@/components/fizz/menu/PublicOrder";
+import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
 
 export const dynamic = "force-dynamic";
-
-const FONT_FAMILY: Record<string, string> = {
-  sans: "var(--font-inter), system-ui, sans-serif",
-  display: "var(--font-space-grotesk), system-ui, sans-serif",
-  serif: "Georgia, 'Times New Roman', serif",
-  mono: "'SF Mono', ui-monospace, monospace",
-};
 
 // Base font-size per scale; the rest of the layout uses em so it scales with it.
 const SCALE_PX: Record<string, number> = { sm: 15, md: 17, lg: 19 };
@@ -32,48 +27,68 @@ export async function generateMetadata({
 
 export default async function PublicMenuPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ viewOnly?: string }>;
 }) {
   const api = await trpc();
-  const { slug } = await params;
+  const [{ slug }, { viewOnly }] = await Promise.all([params, searchParams]);
   const menu = await api.menu.public(slug);
   if (!menu) notFound();
 
-  const { store, categories } = menu;
-  const accent = store.menuAccent || "#C6F432";
-  const fontFamily = FONT_FAMILY[store.menuFont] ?? FONT_FAMILY.sans;
+  const { store, categories, ordering: cfg } = menu;
+  const theme = getMenuTheme(store.menuTheme);
+  // The store's own accent wins; the theme only suggests one at pick time.
+  const accent = store.menuAccent || theme.accent;
   const basePx = SCALE_PX[store.menuFontScale] ?? SCALE_PX.md;
+  // Ordering needs somewhere to send the order and at least one fulfilment
+  // mode; without either it stays off.
+  const modes = cfg
+    ? ([
+        cfg.dineIn && "Dine-in",
+        cfg.takeaway && "Takeaway",
+        cfg.delivery && "Delivery",
+      ].filter(Boolean) as string[])
+    : [];
+  // ?viewOnly=1 forces the read-only menu — for QR prints, tablets on the
+  // counter, and anywhere a guest shouldn't be able to fire off an order.
+  const readOnly = viewOnly === "1" || viewOnly === "true";
+  const ordering = !readOnly && !!cfg?.ordering && !!cfg.whatsapp && modes.length > 0;
 
   return (
     <main
-      className="min-h-dvh bg-ink text-cream"
-      style={{ fontFamily, fontSize: `${basePx}px` }}
+      className="min-h-dvh bg-[var(--m-bg)] text-[var(--m-text)]"
+      style={{ ...themeVars(theme, accent), fontSize: `${basePx}px` }}
     >
-      <div className="mx-auto max-w-3xl px-6 py-14 lg:py-20">
+      <div className="mx-auto max-w-3xl px-6 pb-14 pt-14 lg:pb-20 lg:pt-20" style={{ paddingBottom: ordering ? "7rem" : undefined }}>
         {/* Branding header */}
-        <header className="border-b border-ink-line pb-8 text-center">
+        <header className="border-b border-[var(--m-line)] pb-8 text-center">
           <p
-            className="text-[0.7em] font-semibold uppercase tracking-[0.3em]"
+            className={`text-[0.7em] font-semibold uppercase ${theme.eyebrow === "wide" ? "tracking-[0.3em]" : "tracking-[0.06em]"}`
+}
             style={{ color: accent }}
           >
             Menu
           </p>
-          <h1 className="mt-3 text-[2.4em] font-bold leading-tight tracking-tight">
+          <h1
+            className="mt-3 text-[2.4em] font-bold leading-tight tracking-tight"
+            style={{ fontFamily: theme.display }}
+          >
             {store.name}
           </h1>
           {store.menuTagline && (
-            <p className="mt-3 text-[1.05em] text-steam">{store.menuTagline}</p>
+            <p className="mt-3 text-[1.05em] text-[var(--m-muted)]">{store.menuTagline}</p>
           )}
           {(store.city || store.phone) && (
-            <p className="mt-4 text-[0.85em] text-steam">
+            <p className="mt-4 text-[0.85em] text-[var(--m-muted)]">
               {[store.addressLine1, store.city, store.phone].filter(Boolean).join(" · ")}
             </p>
           )}
         </header>
 
         {categories.length === 0 ? (
-          <p className="mt-16 text-center text-steam">This menu is being plated. Check back soon.</p>
+          <p className="mt-16 text-center text-[var(--m-muted)]">This menu is being plated. Check back soon.</p>
         ) : (
           <div className="mt-12 flex flex-col gap-12">
             {categories.map((cat) => (
@@ -82,9 +97,14 @@ export default async function PublicMenuPage({
                   <span style={{ color: accent }}>
                     <MenuCategoryIconGlyph name={cat.icon} />
                   </span>
-                  <h2 className="text-[1.5em] font-bold tracking-tight">{cat.name}</h2>
+                  <h2
+                    className="text-[1.5em] font-bold tracking-tight"
+                    style={{ fontFamily: theme.display }}
+                  >
+                    {cat.name}
+                  </h2>
                 </div>
-                <div className="mt-5 flex flex-col divide-y divide-ink-line/70">
+                <div className="mt-5 flex flex-col divide-y divide-[var(--m-line)]">
                   {cat.items.map((item) => (
                     <div key={item.id} className="flex items-start justify-between gap-6 py-4">
                       <div className="min-w-0">
@@ -100,23 +120,47 @@ export default async function PublicMenuPage({
                           )}
                         </p>
                         {item.description && (
-                          <p className="mt-1 text-[0.9em] text-steam">{item.description}</p>
+                          <p className="mt-1 text-[0.9em] text-[var(--m-muted)]">{item.description}</p>
                         )}
                         {item.variants.length > 0 && (
                           <ul className="mt-2 flex flex-col gap-1">
                             {item.variants.map((v) => (
-                              <li key={v.id} className="flex justify-between gap-4 text-[0.9em] text-steam">
+                              <li key={v.id} className="flex items-center justify-between gap-4 text-[0.9em] text-[var(--m-muted)]">
                                 <span>{v.name}</span>
-                                <span style={{ color: accent }}>{formatMoney(v.price, store.currency)}</span>
+                                <span className="flex items-center gap-3">
+                                  <span style={{ color: accent }}>{formatMoney(v.price, store.currency)}</span>
+
+                                  {ordering && (
+                                    <AddToCart
+                                      itemKey={v.id}
+                                      name={`${item.name} (${v.name})`}
+                                      price={v.price}
+                                      accent={accent}
+                                    />
+                                  )}
+                                </span>
                               </li>
                             ))}
                           </ul>
                         )}
                       </div>
                       {item.variants.length === 0 && (
-                        <span className="shrink-0 text-[1.05em] font-semibold" style={{ color: accent }}>
-                          {formatMoney(item.price, store.currency)}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <span
+                            className="text-[1.05em] font-semibold"
+                            style={{ color: accent, fontFamily: theme.display }}
+                          >
+                            {formatMoney(item.price, store.currency)}
+                          </span>
+                          {ordering && (
+                            <AddToCart
+                              itemKey={item.id}
+                              name={item.name}
+                              price={item.price}
+                              accent={accent}
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
                   ))}
@@ -126,14 +170,26 @@ export default async function PublicMenuPage({
           </div>
         )}
 
-        <footer className="mt-16 border-t border-ink-line pt-6 text-center text-[0.8em] text-steam">
+        <footer className="mt-16 border-t border-[var(--m-line)] pt-6 text-center text-[0.8em] text-[var(--m-muted)]">
           Menu by{" "}
-          <span className="font-semibold text-cream">
+          <span className="font-semibold text-[var(--m-text)]">
             Fi<span style={{ color: accent }}>zz</span>
             <span className="align-super text-[0.7em]" style={{ color: accent }}>●</span>
           </span>
         </footer>
       </div>
+
+      {ordering && (
+        <FloatingCart
+          storeName={store.name}
+          whatsapp={cfg!.whatsapp!}
+          currency={store.currency}
+          accent={accent}
+          modes={modes}
+          deliveryFee={Number(cfg!.deliveryFee)}
+          packagingFee={Number(cfg!.packagingFee)}
+        />
+      )}
     </main>
   );
 }

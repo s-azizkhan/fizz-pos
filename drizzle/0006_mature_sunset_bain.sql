@@ -1,0 +1,1 @@
+ALTER TABLE "store" ADD COLUMN "menu_theme" text DEFAULT 'midnight' NOT NULL;

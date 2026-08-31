@@ -14,9 +14,10 @@ export default async function MenuPage() {
   const user = await getCurrentUser();
   if (user.role !== "admin" && user.role !== "manager") redirect("/dashboard");
 
-  const [store, categories, ingredients, recipes, hdrs] = await Promise.all([
+  const [store, categories, orderSettings, ingredients, recipes, hdrs] = await Promise.all([
     api.store.get(),
     api.menu.full(),
+    api.menu.orderSettings(),
     api.recipe.ingredients(),
     api.recipe.byMenuItem(),
     headers(),
@@ -30,6 +31,7 @@ export default async function MenuPage() {
     <MenuPageClient
       store={store}
       categories={categories}
+      orderSettings={orderSettings}
       ingredients={ingredients}
       recipes={recipes}
       origin={origin}

@@ -10,3 +10,4 @@ export * from "./menu";
 export * from "./inventory";
 export * from "./order";
 export * from "./recipe";
+export * from "./orderSettings";

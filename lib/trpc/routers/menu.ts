@@ -5,7 +5,9 @@ import { and, eq, isNull, max, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   store,
-  menuAppearanceForm,
+  orderSettings,
+  menuAppearanceShape,
+  orderSettingsShape,
   categoryForm,
   itemForm,
   menuCategories,
@@ -14,6 +16,7 @@ import {
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { getFullMenu, getPublicMenu } from "@/lib/store/menu";
+import { getOrderSettings } from "@/lib/store/order-settings";
 import {
   router,
   protectedProcedure,
@@ -38,14 +41,32 @@ function bump() {
 
 const idInput = (msg: string) => z.object({ id: z.uuid(msg) });
 
+// One modal edits both the look (store row) and the ordering config
+// (order_settings row), so the mutation takes both shapes in one object.
+const menuSettingsForm = z
+  .object({ ...menuAppearanceShape, ...orderSettingsShape })
+  // Taking orders with no number to send them to is a dead button.
+  .refine((v) => !v.ordering || !!v.whatsapp, {
+    path: ["whatsapp"],
+    error: "Add a WhatsApp number to accept orders",
+  })
+  // Delivery with no mode left on would leave the guest nothing to pick.
+  .refine((v) => !v.ordering || v.dineIn || v.takeaway || v.delivery, {
+    path: ["dineIn"],
+    error: "Offer at least one way to get the order",
+  });
+
 export const menuRouter = router({
   full: protectedProcedure.query(() => getFullMenu()),
+
+  // Ordering config for the admin modal (own table, lazily created).
+  orderSettings: protectedProcedure.query(() => getOrderSettings()),
 
   // The public /m/[slug] page — no session.
   public: publicProcedure.input(z.string().min(1)).query(({ input }) => getPublicMenu(input)),
 
   updateAppearance: protectedProcedure
-    .input(menuAppearanceForm)
+    .input(menuSettingsForm)
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin") {
         throw new TRPCError({
@@ -53,11 +74,49 @@ export const menuRouter = router({
           message: "Only admins can edit menu settings.",
         });
       }
+      const {
+        ordering,
+        whatsapp,
+        dineIn,
+        takeaway,
+        delivery,
+        deliveryFee,
+        packagingFee,
+        ...appearance
+      } = input;
       try {
-        await db
-          .update(store)
-          .set({ ...input, updatedAt: new Date() })
-          .where(eq(store.id, STORE_ID));
+        await db.transaction(async (tx) => {
+          await tx
+            .update(store)
+            .set({ ...appearance, updatedAt: new Date() })
+            .where(eq(store.id, STORE_ID));
+          // Ordering config lives in its own table, one row per store.
+          await tx
+            .insert(orderSettings)
+            .values({
+              storeId: STORE_ID,
+              ordering,
+              whatsapp,
+              dineIn,
+              takeaway,
+              delivery,
+              deliveryFee,
+              packagingFee,
+            })
+            .onConflictDoUpdate({
+              target: orderSettings.storeId,
+              set: {
+                ordering,
+                whatsapp,
+                dineIn,
+                takeaway,
+                delivery,
+                deliveryFee,
+                packagingFee,
+                updatedAt: new Date(),
+              },
+            });
+        });
       } catch (e) {
         // Unique violation on slug is the common case.
         const msg = String(e);

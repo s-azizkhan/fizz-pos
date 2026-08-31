@@ -5,10 +5,12 @@ import {
   menuCategories,
   menuItems,
   menuItemVariants,
+  orderSettings,
   store,
   type MenuCategory,
   type MenuItem,
   type MenuItemVariant,
+  type OrderSettings,
   type Store,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
@@ -64,6 +66,8 @@ export async function getFullMenu(): Promise<MenuCategoryWithItems[]> {
 export type PublicMenu = {
   store: Store;
   categories: MenuCategoryWithItems[];
+  /** null until the café saves ordering settings once. */
+  ordering: OrderSettings | null;
 };
 
 // Look up a published menu by its public slug. Returns null when missing or
@@ -75,6 +79,9 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
     .where(and(eq(store.menuSlug, slug), eq(store.menuPublished, true)))
     .limit(1);
   if (!row) return null;
-  const categories = (await buildMenu(true)).filter((c) => c.items.length > 0);
-  return { store: row, categories };
+  const [categories, [ordering]] = await Promise.all([
+    buildMenu(true).then((cats) => cats.filter((c) => c.items.length > 0)),
+    db.select().from(orderSettings).where(eq(orderSettings.storeId, row.id)).limit(1),
+  ]);
+  return { store: row, categories, ordering: ordering ?? null };
 }
