@@ -1,15 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { updateCategory } from "@/app/actions/menu";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useTRPC } from "@/lib/trpc/client";
 import { MenuCategoryIconGlyph } from "./category-icons";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
-
-function toFormData(obj: Record<string, string | number | boolean>): FormData {
-  const fd = new FormData();
-  for (const [k, v] of Object.entries(obj)) fd.set(k, String(v));
-  return fd;
-}
 
 export default function PublicMenuSectionsModal({
   categories,
@@ -23,25 +18,24 @@ export default function PublicMenuSectionsModal({
   const [visibleCategories, setVisibleCategories] = useState<Record<string, boolean>>(
     categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.available !== false }), {})
   );
-  const [pending, startTransition] = useTransition();
+  const trpc = useTRPC();
+  const update = useMutation(trpc.menu.updateCategory.mutationOptions());
+  const pending = update.isPending;
 
   const handleToggle = (categoryId: string) => {
     const newVisible = !visibleCategories[categoryId];
     setVisibleCategories((prev) => ({ ...prev, [categoryId]: newVisible }));
 
-    startTransition(async () => {
-      const category = categories.find((c) => c.id === categoryId);
-      if (category) {
-        await updateCategory(
-          { ok: false },
-          toFormData({
-            id: categoryId,
-            name: category.name,
-            icon: category.icon,
-            available: newVisible,
-          })
-        );
-      }
+    const category = categories.find((c) => c.id === categoryId);
+    if (!category) return;
+    // `available` now goes over the wire as a real boolean. It used to be
+    // String(false) === "false", which z.coerce.boolean() read as TRUE — so
+    // hiding a section never actually saved.
+    update.mutate({
+      id: categoryId,
+      name: category.name,
+      icon: category.icon,
+      available: newVisible,
     });
   };
 

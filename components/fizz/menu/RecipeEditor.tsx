@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { saveRecipe, type RecipeState } from "@/app/actions/recipe";
+import { useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { MenuItemWithVariants } from "@/lib/store/menu";
 import type { RecipeComponent } from "@/lib/db/schema";
@@ -32,8 +33,16 @@ export default function RecipeEditor({
   onDone: () => void;
 }) {
   const [scope, setScope] = useState<string>(BASE);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const trpc = useTRPC();
+  const save = useMutation(
+    trpc.recipe.save.mutationOptions({
+      onSuccess: () => {
+        toast.success("Recipe saved");
+        onDone();
+      },
+    }),
+  );
+  const error = save.error?.message ?? null;
 
   // Rows for the currently selected scope, derived fresh from `recipe` whenever
   // the scope flips. Local edits live in `drafts` keyed by scope.
@@ -60,25 +69,16 @@ export default function RecipeEditor({
   const unitOf = (id: string) => ingredients.find((i) => i.id === id)?.unit ?? "";
 
   function submit() {
-    setError(null);
     const clean = rows
       .filter((r) => r.inventoryItemId && r.quantity !== "" && Number(r.quantity) > 0)
       .map((r) => ({ inventoryItemId: r.inventoryItemId, quantity: r.quantity }));
 
-    const fd = new FormData();
-    fd.set("menuItemId", item.id);
-    if (scope !== BASE) fd.set("variantId", scope);
-    fd.set("components", JSON.stringify(clean));
-
-    startTransition(async () => {
-      const res: RecipeState = await saveRecipe({ ok: false }, fd);
-      if (res.ok) {
-        toast.success("Recipe saved");
-        onDone();
-      } else {
-        setError(res.error ?? "Failed");
-        toast.error(res.error ?? "Couldn't save recipe");
-      }
+    // `components` is still a JSON string: recipeForm parses it with
+    // z.string().transform(JSON.parse). Widening that schema is a follow-up.
+    save.mutate({
+      menuItemId: item.id,
+      variantId: scope === BASE ? "" : scope,
+      components: JSON.stringify(clean),
     });
   }
 
@@ -174,8 +174,8 @@ export default function RecipeEditor({
       </div>
 
       <div className="mt-4 flex items-center gap-3">
-        <button type="button" onClick={submit} disabled={pending} className={btnPrimary}>
-          {pending ? "Saving…" : "Save recipe"}
+        <button type="button" onClick={submit} disabled={save.isPending} className={btnPrimary}>
+          {save.isPending ? "Saving…" : "Save recipe"}
         </button>
         <button type="button" onClick={onDone} className={btnGhost}>
           Done

@@ -11,9 +11,10 @@ type UiState = {
   // Dashboard sidebar.
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
-  mobileSidebarOpen: boolean;
-  toggleMobileSidebar: () => void;
-  closeMobileSidebar: () => void;
+  // Mobile "More" sheet from the bottom tab bar.
+  moreOpen: boolean;
+  toggleMore: () => void;
+  closeMore: () => void;
 };
 
 export const useUi = create<UiState>()(
@@ -26,10 +27,9 @@ export const useUi = create<UiState>()(
       setJoined: (v) => set({ joined: v }),
       sidebarCollapsed: false,
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
-      mobileSidebarOpen: false,
-      toggleMobileSidebar: () =>
-        set((s) => ({ mobileSidebarOpen: !s.mobileSidebarOpen })),
-      closeMobileSidebar: () => set({ mobileSidebarOpen: false }),
+      moreOpen: false,
+      toggleMore: () => set((s) => ({ moreOpen: !s.moreOpen })),
+      closeMore: () => set({ moreOpen: false }),
     }),
     {
       name: "fizz-ui",

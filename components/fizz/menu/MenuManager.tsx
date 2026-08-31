@@ -1,18 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import {
-  updateCategory,
-  deleteCategory,
-  reorderCategories,
-  createItem,
-  updateItem,
-  deleteItem,
-  toggleItemAvailable,
-  type MenuState,
-} from "@/app/actions/menu";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/store/format";
 import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
 import { MenuCategoryIconGlyph } from "./category-icons";
 import IconPicker from "./IconPicker";
 import RecipeEditor from "./RecipeEditor";
@@ -30,13 +22,6 @@ const btnPrimary =
   "rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
 const btnGhost =
   "rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz";
-
-// Call a server action with a FormData payload built from a plain object.
-function toFormData(obj: Record<string, string | number | boolean>): FormData {
-  const fd = new FormData();
-  for (const [k, v] of Object.entries(obj)) fd.set(k, String(v));
-  return fd;
-}
 
 type VariantDraft = { name: string; price: string; cost: string };
 
@@ -122,8 +107,12 @@ function ItemForm({
   const [variants, setVariants] = useState<VariantDraft[]>(
     item?.variants.map((v) => ({ name: v.name, price: v.price, cost: v.cost })) ?? [],
   );
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const trpc = useTRPC();
+  // Both hooks called unconditionally; pick which one to fire.
+  const create = useMutation(trpc.menu.createItem.mutationOptions());
+  const update = useMutation(trpc.menu.updateItem.mutationOptions());
+  const save = item ? update : create;
+  const error = save.error?.message ?? null;
 
   // Live margin preview from the base price/cost.
   const priceN = Number(price) || 0;
@@ -132,7 +121,6 @@ function ItemForm({
   const marginPct = priceN > 0 ? (marginN / priceN) * 100 : 0;
 
   function submit() {
-    setError(null);
     const cleanVariants = variants
       .filter((v) => v.name.trim())
       .map((v) => ({
@@ -140,23 +128,23 @@ function ItemForm({
         price: v.price === "" ? "0" : v.price,
         cost: v.cost === "" ? "0" : v.cost,
       }));
-    const payload = toFormData({
-      categoryId,
-      name,
-      description,
-      price: price === "" ? "0" : price,
-      cost: cost === "" ? "0" : cost,
-      available,
-      variants: JSON.stringify(cleanVariants),
-    });
-    if (item) payload.set("id", String(item.id));
-    startTransition(async () => {
-      const res: MenuState = item
-        ? await updateItem({ ok: false }, payload)
-        : await createItem({ ok: false }, payload);
-      if (res.ok) onDone();
-      else setError(res.error ?? "Failed");
-    });
+    // `available` goes over the wire as a real boolean now. It used to be
+    // String(false) === "false", which z.coerce.boolean() read as TRUE — so an
+    // item could never be saved as unavailable.
+    save.mutate(
+      {
+        ...(item ? { id: item.id } : {}),
+        categoryId,
+        name,
+        description,
+        price: price === "" ? "0" : price,
+        cost: cost === "" ? "0" : cost,
+        available,
+        // recipeForm/itemForm still parse variants from a JSON string.
+        variants: JSON.stringify(cleanVariants),
+      } as never,
+      { onSuccess: () => onDone() },
+    );
   }
 
   return (
@@ -196,8 +184,8 @@ function ItemForm({
         </div>
       </div>
       <div className="mt-4 flex items-center gap-3">
-        <button type="button" onClick={submit} disabled={pending || !name.trim()} className={btnPrimary}>
-          {pending ? "Saving…" : item ? "Save item" : "Add item"}
+        <button type="button" onClick={submit} disabled={save.isPending || !name.trim()} className={btnPrimary}>
+          {save.isPending ? "Saving…" : item ? "Save item" : "Add item"}
         </button>
         <button type="button" onClick={onDone} className={btnGhost}>
           Cancel
@@ -223,7 +211,14 @@ function ItemRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [recipeOpen, setRecipeOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const trpc = useTRPC();
+  const toggle = useMutation(trpc.menu.toggleAvailable.mutationOptions());
+  // Failure toasts come from the global MutationCache handler.
+  const del = useMutation(
+    trpc.menu.deleteItem.mutationOptions({
+      onSuccess: () => toast.success("Item deleted"),
+    }),
+  );
 
   if (editing) {
     return <ItemForm categoryId={categoryId} item={item} currency={currency} onDone={() => setEditing(false)} />;
@@ -262,12 +257,8 @@ function ItemRow({
         <span className="font-display font-semibold text-fizz">{formatMoney(item.price, currency)}</span>
         <button
           type="button"
-          onClick={() =>
-            startTransition(async () => {
-              await toggleItemAvailable({ ok: false }, toFormData({ id: item.id }));
-            })
-          }
-          disabled={pending}
+          onClick={() => toggle.mutate({ id: item.id })}
+          disabled={toggle.isPending}
           className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam hover:border-fizz hover:text-fizz"
         >
           {item.available ? "Hide" : "Show"}
@@ -289,14 +280,8 @@ function ItemRow({
         </button>
         <button
           type="button"
-          onClick={() =>
-            startTransition(async () => {
-              const res = await deleteItem({ ok: false }, toFormData({ id: item.id }));
-              if (res?.ok) toast.success("Item deleted");
-              else toast.error(res?.error ?? "Couldn't delete item");
-            })
-          }
-          disabled={pending}
+          onClick={() => del.mutate({ id: item.id })}
+          disabled={del.isPending}
           className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
         >
           Delete
@@ -327,16 +312,23 @@ function CategoryCard({
   const [name, setName] = useState(category.name);
   const [icon, setIcon] = useState(category.icon);
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const trpc = useTRPC();
+  const update = useMutation(
+    // Error renders inline below; silence the duplicate global toast.
+    trpc.menu.updateCategory.mutationOptions({
+      meta: { silentError: true },
+      onSuccess: () => setEditing(false),
+    }),
+  );
+  const del = useMutation(
+    trpc.menu.deleteCategory.mutationOptions({
+      onSuccess: () => toast.success("Category deleted"),
+    }),
+  );
+  const error = update.error?.message ?? null;
 
   function saveCategory() {
-    setError(null);
-    startTransition(async () => {
-      const res = await updateCategory({ ok: false }, toFormData({ id: category.id, name, icon }));
-      if (res.ok) setEditing(false);
-      else setError(res.error ?? "Failed");
-    });
+    update.mutate({ id: category.id, name, icon });
   }
 
   return (
@@ -358,7 +350,7 @@ function CategoryCard({
         <div className="flex items-center gap-3">
           {editing ? (
             <>
-              <button type="button" onClick={saveCategory} disabled={pending} className={btnPrimary}>Save</button>
+              <button type="button" onClick={saveCategory} disabled={update.isPending} className={btnPrimary}>Save</button>
               <button type="button" onClick={() => { setEditing(false); setName(category.name); setIcon(category.icon); }} className={btnGhost}>Cancel</button>
             </>
           ) : (
@@ -366,14 +358,8 @@ function CategoryCard({
               <button type="button" onClick={() => setEditing(true)} className={btnGhost}>Edit</button>
               <button
                 type="button"
-                onClick={() =>
-                  startTransition(async () => {
-                    const res = await deleteCategory({ ok: false }, toFormData({ id: category.id }));
-                    if (res?.ok) toast.success("Category deleted");
-                    else toast.error(res?.error ?? "Couldn't delete category");
-                  })
-                }
-                disabled={pending}
+                onClick={() => del.mutate({ id: category.id })}
+                disabled={del.isPending}
                 className="rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
               >
                 Delete
@@ -425,7 +411,8 @@ export default function MenuManager({
   recipes: Record<string, RecipeComponent[]>;
 }) {
   const [categories, setCategories] = useState(initial);
-  const [, startTransition] = useTransition();
+  const trpc = useTRPC();
+  const reorder = useMutation(trpc.menu.reorderCategories.mutationOptions());
 
   function move(index: number, dir: -1 | 1) {
     const next = [...categories];
@@ -433,9 +420,9 @@ export default function MenuManager({
     if (target < 0 || target >= next.length) return;
     [next[index], next[target]] = [next[target], next[index]];
     setCategories(next);
-    startTransition(async () => {
-      await reorderCategories(next.map((c) => c.id));
-    });
+    // Optimistic: local order is already applied. The global router.refresh()
+    // re-syncs from the server, and a failure surfaces via the global toast.
+    reorder.mutate(next.map((c) => c.id));
   }
 
   return (

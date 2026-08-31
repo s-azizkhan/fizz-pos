@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import Modal from "@/components/fizz/Modal";
 import InventoryItemForm from "./InventoryItemForm";
 import StockMovementForm from "./StockMovementForm";
 import StockHistory from "./StockHistory";
-import { deleteInventoryItem } from "@/app/actions/inventory";
 import { INVENTORY_UNIT_LABELS } from "@/lib/db/schema";
 import { formatMoney } from "@/lib/store/format";
 import { Chip, ChipBar, SearchInput } from "@/components/fizz/ui/controls";
 import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
 import type { InventoryItemRow } from "@/lib/store/inventory";
 
 const btnPrimary =
@@ -28,23 +29,21 @@ const nameBtn =
   "text-left font-medium text-cream underline decoration-ink-line decoration-dotted underline-offset-4 transition-colors hover:text-fizz hover:decoration-fizz";
 
 function DeleteButton({ id }: { id: string }) {
-  const [pending, startTransition] = useTransition();
+  const trpc = useTRPC();
+  // Failure toast comes from the global MutationCache handler.
+  const del = useMutation(
+    trpc.inventory.deleteItem.mutationOptions({
+      onSuccess: () => toast.success("Item deleted"),
+    }),
+  );
   return (
     <button
       type="button"
-      disabled={pending}
-      onClick={() => {
-        const fd = new FormData();
-        fd.set("id", id);
-        startTransition(async () => {
-          const res = await deleteInventoryItem({ ok: false }, fd);
-          if (res?.ok) toast.success("Item deleted");
-          else toast.error(res?.error ?? "Couldn't delete item");
-        });
-      }}
+      disabled={del.isPending}
+      onClick={() => del.mutate({ id })}
       className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
     >
-      {pending ? "…" : "Delete"}
+      {del.isPending ? "…" : "Delete"}
     </button>
   );
 }

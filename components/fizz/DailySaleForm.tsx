@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { createDailySale, type DailySaleState } from "@/app/actions/daily-sales";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
+import { fields } from "@/lib/trpc/fields";
+import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import { formatMoney } from "@/lib/store/format";
-import { useActionToast } from "@/lib/hooks/useActionToast";
-
-const initial: DailySaleState = { ok: false };
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -25,10 +26,9 @@ export default function DailySaleForm({
   currency: string;
   onSuccess?: () => void;
 }) {
-  const [state, action, pending] = useActionState(createDailySale, initial);
-  useActionToast(state, { success: "Sale recorded" });
-  const [saved, setSaved] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const trpc = useTRPC();
+  const create = useMutation(trpc.dailySales.create.mutationOptions());
+  const saved = useSavedFlag(create.isSuccess);
 
   const [cash, setCash] = useState("0");
   const [online, setOnline] = useState("0");
@@ -36,24 +36,22 @@ export default function DailySaleForm({
 
   const total = (Number(cash) || 0) + (Number(online) || 0) + (Number(credit) || 0);
 
-  useEffect(() => {
-    if (state.ok) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSaved(true);
-      formRef.current?.reset();
-      setCash("0");
-      setOnline("0");
-      setCredit("0");
-      onSuccess?.();
-      const t = setTimeout(() => setSaved(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [state.ok, onSuccess]);
-
   return (
     <form
-      ref={formRef}
-      action={action}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        create.mutate(fields(form), {
+          onSuccess: () => {
+            toast.success("Sale recorded");
+            form.reset();
+            setCash("0");
+            setOnline("0");
+            setCredit("0");
+            onSuccess?.();
+          },
+        });
+      }}
       className="rounded-fizz border border-ink-line bg-ink-soft p-7"
     >
       <h2 className="font-display text-xl font-bold tracking-tight">
@@ -125,15 +123,15 @@ export default function DailySaleForm({
         </div>
         <div className="flex items-center gap-4">
           {saved && <span className="text-sm font-semibold text-fizz">Saved ●</span>}
-          {state.error && (
-            <span className="text-sm text-[#E2655A]">{state.error}</span>
+          {create.error && (
+            <span className="text-sm text-[#E2655A]">{create.error.message}</span>
           )}
           <button
             type="submit"
-            disabled={pending}
+            disabled={create.isPending}
             className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
           >
-            {pending ? "Saving…" : "Record sale"}
+            {create.isPending ? "Saving…" : "Record sale"}
           </button>
         </div>
       </div>

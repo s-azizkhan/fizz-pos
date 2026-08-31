@@ -1,12 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
-import { deleteDailySale, type DailySaleState } from "@/app/actions/daily-sales";
+import { useMutation } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/store/format";
-import { useActionToast } from "@/lib/hooks/useActionToast";
+import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
 import type { DailySaleRow } from "@/lib/store/daily-sales";
-
-const initial: DailySaleState = { ok: false };
 
 function fmtDate(d: string): string {
   // saleDate is a YYYY-MM-DD string from the date column.
@@ -30,19 +28,21 @@ function fmtDateTime(d: Date | string): string {
 }
 
 function DeleteButton({ id }: { id: string }) {
-  const [state, action, pending] = useActionState(deleteDailySale, initial);
-  useActionToast(state, { success: "Sale deleted" });
+  const trpc = useTRPC();
+  const del = useMutation(
+    trpc.dailySales.delete.mutationOptions({
+      onSuccess: () => toast.success("Sale deleted"),
+    }),
+  );
   return (
-    <form action={action} className="inline">
-      <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
-      >
-        {pending ? "…" : "Delete"}
-      </button>
-    </form>
+    <button
+      type="button"
+      onClick={() => del.mutate({ id })}
+      disabled={del.isPending}
+      className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
+    >
+      {del.isPending ? "…" : "Delete"}
+    </button>
   );
 }
 

@@ -4,7 +4,7 @@ import type { db } from "@/lib/db";
 import { inventoryItems, recipeComponents, stockMovements } from "@/lib/db/schema";
 
 // The transaction handle Drizzle hands to a `db.transaction(async (tx) => …)`
-// callback. Same trick used in app/actions/order.ts#writeItems.
+// callback. Same trick used in lib/trpc/routers/orders.ts#writeItems.
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // A sold line, minimal shape: which menu item/variant and how many.

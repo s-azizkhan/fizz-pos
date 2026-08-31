@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fetchMovements } from "@/app/actions/inventory";
+import { useQuery } from "@tanstack/react-query";
+import { useTRPC } from "@/lib/trpc/client";
 import {
   INVENTORY_UNIT_LABELS,
   STOCK_MOVEMENT_LABELS,
   type StockMovementType,
 } from "@/lib/db/schema";
-import type { InventoryItemRow, StockMovementRow } from "@/lib/store/inventory";
+import type { InventoryItemRow } from "@/lib/store/inventory";
 
 // Visual identity per movement type. `credit` drives the +/− sign treatment;
 // `tone` is a Tailwind text class from the brand palette.
@@ -33,21 +33,11 @@ function shortUnit(unit: InventoryItemRow["unit"]) {
 }
 
 export default function StockHistory({ item }: { item: InventoryItemRow }) {
-  const [rows, setRows] = useState<StockMovementRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const trpc = useTRPC();
+  const { data: rows, error } = useQuery(
+    trpc.inventory.movements.queryOptions({ itemId: item.id }),
+  );
   const unit = shortUnit(item.unit);
-
-  useEffect(() => {
-    let alive = true;
-    fetchMovements(item.id).then((res) => {
-      if (!alive) return;
-      if (res.ok) setRows(res.movements);
-      else setError(res.error);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [item.id]);
 
   // Lifetime totals from the signed deltas (recounts excluded — they set, not flow).
   const credited = (rows ?? [])
@@ -96,9 +86,9 @@ export default function StockHistory({ item }: { item: InventoryItemRow }) {
       <div className="mt-6 max-h-[50vh] overflow-y-auto pr-1">
         {error ? (
           <p className="rounded-fizz border border-[#E2655A]/40 bg-[#E2655A]/5 p-4 text-sm text-[#E2655A]">
-            {error}
+            {error.message}
           </p>
-        ) : rows === null ? (
+        ) : rows === undefined ? (
           <div className="flex flex-col gap-2">
             {[0, 1, 2].map((i) => (
               <div key={i} className="h-16 animate-pulse rounded-fizz border border-ink-line bg-ink" />

@@ -16,8 +16,14 @@ export const verifySession = cache(async () => {
   return session;
 });
 
-export const getCurrentUser = cache(async () => {
-  const session = await verifySession();
+// Nullable variant. tRPC procedures MUST use this one: redirect() throws a
+// NEXT_REDIRECT digest that tRPC swallows into a generic 500, so a procedure
+// has to decide for itself (UNAUTHORIZED) rather than redirect.
+export const getSessionUser = cache(async () => {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const session = await decrypt(token);
+  if (!session) return null;
+
   const rows = await db
     .select({
       id: users.id,
@@ -29,7 +35,10 @@ export const getCurrentUser = cache(async () => {
     .where(eq(users.id, session.userId))
     .limit(1);
 
-  const user = rows[0];
-  if (!user) redirect("/login"); // session points at a deleted user
-  return user;
+  return rows[0] ?? null; // null also covers a session pointing at a deleted user
 });
+
+// Redirecting variant for RSC pages and Server Actions. Unchanged behaviour.
+export const getCurrentUser = cache(
+  async () => (await getSessionUser()) ?? redirect("/login"),
+);

@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { deleteExpense, type ExpenseState } from "@/app/actions/expenses";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/store/format";
+import { toast } from "@/lib/store/toast";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
-import { useActionToast } from "@/lib/hooks/useActionToast";
+import { useTRPC } from "@/lib/trpc/client";
 import type { ExpenseRow } from "@/lib/store/expenses";
-
-const initial: ExpenseState = { ok: false };
 
 const METHOD_LABELS: Record<string, string> = {
   cash: "Cash",
@@ -37,19 +36,21 @@ function fmtDateTime(d: Date | string): string {
 }
 
 function DeleteButton({ id }: { id: string }) {
-  const [state, action, pending] = useActionState(deleteExpense, initial);
-  useActionToast(state, { success: "Expense deleted" });
+  const trpc = useTRPC();
+  const del = useMutation(
+    trpc.expenses.delete.mutationOptions({
+      onSuccess: () => toast.success("Expense deleted"),
+    }),
+  );
   return (
-    <form action={action} className="inline">
-      <input type="hidden" name="id" value={id} />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
-      >
-        {pending ? "…" : "Delete"}
-      </button>
-    </form>
+    <button
+      type="button"
+      onClick={() => del.mutate({ id })}
+      disabled={del.isPending}
+      className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
+    >
+      {del.isPending ? "…" : "Delete"}
+    </button>
   );
 }
 

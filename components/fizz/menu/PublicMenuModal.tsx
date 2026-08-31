@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { updateMenuAppearance, type MenuState } from "@/app/actions/menu";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
+import { fields } from "@/lib/trpc/fields";
 import { MENU_FONTS, MENU_FONT_SCALES } from "@/lib/db/schema";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
-import { useActionToast } from "@/lib/hooks/useActionToast";
 import type { Store } from "@/lib/db/schema";
 
-const initial: MenuState = { ok: false };
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -36,9 +37,11 @@ export default function PublicMenuModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const [state, action, pending] = useActionState(updateMenuAppearance, initial);
-  useActionToast(state, { success: "Menu settings saved" });
-  const saved = useSavedFlag(state.ok);
+  const trpc = useTRPC();
+  const save = useMutation(
+    trpc.menu.updateAppearance.mutationOptions({ onSuccess: () => toast.success("Menu settings saved") }),
+  );
+  const saved = useSavedFlag(save.isSuccess);
 
   const [slug, setSlug] = useState(store.menuSlug ?? (slugify(store.name) || "menu"));
   const [published, setPublished] = useState(store.menuPublished);
@@ -69,7 +72,11 @@ export default function PublicMenuModal({
           </button>
         </div>
 
-        <form action={action} className="mt-6 flex flex-col gap-6">
+        <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate(fields(e.currentTarget));
+        }} className="mt-6 flex flex-col gap-6">
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="flex flex-col gap-2 sm:col-span-2">
               <span className={labelCls}>Menu link</span>
@@ -126,11 +133,11 @@ export default function PublicMenuModal({
           </div>
 
           <div className="flex items-center gap-4 border-t border-ink-line pt-6">
-            <button type="submit" disabled={pending} className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
-              {pending ? "Saving…" : "Save menu settings"}
+            <button type="submit" disabled={save.isPending} className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
+              {save.isPending ? "Saving…" : "Save menu settings"}
             </button>
             {saved && <span className="text-sm font-semibold text-fizz">Saved ●</span>}
-            {state.error && <span className="text-sm text-[#E2655A]">{state.error}</span>}
+            {save.error && <span className="text-sm text-[#E2655A]">{save.error.message}</span>}
             <button
               type="button"
               onClick={onClose}

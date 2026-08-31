@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import { createExpense, type ExpenseState } from "@/app/actions/expenses";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { EXPENSE_CATEGORIES, expenseMethod } from "@/lib/db/schema";
 import { formatMoney } from "@/lib/store/format";
-import { useActionToast } from "@/lib/hooks/useActionToast";
-
-const initial: ExpenseState = { ok: false };
+import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
+import { fields } from "@/lib/trpc/fields";
+import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -33,28 +34,27 @@ export default function ExpenseForm({
   currency: string;
   onSuccess?: () => void;
 }) {
-  const [state, action, pending] = useActionState(createExpense, initial);
-  useActionToast(state, { success: "Expense recorded" });
-  const [saved, setSaved] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
+  const trpc = useTRPC();
   const [amount, setAmount] = useState("");
-
-  useEffect(() => {
-    if (state.ok) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSaved(true);
-      formRef.current?.reset();
-      setAmount("");
-      onSuccess?.();
-      const t = setTimeout(() => setSaved(false), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [state.ok, onSuccess]);
+  const create = useMutation(trpc.expenses.create.mutationOptions());
+  const saved = useSavedFlag(create.isSuccess);
 
   return (
     <form
-      ref={formRef}
-      action={action}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        // Per-call options, not hook options: keeps the form element out of a
+        // ref read during render (react-hooks/refs).
+        create.mutate(fields(form), {
+          onSuccess: () => {
+            toast.success("Expense recorded");
+            form.reset();
+            setAmount("");
+            onSuccess?.();
+          },
+        });
+      }}
       className="rounded-fizz border border-ink-line bg-ink-soft p-7"
     >
       <h2 className="font-display text-xl font-bold tracking-tight">
@@ -129,15 +129,15 @@ export default function ExpenseForm({
         </div>
         <div className="flex items-center gap-4">
           {saved && <span className="text-sm font-semibold text-fizz">Saved ●</span>}
-          {state.error && (
-            <span className="text-sm text-[#E2655A]">{state.error}</span>
+          {create.error && (
+            <span className="text-sm text-[#E2655A]">{create.error.message}</span>
           )}
           <button
             type="submit"
-            disabled={pending}
+            disabled={create.isPending}
             className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
           >
-            {pending ? "Saving…" : "Record expense"}
+            {create.isPending ? "Saving…" : "Record expense"}
           </button>
         </div>
       </div>

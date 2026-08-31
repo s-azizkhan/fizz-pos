@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getPublicMenu } from "@/lib/store/menu";
+import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
 import { MenuCategoryIconGlyph } from "@/components/fizz/menu/category-icons";
 
@@ -22,7 +22,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const menu = await getPublicMenu(slug);
+  const menu = await (await trpc()).menu.public(slug);
   if (!menu) return { title: "Menu not found" };
   return {
     title: `${menu.store.name} — Menu`,
@@ -35,8 +35,9 @@ export default async function PublicMenuPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const api = await trpc();
   const { slug } = await params;
-  const menu = await getPublicMenu(slug);
+  const menu = await api.menu.public(slug);
   if (!menu) notFound();
 
   const { store, categories } = menu;

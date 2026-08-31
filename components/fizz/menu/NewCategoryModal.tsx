@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { createCategory } from "@/app/actions/menu";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
 import IconPicker from "./IconPicker";
 
 const inputCls =
@@ -10,12 +11,6 @@ const inputCls =
 const labelCls = "text-xs font-semibold uppercase tracking-[0.18em] text-fizz";
 const btnPrimary =
   "rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
-
-function toFormData(obj: Record<string, string | number | boolean>): FormData {
-  const fd = new FormData();
-  for (const [k, v] of Object.entries(obj)) fd.set(k, String(v));
-  return fd;
-}
 
 export default function NewCategoryModal({
   isOpen,
@@ -26,23 +21,21 @@ export default function NewCategoryModal({
 }) {
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState<string>("☕");
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  function addCategory() {
-    setError(null);
-    startTransition(async () => {
-      const res = await createCategory({ ok: false }, toFormData({ name: newName, icon: newIcon }));
-      if (res.ok) {
+  const trpc = useTRPC();
+  const create = useMutation(
+    trpc.menu.createCategory.mutationOptions({
+      onSuccess: () => {
         setNewName("");
         setNewIcon("☕");
         toast.success("Category added");
         onClose();
-      } else {
-        setError(res.error ?? "Failed");
-        toast.error(res.error ?? "Couldn't add category");
-      }
-    });
+      },
+    }),
+  );
+  const error = create.error?.message ?? null;
+
+  function addCategory() {
+    create.mutate({ name: newName, icon: newIcon });
   }
 
   if (!isOpen) return null;
@@ -95,10 +88,10 @@ export default function NewCategoryModal({
           <button
             type="button"
             onClick={addCategory}
-            disabled={pending || !newName.trim()}
+            disabled={create.isPending || !newName.trim()}
             className={btnPrimary}
           >
-            {pending ? "Adding…" : "Add category"}
+            {create.isPending ? "Adding…" : "Add category"}
           </button>
         </div>
       </div>

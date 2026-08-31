@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
-import { listExpenses } from "@/lib/store/expenses";
+import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
 import ExpensesTable from "@/components/fizz/ExpensesTable";
 import RecordExpenseModal from "@/components/fizz/RecordExpenseModal";
@@ -11,8 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default async function ExpensesPage() {
+  const api = await trpc();
   const user = await getCurrentUser();
-  const [store, rows] = await Promise.all([getStore(), listExpenses()]);
+  const [store, rows] = await Promise.all([api.store.get(), api.expenses.list()]);
   const canDelete = user.role === "admin" || user.role === "manager";
 
   const grandTotal = rows.reduce((sum, r) => sum + Number(r.amount), 0).toFixed(2);

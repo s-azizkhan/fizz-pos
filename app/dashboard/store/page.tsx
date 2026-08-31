@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
+import { trpc } from "@/lib/trpc/server";
 import StoreSettingsForm from "@/components/fizz/StoreSettingsForm";
 
 export const metadata: Metadata = {
@@ -9,10 +9,11 @@ export const metadata: Metadata = {
 };
 
 export default async function StorePage() {
+  const api = await trpc();
   const user = await getCurrentUser();
   if (user.role !== "admin") redirect("/dashboard");
 
-  const store = await getStore();
+  const store = await api.store.get();
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 lg:py-14">

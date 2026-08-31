@@ -1,20 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
-import {
-  createInventoryItem,
-  updateInventoryItem,
-  type InventoryState,
-} from "@/app/actions/inventory";
+import { useMutation } from "@tanstack/react-query";
 import {
   INVENTORY_CATEGORIES,
   INVENTORY_UNIT_LABELS,
   inventoryUnit,
 } from "@/lib/db/schema";
 import type { InventoryItem } from "@/lib/db/schema";
-import { useActionToast } from "@/lib/hooks/useActionToast";
-
-const initial: InventoryState = { ok: false };
+import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
+import { fields } from "@/lib/trpc/fields";
+import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -29,25 +25,28 @@ export default function InventoryItemForm({
   currency: string;
   onSuccess?: () => void;
 }) {
-  const action = item ? updateInventoryItem : createInventoryItem;
-  const [state, formAction, pending] = useActionState(action, initial);
-  useActionToast(state, { success: item ? "Item saved" : "Item added" });
-  const formRef = useRef<HTMLFormElement>(null);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (state.ok) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSaved(true);
-      if (!item) formRef.current?.reset();
-      onSuccess?.();
-      const t = setTimeout(() => setSaved(false), 2500);
-      return () => clearTimeout(t);
-    }
-  }, [state.ok, item, onSuccess]);
+  const trpc = useTRPC();
+  // Both hooks must be called unconditionally; pick which one to fire.
+  const create = useMutation(trpc.inventory.createItem.mutationOptions());
+  const update = useMutation(trpc.inventory.updateItem.mutationOptions());
+  const save = item ? update : create;
+  const saved = useSavedFlag(save.isSuccess, 2500);
 
   return (
-    <form ref={formRef} action={formAction} className="rounded-fizz border border-ink-line bg-ink-soft p-7">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        save.mutate(fields(form), {
+          onSuccess: () => {
+            toast.success(item ? "Item saved" : "Item added");
+            if (!item) form.reset();
+            onSuccess?.();
+          },
+        });
+      }}
+      className="rounded-fizz border border-ink-line bg-ink-soft p-7"
+    >
       {item && <input type="hidden" name="id" value={item.id} />}
       <h2 className="font-display text-xl font-bold tracking-tight">
         {item ? "Edit item" : "New stock item"}
@@ -110,11 +109,11 @@ export default function InventoryItemForm({
       </div>
 
       <div className="mt-6 flex items-center gap-4">
-        <button type="submit" disabled={pending} className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
-          {pending ? "Saving…" : item ? "Save item" : "Add item"}
+        <button type="submit" disabled={save.isPending} className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
+          {save.isPending ? "Saving…" : item ? "Save item" : "Add item"}
         </button>
         {saved && <span className="text-sm font-semibold text-fizz">Saved ●</span>}
-        {state.error && <span className="text-sm text-[#E2655A]">{state.error}</span>}
+        {save.error && <span className="text-sm text-[#E2655A]">{save.error.message}</span>}
       </div>
     </form>
   );

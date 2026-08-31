@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
-import { listDailySales } from "@/lib/store/daily-sales";
+import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
 import DailySalesTable from "@/components/fizz/DailySalesTable";
 import RecordSaleModal from "@/components/fizz/RecordSaleModal";
@@ -11,8 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default async function DailySalesPage() {
+  const api = await trpc();
   const user = await getCurrentUser();
-  const [store, rows] = await Promise.all([getStore(), listDailySales()]);
+  const [store, rows] = await Promise.all([api.store.get(), api.dailySales.list()]);
   const canDelete = user.role === "admin" || user.role === "manager";
 
   const grandTotal = rows

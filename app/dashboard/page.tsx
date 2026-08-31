@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
-import { getHomeSnapshot } from "@/lib/store/home";
+import { trpc } from "@/lib/trpc/server";
 import { navForRole } from "@/components/fizz/dashboard/nav-items";
 import DashboardHome from "@/components/fizz/dashboard/DashboardHome";
 import type { UserRole } from "@/lib/db/schema";
@@ -26,10 +25,11 @@ function isOpenNow(open: string, close: string): boolean {
 }
 
 export default async function DashboardPage() {
+  const api = await trpc();
   const [user, store, snapshot] = await Promise.all([
     getCurrentUser(),
-    getStore(),
-    getHomeSnapshot(),
+    api.store.get(),
+    api.analytics.homeSnapshot(),
   ]);
 
   // Managers/owners see insight panels; staff get a floor-focused view.

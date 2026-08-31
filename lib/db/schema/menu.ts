@@ -91,6 +91,11 @@ const costMoney = z
 const optionalText = (max: number) =>
   z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || null);
 
+// z.coerce.boolean() is Boolean(), so the string "false" a <select>/hidden
+// input sends parses as TRUE. Accept a real boolean (tRPC/JSON) or the
+// "true"/"false" string a form sends.
+const flag = (dflt: boolean) => z.union([z.boolean(), z.stringbool()]).default(dflt);
+
 export const categoryForm = z.object({
   name: z.string().trim().min(1, "Name is required").max(80),
   // Free-form: any emoji or short symbol. Empty falls back to a default.
@@ -100,7 +105,7 @@ export const categoryForm = z.object({
     .max(8, "Use a single emoji")
     .optional()
     .transform((v) => v || "☕"),
-  available: z.coerce.boolean().default(true),
+  available: flag(true),
 });
 export type CategoryInput = z.infer<typeof categoryForm>;
 
@@ -117,7 +122,7 @@ export const itemForm = z.object({
   description: optionalText(280),
   price: money,
   cost: costMoney,
-  available: z.coerce.boolean().default(true),
+  available: flag(true),
   // Variants arrive as a JSON string from the client form.
   variants: z
     .string()

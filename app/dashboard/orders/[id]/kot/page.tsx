@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
-import { getOrder } from "@/lib/store/orders";
+import { trpc } from "@/lib/trpc/server";
 import KotTicket from "@/components/fizz/orders/KotTicket";
 
 export const metadata: Metadata = { title: "KOT — Fizz" };
@@ -21,9 +20,10 @@ export default async function KotPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const api = await trpc();
   await getCurrentUser();
   const { id } = await params;
-  const [store, order] = await Promise.all([getStore(), getOrder(id)]);
+  const [store, order] = await Promise.all([api.store.get(), api.orders.byId(id)]);
   if (!order) notFound();
 
   return (

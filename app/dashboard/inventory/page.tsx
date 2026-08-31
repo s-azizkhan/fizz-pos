@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
-import { listInventory, inventorySummary } from "@/lib/store/inventory";
+import { inventorySummary } from "@/lib/store/inventory";
+import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
 import InventoryManager from "@/components/fizz/inventory/InventoryManager";
 
 export const metadata: Metadata = { title: "Inventory — Fizz" };
 
 export default async function InventoryPage() {
+  const api = await trpc();
   const user = await getCurrentUser();
   if (user.role === "staff") redirect("/dashboard");
 
-  const [store, rows] = await Promise.all([getStore(), listInventory()]);
+  const [store, rows] = await Promise.all([api.store.get(), api.inventory.list()]);
   const summary = await inventorySummary(rows);
   const canEdit = user.role === "admin" || user.role === "manager";
 

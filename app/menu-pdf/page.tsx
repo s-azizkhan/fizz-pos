@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
-import { getFullMenu } from "@/lib/store/menu";
+import { trpc } from "@/lib/trpc/server";
 import PrintableMenu from "@/components/fizz/menu/PrintableMenu";
 import { DEFAULT_MENU_COLOR_SCHEME } from "@/components/fizz/menu/print-styles";
 import { DEFAULT_MENU_LAYOUT } from "@/components/fizz/menu/menu-layouts";
@@ -27,12 +26,13 @@ export default async function MenuPdfPage({
     embed?: string;
   }>;
 }) {
+  const api = await trpc();
   const user = await getCurrentUser();
   if (user.role !== "admin" && user.role !== "manager") redirect("/dashboard");
 
   const [store, categories, sp] = await Promise.all([
-    getStore(),
-    getFullMenu(),
+    api.store.get(),
+    api.menu.full(),
     searchParams,
   ]);
 

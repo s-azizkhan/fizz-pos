@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { getStore } from "@/lib/store/data";
-import { getAnalytics } from "@/lib/store/analytics";
+import { trpc } from "@/lib/trpc/server";
 import {
   fromDateInput,
   previousRange,
@@ -31,6 +30,7 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
+  const api = await trpc();
   const user = await getCurrentUser();
   if (user.role === "staff") redirect("/dashboard");
 
@@ -59,8 +59,8 @@ export default async function AnalyticsPage({
   const hourly = rangeDays(range) <= 1;
 
   const [store, analytics] = await Promise.all([
-    getStore(),
-    getAnalytics(range, prev, hourly),
+    api.store.get(),
+    api.analytics.get({ range, prev, hourly }),
   ]);
 
   return (

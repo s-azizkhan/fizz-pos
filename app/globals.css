@@ -129,3 +129,150 @@ body {
     animation: none !important;
   }
 }
+
+/* ===== Mobile app feel (dashboard is phone-first) ===== */
+
+/* Bottom sheets: modals and the "More" menu slide up from the edge. */
+@keyframes sheet-up {
+  from { transform: translateY(12%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.fizz-sheet { animation: sheet-up 0.22s cubic-bezier(0.32, 0.72, 0, 1); }
+
+@media (max-width: 1023px) {
+  /* iOS zooms the page when a focused input is under 16px. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Rounded top only where the sheet meets the screen edge. */
+  .fizz-sheet {
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+  }
+}
+
+/* No blue flash on tap, and no rubber-band scroll behind fixed bars. */
+@media (hover: none) {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  /* Native-feeling press feedback on anything tappable. */
+  button:active,
+  a:active,
+  [role="button"]:active {
+    transform: scale(0.97);
+    transition: transform 0.06s ease-out;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fizz-sheet { animation: none; }
+  button:active,
+  a:active,
+  [role="button"]:active { transform: none; }
+}
+
+/* ===== Route transitions ===== */
+
+/* Directional slides: content moves left going deeper, right coming back.
+   60px is enough to read as direction without the eye chasing it. */
+::view-transition-old(.nav-forward) {
+  --slide-offset: -60px;
+  animation:
+    150ms ease-in both vt-fade reverse,
+    320ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --slide-offset: 60px;
+  animation:
+    200ms ease-out 120ms both vt-fade,
+    320ms ease-in-out both vt-slide;
+}
+::view-transition-old(.nav-back) {
+  --slide-offset: 60px;
+  animation:
+    150ms ease-in both vt-fade reverse,
+    320ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --slide-offset: -60px;
+  animation:
+    200ms ease-out 120ms both vt-fade,
+    320ms ease-in-out both vt-slide;
+}
+
+@keyframes vt-fade {
+  from { opacity: 0; filter: blur(3px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@keyframes vt-slide {
+  from { translate: var(--slide-offset); }
+  to { translate: 0; }
+}
+
+/* The top bar and tab bar are the user's fixed spatial anchors — the content
+   moves, the chrome does not. */
+::view-transition-group(app-bar),
+::view-transition-group(tab-bar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(app-bar),
+::view-transition-old(tab-bar) {
+  display: none;
+}
+::view-transition-new(app-bar),
+::view-transition-new(tab-bar) {
+  animation: none;
+}
+
+/* ===== Loading + launch ===== */
+
+/* Skeleton shimmer for loading.tsx fallbacks. */
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.fizz-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-ink-line) 0%,
+    color-mix(in oklab, var(--color-ink-line) 55%, var(--color-steam)) 50%,
+    var(--color-ink-line) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+/* Launch screen: the wordmark settles, the lime rule draws under it. */
+@keyframes splash-mark {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes splash-bar {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.fizz-splash-mark { animation: splash-mark 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.fizz-splash-bar { animation: splash-bar 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fizz-shimmer,
+  .fizz-splash-mark,
+  .fizz-splash-bar { animation: none; }
+
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

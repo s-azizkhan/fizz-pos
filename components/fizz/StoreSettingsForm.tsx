@@ -1,15 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { updateStore, type StoreState } from "@/app/actions/store";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "@/lib/store/toast";
+import { useTRPC } from "@/lib/trpc/client";
+import { fields } from "@/lib/trpc/fields";
 import { formatDocNumber } from "@/lib/store/format";
 import { CURRENCIES } from "@/lib/store/currencies";
 import { COUNTRIES } from "@/lib/store/countries";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
-import { useActionToast } from "@/lib/hooks/useActionToast";
 import type { Store } from "@/lib/db/schema";
 
-const initial: StoreState = { ok: false };
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -65,9 +66,11 @@ function Section({
 }
 
 export default function StoreSettingsForm({ store }: { store: Store }) {
-  const [state, action, pending] = useActionState(updateStore, initial);
-  useActionToast(state, { success: "Settings saved" });
-  const saved = useSavedFlag(state.ok);
+  const trpc = useTRPC();
+  const save = useMutation(
+    trpc.store.update.mutationOptions({ onSuccess: () => toast.success("Settings saved") }),
+  );
+  const saved = useSavedFlag(save.isSuccess);
 
   // Live preview state for the numbering section.
   const [invPrefix, setInvPrefix] = useState(store.invoicePrefix);
@@ -90,7 +93,11 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
   });
 
   return (
-    <form action={action} className="flex flex-col gap-6">
+    <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate(fields(e.currentTarget));
+        }} className="flex flex-col gap-6">
       <Section title="Store profile" hint="Name, contact, and where you pour.">
         <Field label="Store name" name="name" defaultValue={store.name} required />
         <Field label="Legal name" name="legalName" defaultValue={store.legalName} />
@@ -244,13 +251,13 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
       <div className="flex items-center gap-4">
         <button
           type="submit"
-          disabled={pending}
+          disabled={save.isPending}
           className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
         >
-          {pending ? "Saving…" : "Save changes"}
+          {save.isPending ? "Saving…" : "Save changes"}
         </button>
         {saved && <span className="text-sm font-semibold text-fizz">Saved ●</span>}
-        {state.error && <span className="text-sm text-[#E2655A]">{state.error}</span>}
+        {save.error && <span className="text-sm text-[#E2655A]">{save.error.message}</span>}
       </div>
     </form>
   );

@@ -58,6 +58,11 @@ const optionalText = (max: number) =>
   z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || null);
 
 // Admin-facing update schema. Profile fields optional; config fields validated.
+// z.coerce.boolean() is Boolean(), so the string "false" a <select>/hidden
+// input sends parses as TRUE. Accept a real boolean (tRPC/JSON) or the
+// "true"/"false" string a form sends.
+const flag = (dflt: boolean) => z.union([z.boolean(), z.stringbool()]).default(dflt);
+
 export const storeSettingsForm = z.object({
   name: z.string().trim().min(1, "Store name is required").max(120),
   legalName: optionalText(160),
@@ -83,7 +88,7 @@ export const storeSettingsForm = z.object({
     .max(100, "Over 100%?")
     .transform((n) => n.toFixed(3)),
   taxLabel: z.string().trim().min(1, "Name the tax").max(24),
-  taxInclusive: z.coerce.boolean().default(false),
+  taxInclusive: flag(false),
   timezone: z.string().trim().min(1).max(60),
   currency: z.enum(CURRENCY_CODES, "Pick a currency"),
   openingTime: z.string().regex(TIME_RE, "Use HH:MM (24h)"),

@@ -9,9 +9,14 @@
     "lint": "eslint",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "db:seed": "tsx --env-file=.env scripts/seed-admin.ts"
+    "db:seed": "tsx --env-file=.env scripts/seed-admin.mts"
   },
   "dependencies": {
+    "@tanstack/react-query": "5.102.8",
+    "@trpc/client": "11.18.0",
+    "@trpc/server": "11.18.0",
+    "@trpc/tanstack-react-query": "11.18.0",
+    "agentation": "^3.0.2",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "jose": "^6.2.3",
@@ -20,6 +25,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "server-only": "^0.0.1",
+    "superjson": "2.2.6",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
