@@ -29,6 +29,8 @@ type Combo = {
 
 // Curated one-tap combos — the fast path. Mixing your own is still one row away.
 const PRESETS: { name: string; combo: Combo }[] = [
+  { name: "One-Page Red", combo: { scheme: "punch", layout: "onepage", pack: "none", op: 0, fs: 95 } },
+  { name: "One-Page Sheet", combo: { scheme: "cream", layout: "onepage-sheet", pack: "cafe", op: 12, fs: 95 } },
   { name: "Fizz Classic", combo: { scheme: "fizz", layout: "modern", pack: "bubbles", op: 14, fs: 100 } },
   { name: "Diner Cards", combo: { scheme: "diner", layout: "cards", pack: "cafe", op: 12, fs: 100 } },
   { name: "Neon Receipt", combo: { scheme: "vapor", layout: "receipt", pack: "none", op: 0, fs: 95 } },
@@ -95,6 +97,13 @@ export default function ExportMenuPdfModal({
   const commitFs = () => setCFs(fs);
 
   const printNow = () => iframeRef.current?.contentWindow?.print();
+  // The preview iframe owns the render, so ask it to rasterize itself.
+  const savePng = () =>
+    (
+      iframeRef.current?.contentWindow as unknown as {
+        __fizzMenuPng?: () => void;
+      }
+    )?.__fizzMenuPng?.();
   const openFull = () =>
     window.open(`/menu-pdf?${qs(op, fs)}`, "_blank", "noopener");
 
@@ -255,6 +264,13 @@ export default function ExportMenuPdfModal({
             className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105"
           >
             Print / Save PDF
+          </button>
+          <button
+            type="button"
+            onClick={savePng}
+            className="rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+          >
+            Save PNG
           </button>
           <button
             type="button"

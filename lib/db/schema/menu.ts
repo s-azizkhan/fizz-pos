@@ -33,6 +33,9 @@ export const menuItems = pgTable("menu_items", {
   name: text("name").notNull(),
   description: text("description"),
   price: numeric("price", { precision: 12, scale: 2 }).notNull().default("0"),
+  // "veg" | "nonveg" | null (unspecified). Plain text, not a pg enum — adding
+  // a value later is a column-free change. Drives the printed diet tag.
+  diet: text("diet"),
   // Cost of goods to make this item. Margin = price - cost. Set per item.
   cost: numeric("cost", { precision: 12, scale: 2 }).notNull().default("0"),
   available: boolean("available").notNull().default(true),
@@ -123,6 +126,12 @@ export const itemForm = z.object({
   price: money,
   cost: costMoney,
   available: flag(true),
+  // Empty select → null (no tag shown).
+  diet: z
+    .enum(["veg", "nonveg"])
+    .nullish()
+    .or(z.literal(""))
+    .transform((v) => v || null),
   // Variants arrive as a JSON string from the client form.
   variants: z
     .string()

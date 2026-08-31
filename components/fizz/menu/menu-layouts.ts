@@ -33,6 +33,9 @@ export type MenuLayout = {
   dashed?: boolean;
   // Prepend a running number to each item.
   numbered?: boolean;
+  // Everything on ONE page: no cover, no closing page — brand band on top,
+  // contact band at the bottom.
+  single?: boolean;
 };
 
 export const MENU_LAYOUTS: MenuLayout[] = [
@@ -122,6 +125,63 @@ export const MENU_LAYOUTS: MenuLayout[] = [
     density: "cozy",
     dashed: true,
     numbered: true,
+  },
+  {
+    id: "onepage",
+    name: "One-Pager",
+    blurb: "Whole menu on a single page: brand band, two columns, contact strip.",
+    cover: "band",
+    itemRow: "split",
+    uppercaseHeads: true,
+    density: "cozy",
+    columns: 2,
+    single: true,
+  },
+  {
+    id: "onepage-sheet",
+    name: "One-Page Sheet",
+    blurb: "Single page, dotted price leaders inside a hairline frame.",
+    cover: "band",
+    itemRow: "leaders",
+    uppercaseHeads: false,
+    density: "cozy",
+    columns: 2,
+    framed: true,
+    single: true,
+  },
+  {
+    id: "onepage-cards",
+    name: "One-Page Cards",
+    blurb: "Single page, every item a bordered tile, two across.",
+    cover: "band",
+    itemRow: "card",
+    uppercaseHeads: true,
+    density: "cozy",
+    columns: 2,
+    single: true,
+  },
+  {
+    id: "onepage-poster",
+    name: "One-Page Poster",
+    blurb: "Single page, one bold centered list. Wall-friendly.",
+    cover: "band",
+    itemRow: "split",
+    uppercaseHeads: true,
+    density: "cozy",
+    single: true,
+  },
+  {
+    id: "onepage-ticket",
+    name: "One-Page Ticket",
+    blurb: "Single page receipt: dashed rules, numbered rows.",
+    cover: "band",
+    itemRow: "split",
+    uppercaseHeads: true,
+    density: "cozy",
+    columns: 2,
+    dashed: true,
+    numbered: true,
+    single: true,
   },
   {
     id: "boutique",

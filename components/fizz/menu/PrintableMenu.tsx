@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { toPng } from "html-to-image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatMoney } from "@/lib/store/format";
@@ -56,6 +57,51 @@ export default function PrintableMenu({
   // a reload.
   const [op, setOp] = useState(opacity ?? 16);
   const [fs, setFs] = useState(fontScale ?? 100);
+  const [busy, setBusy] = useState(false);
+  const pagesRef = useRef<HTMLDivElement>(null);
+
+  // PNG export: rasterize the page surface at 3x for print-grade pixels.
+  // Multi-page layouts come out as one tall image; the one-page layout is a
+  // single sheet. ponytail: 3x is the sweet spot — 4x blows past canvas limits
+  // on A4 in Safari.
+  const savePng = useCallback(async () => {
+    const root = pagesRef.current;
+    if (!root || busy) return;
+    // Capture each .pdf-page on its own: rasterizing the centered wrapper
+    // bakes its page offset into the canvas and crops the sheet.
+    const pages = Array.from(root.querySelectorAll<HTMLElement>(".pdf-page"));
+    if (pages.length === 0) return;
+    setBusy(true);
+    try {
+      const base = store.menuSlug || "menu";
+      for (const [i, page] of pages.entries()) {
+        const url = await toPng(page, {
+          pixelRatio: 3,
+          backgroundColor: scheme.bg,
+          cacheBust: true,
+          width: page.offsetWidth,
+          height: page.offsetHeight,
+          style: { margin: "0", boxShadow: "none" },
+        });
+        const a = document.createElement("a");
+        a.href = url;
+        a.download =
+          pages.length > 1 ? `${base}-${i + 1}.png` : `${base}.png`;
+        a.click();
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [busy, scheme.bg, store.menuSlug]);
+
+  // Let the embedding preview modal trigger the same export.
+  useEffect(() => {
+    const w = window as unknown as { __fizzMenuPng?: () => void };
+    w.__fizzMenuPng = savePng;
+    return () => {
+      delete w.__fizzMenuPng;
+    };
+  }, [savePng]);
 
   const contactBits = [
     [store.addressLine1, store.addressLine2].filter(Boolean).join(", "),
@@ -113,6 +159,7 @@ export default function PrintableMenu({
       data-density={layout.density}
       data-frame={layout.framed ? "1" : undefined}
       data-dash={layout.dashed ? "1" : undefined}
+      data-single={layout.single ? layout.id : undefined}
     >
       <style>{PRINT_CSS}</style>
 
@@ -127,30 +174,48 @@ export default function PrintableMenu({
           onOpacity={setOp}
           onFontScale={setFs}
           onNavigate={navigate}
+          onPng={savePng}
+          busy={busy}
         />
       )}
 
-      <div className="menu-pdf-pages">
-        {/* ---- COVER ---- */}
-        <section className="pdf-page pdf-cover" data-cover={layout.cover}>
-          <MenuBgLayer pack={pack} seed={0} />
-          <div className="pdf-content">
-            <Cover store={store} layout={layout} headStyle={headStyle} />
-          </div>
-        </section>
+      <div className="menu-pdf-pages" ref={pagesRef}>
+        {/* ---- COVER (skipped by single-page layouts) ---- */}
+        {!layout.single && (
+          <section className="pdf-page pdf-cover" data-cover={layout.cover}>
+            <MenuBgLayer pack={pack} seed={0} />
+            <div className="pdf-content">
+              <Cover store={store} layout={layout} headStyle={headStyle} />
+            </div>
+          </section>
+        )}
 
         {/* ---- MENU BODY ---- */}
         <section className="pdf-page pdf-body">
           <MenuBgLayer pack={pack} seed={2} />
           <div className="pdf-content">
-          <div className="pdf-body-head">
-            <span className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
-              Menu
-            </span>
-            <h2 className="pdf-body-title" style={headStyle}>
-              {store.name}
-            </h2>
-          </div>
+          {layout.single ? (
+            <div className="pdf-brand-head">
+              <div className="pdf-brand-badge" style={headStyle}>
+                <span className="pdf-brand-name">{store.name}</span>
+                {store.menuTagline && (
+                  <span className="pdf-brand-tag">{store.menuTagline}</span>
+                )}
+              </div>
+              <h2 className="pdf-brand-title" style={headStyle}>
+                Menu
+              </h2>
+            </div>
+          ) : (
+            <div className="pdf-body-head">
+              <span className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
+                Menu
+              </span>
+              <h2 className="pdf-body-title" style={headStyle}>
+                {store.name}
+              </h2>
+            </div>
+          )}
 
           {categories.length === 0 ? (
             <p className="pdf-empty">This menu is being plated.</p>
@@ -176,6 +241,7 @@ export default function PrintableMenu({
                           key={item.id}
                           item={item}
                           currency={store.currency}
+                          trimZeros={!!layout.single}
                           variant={layout.itemRow}
                           num={layout.numbered ? ++n : undefined}
                         />
@@ -186,10 +252,24 @@ export default function PrintableMenu({
               })()}
             </div>
           )}
+
+          {layout.single && (
+            <div className="pdf-strip-wrap">
+              <div className="pdf-strip" style={headStyle}>
+                Order now! · Dine-in &amp; takeaway available
+              </div>
+              {reachBits.length > 0 && (
+                <p className="pdf-strip-reach">
+                  {reachBits.map((r) => r.value).join("   ·   ")}
+                </p>
+              )}
+            </div>
+          )}
           </div>
         </section>
 
-        {/* ---- CLOSING / CONTACT ---- */}
+        {/* ---- CLOSING / CONTACT (skipped by single-page layouts) ---- */}
+        {!layout.single && (
         <section className="pdf-page pdf-close">
           <MenuBgLayer pack={pack} seed={4} />
           <div className="pdf-content">
@@ -240,6 +320,7 @@ export default function PrintableMenu({
           </div>
           </div>
         </section>
+        )}
       </div>
     </div>
   );
@@ -274,18 +355,35 @@ function Cover({
   );
 }
 
+// Printed diet marker: "(Veg)" / "(Non-Veg)", like an Indian street-food sheet.
+function DietTag({ diet }: { diet: string | null }) {
+  if (diet !== "veg" && diet !== "nonveg") return null;
+  return (
+    <span className="pdf-diet" data-diet={diet}>
+      ({diet === "veg" ? "Veg" : "Non-Veg"})
+    </span>
+  );
+}
+
 function ItemRow({
   item,
   currency,
   variant,
   num,
+  trimZeros = false,
 }: {
   item: MenuCategoryWithItems["items"][number];
   currency: string;
   variant: MenuLayout["itemRow"];
   num?: number;
+  trimZeros?: boolean;
 }) {
   const hasVariants = item.variants.length > 0;
+  // ₹89.00 → ₹89 on printed one-pagers; keep paise when they exist.
+  const price = (v: string) => {
+    const s = formatMoney(v, currency);
+    return trimZeros ? s.replace(/\.00\b/, "") : s;
+  };
 
   return (
     <div className="pdf-item" data-row={variant}>
@@ -295,12 +393,11 @@ function ItemRow({
             <span className="pdf-item-num">{String(num).padStart(2, "0")}</span>
           )}
           {item.name}
+          <DietTag diet={item.diet} />
         </span>
         {variant === "leaders" && !hasVariants && <span className="pdf-leader" />}
         {!hasVariants && (
-          <span className="pdf-item-price">
-            {formatMoney(item.price, currency)}
-          </span>
+          <span className="pdf-item-price">{price(item.price)}</span>
         )}
       </div>
       {item.description && (
@@ -312,9 +409,7 @@ function ItemRow({
             <li key={v.id} className="pdf-variant">
               <span className="pdf-variant-name">{v.name}</span>
               {variant === "leaders" && <span className="pdf-leader" />}
-              <span className="pdf-item-price">
-                {formatMoney(v.price, currency)}
-              </span>
+              <span className="pdf-item-price">{price(v.price)}</span>
             </li>
           ))}
         </ul>
@@ -333,6 +428,8 @@ function Toolbar({
   onOpacity,
   onFontScale,
   onNavigate,
+  onPng,
+  busy,
 }: {
   schemeId: string;
   layoutId: string;
@@ -343,6 +440,8 @@ function Toolbar({
   onOpacity: (v: number) => void;
   onFontScale: (v: number) => void;
   onNavigate: (next: { scheme?: string; layout?: string; pack?: string }) => void;
+  onPng: () => void;
+  busy: boolean;
 }) {
   return (
     <div className="menu-pdf-toolbar">
@@ -439,6 +538,15 @@ function Toolbar({
         >
           Print / Save PDF
         </button>
+
+        <button
+          type="button"
+          onClick={onPng}
+          disabled={busy}
+          className="mpt-png"
+        >
+          {busy ? "Rendering…" : "Save PNG"}
+        </button>
       </div>
     </div>
   );
@@ -527,6 +635,19 @@ const PRINT_CSS = `
   white-space: nowrap;
 }
 .mpt-print:hover { filter: brightness(1.05); }
+.mpt-png {
+  background: none;
+  border: 1px solid #2A313C;
+  color: #F4F1E9;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.mpt-png:hover:not(:disabled) { border-color: #C6F432; color: #C6F432; }
+.mpt-png:disabled { opacity: 0.6; cursor: default; }
 
 /* ----- Page surface ----- */
 .menu-pdf-pages {
@@ -657,6 +778,15 @@ const PRINT_CSS = `
 }
 .pdf-item-main { display: flex; align-items: baseline; gap: 10px; }
 .pdf-item-name { font-size: 1em; font-weight: 600; color: var(--pg-fg); }
+.pdf-diet {
+  font-size: 0.78em;
+  font-weight: 600;
+  margin-left: 5px;
+  color: var(--pg-muted);
+  white-space: nowrap;
+}
+.pdf-diet[data-diet="veg"] { color: #2E7D32; }
+.pdf-diet[data-diet="nonveg"] { color: #B3261E; }
 .pdf-item-price {
   font-family: var(--pg-head);
   font-size: 1em;
@@ -804,6 +934,91 @@ const PRINT_CSS = `
 }
 .pdf-cover[data-cover="ticket"] .pdf-cover-title { font-size: 46px; }
 .pdf-cover[data-cover="ticket"] .pdf-cover-tag { margin-left: auto; margin-right: auto; }
+
+/* ===== Single-page (One-Pager) layout ===== */
+/* Brand band on top, two-column body, contact strip pinned to the bottom. */
+.menu-pdf-root[data-single] .pdf-body { display: flex; }
+.menu-pdf-root[data-single] .pdf-body .pdf-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.menu-pdf-root[data-single] .pdf-cats { flex: 1; }
+.pdf-brand-head { text-align: center; margin-bottom: 26px; }
+.pdf-brand-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--pg-accent);
+  color: var(--pg-accent-fg);
+  border-radius: 14px;
+  padding: 12px 34px;
+}
+.pdf-brand-name { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.pdf-brand-tag {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  opacity: 0.9;
+}
+.pdf-brand-title {
+  margin: 10px 0 0;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--pg-accent);
+  letter-spacing: 0.06em;
+}
+/* Match the printed-flyer reference: hairline page frame, red uppercase
+   category heads with no rule, undivided tight rows, dashed price prefix. */
+.menu-pdf-root[data-single="onepage"] .pdf-page {
+  border: 1.5px solid var(--pg-fg);
+  padding: 34px 30px 26px;
+}
+.menu-pdf-root[data-single="onepage"] .pdf-cat-rule { display: none; }
+.menu-pdf-root[data-single="onepage"] .pdf-cat-name {
+  color: var(--pg-accent);
+  font-size: 1.6em;
+  letter-spacing: 0.02em;
+}
+.menu-pdf-root[data-single="onepage"] .pdf-cat-icon { font-size: 1.5em; }
+.menu-pdf-root[data-single="onepage"] .pdf-cat-head { margin-bottom: 6px; }
+.menu-pdf-root[data-single="onepage"] .pdf-item {
+  border-bottom: none;
+  padding: 3px 0;
+}
+.menu-pdf-root[data-single="onepage"] .pdf-item-name { font-weight: 700; }
+.menu-pdf-root[data-single="onepage"] .pdf-item-price::before { content: "- "; }
+.menu-pdf-root[data-single="onepage"] .pdf-variants { gap: 2px; margin-top: 2px; }
+
+.pdf-strip-wrap { margin-top: 18px; }
+.pdf-strip {
+  background: var(--pg-accent);
+  color: var(--pg-accent-fg);
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.pdf-strip-reach {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pg-fg);
+}
+
+/* Variant: One-Page Poster — single wide column, centered heads. */
+.menu-pdf-root[data-single="onepage-poster"] .pdf-cat-head { justify-content: center; }
+.menu-pdf-root[data-single="onepage-poster"] .pdf-items { max-width: 560px; margin: 0 auto; }
+
+/* Variant: One-Page Ticket — dashed rules already come from the layout flag;
+   just pull the rows tighter so a numbered list still fits one sheet. */
+.menu-pdf-root[data-single="onepage-ticket"] .pdf-item { padding: 4px 0; }
+
+/* Every one-pager: the page must not spill onto a second sheet. */
+.menu-pdf-root[data-single] .pdf-cat { break-inside: avoid; }
 
 /* ----- Print ----- */
 @page { size: A4; margin: 0; }

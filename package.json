@@ -19,6 +19,7 @@
     "agentation": "^3.0.2",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
+    "html-to-image": "^1.11.13",
     "jose": "^6.2.3",
     "next": "16.2.9",
     "postgres": "^3.4.9",

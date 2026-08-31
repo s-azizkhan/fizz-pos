@@ -104,6 +104,7 @@ function ItemForm({
   const [price, setPrice] = useState(item?.price ?? "");
   const [cost, setCost] = useState(item?.cost ?? "");
   const [available, setAvailable] = useState(item?.available ?? true);
+  const [diet, setDiet] = useState(item?.diet ?? "");
   const [variants, setVariants] = useState<VariantDraft[]>(
     item?.variants.map((v) => ({ name: v.name, price: v.price, cost: v.cost })) ?? [],
   );
@@ -140,6 +141,7 @@ function ItemForm({
         price: price === "" ? "0" : price,
         cost: cost === "" ? "0" : cost,
         available,
+        diet,
         // recipeForm/itemForm still parse variants from a JSON string.
         variants: JSON.stringify(cleanVariants),
       } as never,
@@ -175,6 +177,14 @@ function ItemForm({
             <span className="text-steam"> · food cost {priceN > 0 ? ((costN / priceN) * 100).toFixed(0) : 0}%</span>
           </div>
         )}
+        <label className="flex flex-col gap-2 sm:col-span-2">
+          <span className={labelCls}>Diet</span>
+          <select value={diet} onChange={(e) => setDiet(e.target.value)} className={inputCls}>
+            <option value="">No tag</option>
+            <option value="veg">Veg</option>
+            <option value="nonveg">Non-Veg</option>
+          </select>
+        </label>
         <label className="flex items-center gap-3 sm:col-span-2">
           <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="h-5 w-5 accent-[#C6F432]" />
           <span className="text-sm text-cream">Available</span>

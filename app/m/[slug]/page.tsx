@@ -88,7 +88,17 @@ export default async function PublicMenuPage({
                   {cat.items.map((item) => (
                     <div key={item.id} className="flex items-start justify-between gap-6 py-4">
                       <div className="min-w-0">
-                        <p className="text-[1.05em] font-semibold">{item.name}</p>
+                        <p className="text-[1.05em] font-semibold">
+                          {item.name}
+                          {(item.diet === "veg" || item.diet === "nonveg") && (
+                            <span
+                              className="ml-2 text-[0.75em] font-semibold"
+                              style={{ color: item.diet === "veg" ? "#2E7D32" : "#B3261E" }}
+                            >
+                              ({item.diet === "veg" ? "Veg" : "Non-Veg"})
+                            </span>
+                          )}
+                        </p>
                         {item.description && (
                           <p className="mt-1 text-[0.9em] text-steam">{item.description}</p>
                         )}
