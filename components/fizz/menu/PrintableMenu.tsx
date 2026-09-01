@@ -69,7 +69,6 @@ export default function PrintableMenu({
   packId,
   opacity,
   fontScale,
-  fold,
   embed = false,
 }: {
   store: Store;
@@ -81,7 +80,6 @@ export default function PrintableMenu({
   packId: string;
   opacity: number; // background watermark opacity, %
   fontScale: number; // menu body font size, %
-  fold: boolean; // A3 landscape sheets folded into an A4 booklet
   embed?: boolean;
 }) {
   const router = useRouter();
@@ -145,7 +143,7 @@ export default function PrintableMenu({
     [store.addressLine1, store.addressLine2].filter(Boolean).join(", "),
     [store.city, store.state, store.postalCode].filter(Boolean).join(" "),
     store.country,
-  ].filter(Boolean) as string[];
+  ].filter(Boolean);
 
   // Fulfilment line on the single-page strip, from the ordering settings.
   const modes = [
@@ -196,13 +194,11 @@ export default function PrintableMenu({
     scheme?: string;
     layout?: string;
     pack?: string;
-    fold?: boolean;
   }) =>
     router.replace(
       `/menu-pdf?scheme=${next.scheme ?? scheme.id}` +
         `&layout=${next.layout ?? layout.id}` +
-        `&pack=${next.pack ?? pack.id}&op=${op}&fs=${fs}` +
-        `&fold=${(next.fold ?? fold) ? "1" : "0"}`,
+        `&pack=${next.pack ?? pack.id}&op=${op}&fs=${fs}`,
       { scroll: false },
     );
 
@@ -214,11 +210,8 @@ export default function PrintableMenu({
       data-frame={layout.framed ? "1" : undefined}
       data-dash={layout.dashed ? "1" : undefined}
       data-single={layout.single ? layout.id : undefined}
-      data-fold={fold ? "1" : undefined}
     >
       <style>{PRINT_CSS}</style>
-      {/* Folded layouts print on A3 landscape; a later @page rule wins. */}
-      {fold && <style>{"@page { size: A3 landscape; margin: 0; }"}</style>}
 
       {!embed && (
         <Toolbar
@@ -228,7 +221,6 @@ export default function PrintableMenu({
           op={op}
           fs={fs}
           hasBg={pack.glyphs.length > 0}
-          fold={fold}
           onOpacity={setOp}
           onFontScale={setFs}
           onNavigate={navigate}
@@ -238,28 +230,8 @@ export default function PrintableMenu({
       )}
 
       <div className="menu-pdf-pages" ref={pagesRef}>
-        {/* ---- A3 FOLD: outside sheet — back panel + front cover ---- */}
-        {fold && (
-          <section className="pdf-page pdf-sheet" data-cover={layout.cover}>
-            <MenuBgLayer pack={pack} seed={0} />
-            <div className="pdf-content pdf-sheet-inner">
-              <div className="pdf-panel">
-                <Closing
-                  store={store}
-                  headStyle={headStyle}
-                  contactBits={contactBits}
-                  reachBits={reachBits}
-                />
-              </div>
-              <div className="pdf-panel">
-                <Cover store={store} layout={layout} headStyle={headStyle} />
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* ---- COVER (skipped by single-page and folded layouts) ---- */}
-        {!layout.single && !fold && (
+        {/* ---- COVER (skipped by single-page layouts) ---- */}
+        {!layout.single && (
           <section className="pdf-page pdf-cover" data-cover={layout.cover}>
             <MenuBgLayer pack={pack} seed={0} />
             <div className="pdf-content">
@@ -341,7 +313,7 @@ export default function PrintableMenu({
             </div>
           )}
 
-          {layout.single && !fold && (
+          {layout.single && (
             <div className="pdf-strip-wrap">
               <div className="pdf-strip" style={headStyle}>
                 {stripLine}
@@ -361,17 +333,58 @@ export default function PrintableMenu({
           </div>
         </section>
 
-        {/* ---- CLOSING / CONTACT (skipped by single-page and folded layouts) ---- */}
-        {!layout.single && !fold && (
+        {/* ---- CLOSING / CONTACT (skipped by single-page layouts) ---- */}
+        {!layout.single && (
         <section className="pdf-page pdf-close">
           <MenuBgLayer pack={pack} seed={4} />
           <div className="pdf-content">
-          <Closing
-            store={store}
-            headStyle={headStyle}
-            contactBits={contactBits}
-            reachBits={reachBits}
-          />
+          <div className="pdf-close-inner">
+            <p className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
+              Come say hi
+            </p>
+            <h2 className="pdf-close-title" style={headStyle}>
+              {store.name}
+            </h2>
+            {store.menuTagline && (
+              <p className="pdf-close-tag">{store.menuTagline}</p>
+            )}
+
+            {contactBits.length > 0 && (
+              <address className="pdf-address">
+                {contactBits.map((line, i) => (
+                  <span key={i}>{line}</span>
+                ))}
+              </address>
+            )}
+
+            {reachBits.length > 0 && (
+              <div className="pdf-reach">
+                {reachBits.map((r) => (
+                  <div key={r.label} className="pdf-reach-row">
+                    <span className="pdf-reach-icon">
+                      <r.icon />
+                    </span>
+                    <span className="pdf-reach-value">{r.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {(store.openingTime || store.closingTime) && (
+              <p className="pdf-hours">
+                Open daily {store.openingTime}–{store.closingTime}
+              </p>
+            )}
+
+            <p className="pdf-thanks" style={headStyle}>
+              Thanks for stopping by.
+            </p>
+
+            <p className="pdf-wordmark">
+              Menu by Fi<span style={{ color: "var(--pg-accent)" }}>zz</span>
+              <span className="pdf-dot">●</span>
+            </p>
+          </div>
           </div>
         </section>
         )}
@@ -412,68 +425,6 @@ function Cover({
         <p className="pdf-cover-tag">Our menu, freshly poured.</p>
       )}
       <p className="pdf-cover-meta">{since}</p>
-    </div>
-  );
-}
-
-// Contact/closing panel. Its own component because the A3 fold layout prints
-// it as the back panel of the outside sheet, not as a page of its own.
-function Closing({
-  store,
-  headStyle,
-  contactBits,
-  reachBits,
-}: {
-  store: Store;
-  headStyle: React.CSSProperties;
-  contactBits: string[];
-  reachBits: { label: string; icon: () => React.ReactElement; value: string }[];
-}) {
-  return (
-    <div className="pdf-close-inner">
-      <p className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
-        Come say hi
-      </p>
-      <h2 className="pdf-close-title" style={headStyle}>
-        {store.name}
-      </h2>
-      {store.menuTagline && <p className="pdf-close-tag">{store.menuTagline}</p>}
-
-      {contactBits.length > 0 && (
-        <address className="pdf-address">
-          {contactBits.map((line, i) => (
-            <span key={i}>{line}</span>
-          ))}
-        </address>
-      )}
-
-      {reachBits.length > 0 && (
-        <div className="pdf-reach">
-          {reachBits.map((r) => (
-            <div key={r.label} className="pdf-reach-row">
-              <span className="pdf-reach-icon">
-                <r.icon />
-              </span>
-              <span className="pdf-reach-value">{r.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {(store.openingTime || store.closingTime) && (
-        <p className="pdf-hours">
-          Open daily {store.openingTime}–{store.closingTime}
-        </p>
-      )}
-
-      <p className="pdf-thanks" style={headStyle}>
-        Thanks for stopping by.
-      </p>
-
-      <p className="pdf-wordmark">
-        Menu by Fi<span style={{ color: "var(--pg-accent)" }}>zz</span>
-        <span className="pdf-dot">●</span>
-      </p>
     </div>
   );
 }
@@ -551,7 +502,6 @@ function Toolbar({
   op,
   fs,
   hasBg,
-  fold,
   onOpacity,
   onFontScale,
   onNavigate,
@@ -564,15 +514,9 @@ function Toolbar({
   op: number;
   fs: number;
   hasBg: boolean;
-  fold: boolean;
   onOpacity: (v: number) => void;
   onFontScale: (v: number) => void;
-  onNavigate: (next: {
-    scheme?: string;
-    layout?: string;
-    pack?: string;
-    fold?: boolean;
-  }) => void;
+  onNavigate: (next: { scheme?: string; layout?: string; pack?: string }) => void;
   onPng: () => void;
   busy: boolean;
 }) {
@@ -630,28 +574,6 @@ function Toolbar({
                   {p.name}
                 </button>
               ))}
-            </div>
-          </div>
-
-          <div className="mpt-group">
-            <span className="mpt-label">Paper</span>
-            <div className="mpt-chips">
-              <button
-                type="button"
-                onClick={() => onNavigate({ fold: false })}
-                aria-pressed={!fold}
-                className={`mpt-chip${!fold ? " is-active" : ""}`}
-              >
-                A4
-              </button>
-              <button
-                type="button"
-                onClick={() => onNavigate({ fold: true })}
-                aria-pressed={fold}
-                className={`mpt-chip${fold ? " is-active" : ""}`}
-              >
-                A3 book fold
-              </button>
             </div>
           </div>
 
@@ -1020,36 +942,6 @@ const PRINT_CSS = `
 .pdf-cats[data-cols="2"] { column-count: 2; column-gap: 40px; }
 .pdf-cats[data-cols="2"] .pdf-cat { break-inside: avoid; }
 
-/* ----- A3 book fold: landscape sheets, folded down the middle ----- */
-/* A3 landscape @96dpi = 1587 x 1123px. Each half is an A4 portrait panel. */
-.menu-pdf-root[data-fold] .menu-pdf-pages { max-width: 1587px; }
-.menu-pdf-root[data-fold] .pdf-page {
-  min-height: 1123px;
-  padding: 54px 60px 60px;
-}
-/* The fold itself: a dashed guide down the centre, on screen and in print. */
-.menu-pdf-root[data-fold] .pdf-page::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  border-left: 1px dashed var(--pg-divider);
-  z-index: 1;
-  pointer-events: none;
-}
-.menu-pdf-root[data-fold] .pdf-sheet-inner {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 110px;
-  flex: 1;
-}
-.menu-pdf-root[data-fold] .pdf-panel { display: flex; flex-direction: column; justify-content: center; }
-/* Inside spread: the body flows left column then right, reading across the fold. */
-.menu-pdf-root[data-fold] .pdf-cats[data-cols="2"] { column-gap: 110px; }
-.menu-pdf-root[data-fold] .pdf-cover-title { font-size: 54px; }
-.menu-pdf-root[data-fold] .pdf-logo { max-height: 110px; }
-
 /* Inset hairline frame on every page (framed layouts). */
 .menu-pdf-root[data-frame="1"] .pdf-page::before {
   content: "";
@@ -1221,10 +1113,6 @@ const PRINT_CSS = `
 .menu-pdf-root[data-single] .pdf-cat { break-inside: avoid; }
 
 /* ----- Print ----- */
-/* Single-page presets set their own tighter page padding; folded sheets are
-   A3, so restore the sheet padding when both apply. */
-.menu-pdf-root[data-fold][data-single] .pdf-page { padding: 54px 60px 60px; }
-
 @page { size: A4; margin: 0; }
 @media print {
   .menu-pdf-toolbar { display: none !important; }

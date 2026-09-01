@@ -54,9 +54,6 @@ export default function ExportMenuPdfModal({
   const [pack, setPack] = useState(DEFAULT_MENU_BG_PACK);
   const [op, setOp] = useState(14);
   const [fs, setFs] = useState(100);
-  // A3 landscape sheets folded into an A4 booklet. Independent of the layout —
-  // any preset can be folded.
-  const [fold, setFold] = useState(false);
   // Committed slider values drive the preview iframe (commit on release so a
   // drag doesn't reload it per step). Scheme/layout/pack reload immediately.
   const [cOp, setCOp] = useState(14);
@@ -70,7 +67,7 @@ export default function ExportMenuPdfModal({
   if (!isOpen) return null;
 
   const qs = (o: number, f: number) =>
-    `scheme=${scheme}&layout=${layout}&pack=${pack}&op=${o}&fs=${f}&fold=${fold ? "1" : "0"}`;
+    `scheme=${scheme}&layout=${layout}&pack=${pack}&op=${o}&fs=${f}`;
   const previewSrc = `/menu-pdf?${qs(cOp, cFs)}&embed=1`;
 
   const applyCombo = (c: Combo) => {
@@ -201,26 +198,6 @@ export default function ExportMenuPdfModal({
                     {l.name}
                   </Chip>
                 ))}
-              </div>
-            </ControlSection>
-
-            {/* Paper */}
-            <ControlSection label="Paper">
-              <div className="flex flex-wrap gap-2">
-                <Chip
-                  active={!fold}
-                  onClick={() => setFold(false)}
-                  title="Standard A4 pages."
-                >
-                  A4 pages
-                </Chip>
-                <Chip
-                  active={fold}
-                  onClick={() => setFold(true)}
-                  title="A3 landscape sheets, folded down the middle into an A4 booklet."
-                >
-                  A3 book fold
-                </Chip>
               </div>
             </ControlSection>
 
