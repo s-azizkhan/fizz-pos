@@ -106,61 +106,64 @@ export default async function PublicMenuPage({
                 </div>
                 <div className="mt-5 flex flex-col divide-y divide-[var(--m-line)]">
                   {cat.items.map((item) => (
-                    <div key={item.id} className="flex items-start justify-between gap-6 py-4">
-                      <div className="min-w-0">
-                        <p className="text-[1.05em] font-semibold">
-                          {item.name}
-                          {(item.diet === "veg" || item.diet === "nonveg") && (
-                            <span
-                              className="ml-2 text-[0.75em] font-semibold"
-                              style={{ color: item.diet === "veg" ? "#2E7D32" : "#B3261E" }}
-                            >
-                              ({item.diet === "veg" ? "Veg" : "Non-Veg"})
-                            </span>
-                          )}
-                        </p>
-                        {item.description && (
-                          <p className="mt-1 text-[0.9em] text-[var(--m-muted)]">{item.description}</p>
-                        )}
-                        {item.variants.length > 0 && (
-                          <ul className="mt-2 flex flex-col gap-1">
-                            {item.variants.map((v) => (
-                              <li key={v.id} className="flex items-center justify-between gap-4 text-[0.9em] text-[var(--m-muted)]">
-                                <span>{v.name}</span>
-                                <span className="flex items-center gap-3">
-                                  <span style={{ color: accent }}>{formatMoney(v.price, store.currency)}</span>
-
-                                  {ordering && (
-                                    <AddToCart
-                                      itemKey={v.id}
-                                      name={`${item.name} (${v.name})`}
-                                      price={v.price}
-                                      accent={accent}
-                                    />
-                                  )}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      {item.variants.length === 0 && (
-                        <div className="flex shrink-0 items-center gap-3">
-                          <span
-                            className="text-[1.05em] font-semibold"
-                            style={{ color: accent, fontFamily: theme.display }}
-                          >
-                            {formatMoney(item.price, store.currency)}
-                          </span>
-                          {ordering && (
-                            <AddToCart
-                              itemKey={item.id}
-                              name={item.name}
-                              price={item.price}
-                              accent={accent}
-                            />
+                    <div key={item.id} className="py-4">
+                      <div className="flex items-start justify-between gap-6">
+                        <div className="min-w-0">
+                          <p className="text-[1.05em] font-semibold">
+                            {item.name}
+                            {(item.diet === "veg" || item.diet === "nonveg") && (
+                              <span
+                                className="ml-2 text-[0.75em] font-semibold"
+                                style={{ color: item.diet === "veg" ? "#2E7D32" : "#B3261E" }}
+                              >
+                                ({item.diet === "veg" ? "Veg" : "Non-Veg"})
+                              </span>
+                            )}
+                          </p>
+                          {item.description && (
+                            <p className="mt-1 text-[0.9em] text-[var(--m-muted)]">{item.description}</p>
                           )}
                         </div>
+                        {/* Base price always shows when set — variants are extras, not replacements. */}
+                        {Number(item.price) > 0 && (
+                          <div className="flex shrink-0 items-center gap-3">
+                            <span
+                              className="text-[1.05em] font-semibold"
+                              style={{ color: accent, fontFamily: theme.display }}
+                            >
+                              {formatMoney(item.price, store.currency)}
+                            </span>
+                            {ordering && (
+                              <AddToCart
+                                itemKey={item.id}
+                                name={item.name}
+                                price={item.price}
+                                accent={accent}
+                              />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {/* Variants sit below the row, full width, so their prices land in the same right column. */}
+                      {item.variants.length > 0 && (
+                        <ul className="mt-2 flex flex-col gap-1">
+                          {item.variants.map((v) => (
+                            <li key={v.id} className="flex items-center justify-between gap-4 text-[0.9em] text-[var(--m-muted)]">
+                              <span>{v.name}</span>
+                              <span className="flex shrink-0 items-center gap-3">
+                                <span style={{ color: accent }}>{formatMoney(v.price, store.currency)}</span>
+                                {ordering && (
+                                  <AddToCart
+                                    itemKey={v.id}
+                                    name={`${item.name} (${v.name})`}
+                                    price={v.price}
+                                    accent={accent}
+                                  />
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                   ))}

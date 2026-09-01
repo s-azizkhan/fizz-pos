@@ -379,6 +379,8 @@ function ItemRow({
   trimZeros?: boolean;
 }) {
   const hasVariants = item.variants.length > 0;
+  // Base price always prints when set — variants are extras, not replacements.
+  const showBase = Number(item.price) > 0;
   // ₹89.00 → ₹89 on printed one-pagers; keep paise when they exist.
   const price = (v: string) => {
     const s = formatMoney(v, currency);
@@ -395,10 +397,8 @@ function ItemRow({
           {item.name}
           <DietTag diet={item.diet} />
         </span>
-        {variant === "leaders" && !hasVariants && <span className="pdf-leader" />}
-        {!hasVariants && (
-          <span className="pdf-item-price">{price(item.price)}</span>
-        )}
+        {variant === "leaders" && showBase && <span className="pdf-leader" />}
+        {showBase && <span className="pdf-item-price">{price(item.price)}</span>}
       </div>
       {item.description && (
         <p className="pdf-item-desc">{item.description}</p>
