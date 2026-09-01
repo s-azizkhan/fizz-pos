@@ -19,8 +19,8 @@ export default function DashboardShell({
   const { sidebarCollapsed } = useUi();
   const pathname = usePathname();
 
-  // The till is its own full-screen surface with a cart bar pinned to the
-  // bottom — the tab bar would fight it, so it hides there.
+  // The till sizes itself to the viewport and scrolls internally, so it takes
+  // no bottom padding — the floating tab bar still shows over it.
   const fullBleed = pathname.startsWith("/dashboard/till");
 
   const current = NAV_ITEMS.filter((i) => i.href !== "/dashboard").find((i) =>
@@ -64,7 +64,7 @@ export default function DashboardShell({
           )}
         </header>
 
-        {/* Bottom padding clears the fixed tab bar (+ iOS home indicator). */}
+        {/* Bottom padding clears the floating tab bar (+ iOS home indicator). */}
         <main
           className={
             fullBleed ? "" : "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
@@ -82,7 +82,7 @@ export default function DashboardShell({
         </main>
       </div>
 
-      {!fullBleed && <BottomNav user={user} />}
+      <BottomNav user={user} />
     </div>
   );
 }

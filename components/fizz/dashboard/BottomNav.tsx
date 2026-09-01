@@ -109,10 +109,14 @@ export default function BottomNav({
         </div>
       )}
 
+      {/* Floating tab bar: a pill that hovers over the content, so the page
+          reads edge-to-edge underneath it. The wrapper is click-through —
+          only the pill itself takes taps. */}
       <nav
         style={{ viewTransitionName: "tab-bar" }}
-        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-ink-line bg-ink/90 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden"
       >
+        <div className="pointer-events-auto mx-auto grid max-w-md grid-cols-5 gap-1 rounded-full border border-ink-line bg-ink/80 p-1.5 shadow-[0_10px_30px_rgba(0,0,0,0.55)] backdrop-blur-xl">
         {tabs.map((item) => {
           const Icon = item.icon;
           const active = isActive(pathname, item.href);
@@ -122,8 +126,8 @@ export default function BottomNav({
               href={item.href}
               onClick={closeMore}
               transitionTypes={[item.href === "/dashboard" ? "nav-back" : "nav-forward"]}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-                active ? "text-fizz" : "text-steam"
+              className={`flex flex-col items-center gap-0.5 rounded-full py-2 text-[10px] font-medium transition-colors ${
+                active ? "bg-fizz/10 text-fizz" : "text-steam"
               }`}
             >
               <Icon className="shrink-0" />
@@ -135,13 +139,14 @@ export default function BottomNav({
           onClick={toggleMore}
           aria-label="More"
           aria-expanded={moreOpen}
-          className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-            moreOpen || moreActive ? "text-fizz" : "text-steam"
+          className={`flex flex-col items-center gap-0.5 rounded-full py-2 text-[10px] font-medium transition-colors ${
+            moreOpen || moreActive ? "bg-fizz/10 text-fizz" : "text-steam"
           }`}
         >
           <span className="grid h-5 w-5 place-items-center text-lg leading-none">⋯</span>
           More
         </button>
+        </div>
       </nav>
     </>
   );

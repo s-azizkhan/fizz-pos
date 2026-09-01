@@ -340,7 +340,8 @@ export default function PosTerminal({
             // Desktop: in-flow right column.
             "lg:relative lg:z-auto lg:flex lg:min-h-0 lg:translate-y-0",
             // Mobile: fixed full-height sheet that slides up.
-            "fixed inset-x-0 bottom-0 top-16 z-40 flex flex-col transition-transform duration-300 ease-out lg:inset-auto",
+            // Mobile sheet sits above the floating tab bar while it is open.
+            "fixed inset-x-0 bottom-0 top-16 z-50 flex flex-col transition-transform duration-300 ease-out lg:inset-auto",
             cartOpen ? "translate-y-0" : "translate-y-full lg:translate-y-0",
           ].join(" ")}
         >
@@ -368,11 +369,11 @@ export default function PosTerminal({
         </div>
       </div>
 
-      {/* Mobile bottom bar: view the order / current total. Hidden on desktop. */}
+      {/* Mobile: floating cart pill, stacked just above the tab bar. */}
       {cart.count > 0 && !cartOpen && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-ink-line bg-fizz px-5 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4 font-display font-bold text-ink lg:hidden"
+          className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] z-30 mx-auto flex max-w-md items-center justify-between gap-3 rounded-full bg-fizz px-5 py-3.5 font-display font-bold text-ink shadow-[0_10px_30px_rgba(14,17,22,0.6)] transition-transform hover:scale-[1.02] lg:hidden"
         >
           <span className="flex items-center gap-2">
             <span className="grid h-7 w-7 place-items-center rounded-full bg-ink/15 text-sm">
