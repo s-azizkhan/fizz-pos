@@ -1,11 +1,12 @@
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   orderItems,
   orders,
   type Order,
   type OrderItem,
+  type KitchenStatus,
   type OrderStatus,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
@@ -57,6 +58,59 @@ export async function getOrder(id: string): Promise<OrderWithItems | null> {
     .where(eq(orderItems.orderId, id))
     .orderBy(orderItems.name);
   return { ...row, items };
+}
+
+// The kitchen board. Payment is irrelevant here — a paid takeaway still has to
+// be cooked — so this filters on the kitchen lane and only drops voided orders.
+// OLDEST FIRST: the queue is a queue, so the newest ticket lands at the back.
+// `ready` is final and unbounded, so that lane is capped; the working lanes are
+// small by nature and returned whole.
+export async function listKot(
+  lane: KitchenStatus,
+): Promise<OrderWithItems[]> {
+  const rows = await db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.storeId, STORE_ID),
+        ne(orders.status, "void"),
+        eq(orders.kitchenStatus, lane),
+      ),
+    )
+    .orderBy(lane === "ready" ? desc(orders.createdAt) : asc(orders.createdAt))
+    .limit(lane === "ready" ? 30 : 200);
+  if (rows.length === 0) return [];
+
+  const items = await db
+    .select()
+    .from(orderItems)
+    .where(inArray(orderItems.orderId, rows.map((o) => o.id)));
+
+  const byOrder = new Map<string, OrderItem[]>();
+  for (const it of items) {
+    const list = byOrder.get(it.orderId) ?? [];
+    list.push(it);
+    byOrder.set(it.orderId, list);
+  }
+  return rows.map((o) => ({ ...o, items: byOrder.get(o.id) ?? [] }));
+}
+
+// Lane counts drive the tab badges, so a cook can see work piling up in a lane
+// they aren't looking at.
+export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
+  const rows = await db
+    .select({
+      lane: orders.kitchenStatus,
+      count: sql<number>`count(*)`.mapWith(Number),
+    })
+    .from(orders)
+    .where(and(eq(orders.storeId, STORE_ID), ne(orders.status, "void")))
+    .groupBy(orders.kitchenStatus);
+
+  const out: Record<KitchenStatus, number> = { new: 0, accepted: 0, ready: 0 };
+  for (const r of rows) out[r.lane] = r.count;
+  return out;
 }
 
 // Count of currently-open tabs — used for the Till/orders badge.

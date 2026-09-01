@@ -30,6 +30,12 @@ export type OrderType = (typeof orderType.enumValues)[number];
 export const orderStatus = pgEnum("order_status", ["open", "paid", "void"]);
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
 
+// What the KITCHEN has done with the order, tracked separately from payment —
+// a paid order still has to be cooked, and a dine-in tab is cooked long before
+// it settles. `ready` is final. Order matters: first value is the default.
+export const kitchenStatus = pgEnum("kitchen_status", ["new", "accepted", "ready"]);
+export type KitchenStatus = (typeof kitchenStatus.enumValues)[number];
+
 // A sale rung at the till. Starts `open` (a tab you can revisit and edit) and
 // becomes `paid` when settled. Money stored as numeric(12,2) strings to avoid
 // float drift, matching the rest of the schema.
@@ -41,6 +47,11 @@ export const orders = pgTable("orders", {
   // Human-facing receipt number from the store's order numbering config.
   number: text("number").notNull(),
   status: orderStatus("status").notNull().default("open"),
+  // Kitchen lane, independent of `status`. See kitchenStatus above.
+  // ponytail: no per-transition timestamps — the board only needs "how long has
+  // this been waiting", which createdAt already answers. Add acceptedAt/readyAt
+  // when you want cook-time analytics.
+  kitchenStatus: kitchenStatus("kitchen_status").notNull().default("new"),
   type: orderType("type").notNull().default("dine_in"),
   // Optional table / tab label keyed at the till.
   reference: text("reference"),
@@ -72,6 +83,8 @@ export const orders = pgTable("orders", {
   index("orders_store_paid_at_idx").on(t.storeId, t.paidAt),
   // Recent-orders feeds order by createdAt within a store.
   index("orders_store_created_at_idx").on(t.storeId, t.createdAt),
+  // The KOT board polls by store + kitchen lane, oldest first.
+  index("orders_store_kitchen_status_idx").on(t.storeId, t.kitchenStatus),
 ]);
 export type Order = typeof orders.$inferSelect;
 
@@ -161,3 +174,10 @@ export const saveOrderSchema = z.object({
   items: z.array(lineSchema).min(1, "Add at least one item"),
 });
 export type SaveOrderInput = z.infer<typeof saveOrderSchema>;
+
+// The kitchen only ever moves an order forward a lane.
+export const kitchenMoveSchema = z.object({
+  orderId: z.uuid(),
+  to: z.enum(["accepted", "ready"]),
+});
+export type KitchenMoveInput = z.infer<typeof kitchenMoveSchema>;

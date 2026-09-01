@@ -5,6 +5,8 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   checkoutSchema,
+  kitchenMoveSchema,
+  kitchenStatus,
   saveOrderSchema,
   orderItems,
   orders,
@@ -12,7 +14,13 @@ import {
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { computeTotals, r2 } from "@/lib/store/totals";
-import { listOrders, getOrder, openOrderCount } from "@/lib/store/orders";
+import {
+  listOrders,
+  getOrder,
+  openOrderCount,
+  listKot,
+  kotCounts,
+} from "@/lib/store/orders";
 import { nextOrderNumber, getStore } from "@/lib/store/data";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
 import { router, protectedProcedure } from "@/lib/trpc/init";
@@ -79,6 +87,7 @@ function bumpPaths() {
   revalidatePath("/dashboard/till");
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/inventory");
+  revalidatePath("/dashboard/kot");
 }
 
 export const ordersRouter = router({
@@ -89,6 +98,46 @@ export const ordersRouter = router({
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getOrder(input)),
 
   openCount: protectedProcedure.query(() => openOrderCount()),
+
+  // --- Kitchen board -------------------------------------------------------
+  // Polled on an interval by the KOT screen, so keep both of these cheap.
+  kot: protectedProcedure
+    .input(z.enum(kitchenStatus.enumValues))
+    .query(({ input }) => listKot(input)),
+
+  kotCounts: protectedProcedure.query(() => kotCounts()),
+
+  // The kitchen only pushes an order forward: new -> accepted -> ready. Going
+  // backwards, or touching a voided order, is rejected — two cooks tapping the
+  // same ticket must not un-do each other on a screen that repaints every few
+  // seconds.
+  kotMove: protectedProcedure
+    .input(kitchenMoveSchema)
+    .mutation(async ({ input }) => {
+      const [row] = await db
+        .select({ status: orders.status, lane: orders.kitchenStatus })
+        .from(orders)
+        .where(and(eq(orders.id, input.orderId), eq(orders.storeId, STORE_ID)))
+        .limit(1);
+      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Order not found." });
+      if (row.status === "void")
+        throw new TRPCError({ code: "CONFLICT", message: "That order was voided." });
+
+      const RANK = { new: 0, accepted: 1, ready: 2 } as const;
+      if (RANK[input.to] <= RANK[row.lane]) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `Already ${row.lane === "new" ? "in the queue" : row.lane}.`,
+        });
+      }
+
+      await db
+        .update(orders)
+        .set({ kitchenStatus: input.to, updatedAt: new Date() })
+        .where(eq(orders.id, input.orderId));
+      revalidatePath("/dashboard/kot");
+      return { ok: true as const };
+    }),
 
   // Save a dine-in (or any) tab as an OPEN order — no payment yet. Creates a new
   // order or updates an existing open one (repopulated from the orders page).

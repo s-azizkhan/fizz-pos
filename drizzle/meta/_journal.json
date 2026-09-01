@@ -71,6 +71,13 @@
       "when": 1788222579770,
       "tag": "0009_sweet_unicorn",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788242412773,
+      "tag": "0010_classy_shocker",
+      "breakpoints": true
     }
   ]
 }
