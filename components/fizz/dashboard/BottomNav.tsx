@@ -40,6 +40,11 @@ export default function BottomNav({
   const tabs = items.slice(0, TAB_COUNT);
   const rest = items.slice(TAB_COUNT);
   const moreActive = rest.some((i) => isActive(pathname, i.href));
+  // The bar lives in the layout, so it never unmounts across navigation — the
+  // pill is one element that slides between slots with a plain CSS transition.
+  // No view transition involved: those are skipped on a hidden document and
+  // only fire on route commit, which made the switch feel instant.
+  const activeIndex = moreOpen || moreActive ? TAB_COUNT : tabs.findIndex((i) => isActive(pathname, i.href));
 
   return (
     <>
@@ -112,11 +117,20 @@ export default function BottomNav({
       {/* Floating tab bar: a pill that hovers over the content, so the page
           reads edge-to-edge underneath it. The wrapper is click-through —
           only the pill itself takes taps. */}
+      {/* No view-transition-name here: a named element becomes its own
+          backdrop root, which kills the pill's backdrop-filter. The bar sits
+          in the root snapshot instead — same pixels old and new, so it reads
+          as fixed anyway. */}
       <nav
-        style={{ viewTransitionName: "tab-bar" }}
         className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
       >
-        <div className="fizz-glass pointer-events-auto mx-auto grid max-w-md grid-cols-5 gap-1 rounded-full p-1.5">
+        <div className="fizz-glass pointer-events-auto relative mx-auto grid max-w-md grid-cols-5 rounded-full p-1.5">
+          {/* Slot width is 1/5 of the track, so slot n sits at n * 100%. */}
+          <span
+            aria-hidden
+            style={{ translate: `${activeIndex * 100}%`, opacity: activeIndex < 0 ? 0 : 1 }}
+            className="fizz-liquid-pill pointer-events-none absolute inset-y-1.5 left-1.5 w-[calc((100%-0.75rem)/5)] rounded-full bg-fizz/12 ring-1 ring-inset ring-fizz/20"
+          />
         {tabs.map((item) => {
           const Icon = item.icon;
           const active = isActive(pathname, item.href);
@@ -130,13 +144,6 @@ export default function BottomNav({
                 active ? "text-fizz" : "text-steam"
               }`}
             >
-              {active && (
-                <span
-                  aria-hidden
-                  style={{ viewTransitionName: "tab-pill" }}
-                  className="absolute inset-0 rounded-full bg-fizz/12 ring-1 ring-inset ring-fizz/20"
-                />
-              )}
               <Icon className="relative shrink-0" />
               <span className="relative max-w-full truncate px-1">{item.label}</span>
             </Link>
@@ -147,7 +154,7 @@ export default function BottomNav({
           aria-label="More"
           aria-expanded={moreOpen}
           className={`flex flex-col items-center gap-0.5 rounded-full py-2 text-[10px] font-medium transition-colors ${
-            moreOpen || moreActive ? "bg-fizz/12 text-fizz ring-1 ring-inset ring-fizz/20" : "text-steam"
+            moreOpen || moreActive ? "text-fizz" : "text-steam"
           }`}
         >
           <span className="grid h-5 w-5 place-items-center text-lg leading-none">⋯</span>

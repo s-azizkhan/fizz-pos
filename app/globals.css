@@ -247,19 +247,16 @@ body {
   to { translate: 0; }
 }
 
-/* The top bar and tab bar are the user's fixed spatial anchors — the content
+/* The top bar is the user's fixed spatial anchor — the content
    moves, the chrome does not. */
-::view-transition-group(app-bar),
-::view-transition-group(tab-bar) {
+::view-transition-group(app-bar) {
   animation: none;
   z-index: 100;
 }
-::view-transition-old(app-bar),
-::view-transition-old(tab-bar) {
+::view-transition-old(app-bar) {
   display: none;
 }
-::view-transition-new(app-bar),
-::view-transition-new(tab-bar) {
+::view-transition-new(app-bar) {
   animation: none;
 }
 
@@ -327,10 +324,13 @@ body {
    scrolls underneath through the blur. */
 .fizz-glass {
   background:
-    linear-gradient(to bottom, rgb(244 241 233 / 0.1), rgb(244 241 233 / 0.02) 42%),
-    rgb(14 17 22 / 0.6);
-  backdrop-filter: blur(28px) saturate(180%);
-  -webkit-backdrop-filter: blur(28px) saturate(180%);
+    linear-gradient(to bottom, rgb(244 241 233 / 0.12), rgb(244 241 233 / 0.03) 42%),
+    rgb(14 17 22 / 0.72);
+  /* brightness < 1: the backdrop is darkened before the tint lands, so the
+     labels keep their contrast no matter what scrolls under the pill. */
+  /* No hand-written -webkit- prefix: Lightning CSS dedupes the pair and keeps
+     only the prefixed one, which Chrome then ignores. Let it add prefixes. */
+  backdrop-filter: blur(40px) saturate(200%) brightness(0.7);
   box-shadow:
     inset 0 1px 0 rgb(244 241 233 / 0.16),
     inset 0 0 0 1px rgb(244 241 233 / 0.06),
@@ -342,14 +342,15 @@ body {
   .fizz-glass { background: rgb(14 17 22 / 0.95); }
 }
 
-/* The lime blob behind the active tab is one named element, so the browser
-   morphs it from the old tab's slot to the new one on every navigation.
-   Overshooting easing = the iOS spring. */
-::view-transition-group(tab-pill) {
-  animation-duration: 420ms;
-  animation-timing-function: cubic-bezier(0.34, 1.4, 0.64, 1);
-  z-index: 101;
+/* The active-tab pill. Overshooting easing on translate is the whole "liquid"
+   feel — it launches fast, passes the target, and settles back. width/opacity
+   ride along so a role change (fewer tabs) does not snap. */
+.fizz-liquid-pill {
+  transition:
+    translate 540ms cubic-bezier(0.34, 1.42, 0.58, 1),
+    opacity 200ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(tab-pill) { animation: none; }
+  .fizz-liquid-pill { transition: opacity 200ms ease-out; }
 }
+
