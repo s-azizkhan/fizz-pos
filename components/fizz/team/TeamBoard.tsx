@@ -150,6 +150,9 @@ function InviteForm() {
                 <input
                   type="radio"
                   name="role"
+                  // Without an explicit value a checked radio serializes as
+                  // "on", which the role enum rejects.
+                  value={r.value}
                   className="sr-only"
                   checked={role === r.value}
                   onChange={() => setRole(r.value)}
