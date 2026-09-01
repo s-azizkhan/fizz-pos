@@ -3,10 +3,8 @@
 import { ViewTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Sidebar from "./Sidebar";
 import BottomNav from "./BottomNav";
 import { NAV_ITEMS } from "./nav-items";
-import { useUi } from "@/lib/store/ui";
 import type { UserRole } from "@/lib/db/schema";
 
 export default function DashboardShell({
@@ -16,7 +14,6 @@ export default function DashboardShell({
   user: { name: string; role: UserRole };
   children: React.ReactNode;
 }) {
-  const { sidebarCollapsed } = useUi();
   const pathname = usePathname();
 
   // The till sizes itself to the viewport and scrolls internally, so it takes
@@ -29,18 +26,12 @@ export default function DashboardShell({
 
   return (
     <div className="min-h-dvh">
-      <Sidebar user={user} />
-
-      <div
-        className={`transition-[padding] duration-300 ease-out ${
-          sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"
-        }`}
-      >
-        {/* Mobile top bar: page title, with a back-to-home tap on subpages.
+      <div>
+        {/* Top bar: page title, with a back-to-home tap on subpages.
             Named so it stays anchored while the content slides underneath. */}
         <header
           style={{ viewTransitionName: "app-bar" }}
-          className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-ink-line bg-ink/80 px-4 backdrop-blur lg:hidden"
+          className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-ink-line bg-ink/80 px-4 backdrop-blur"
         >
           {current ? (
             <>
@@ -67,7 +58,7 @@ export default function DashboardShell({
         {/* Bottom padding clears the floating tab bar (+ iOS home indicator). */}
         <main
           className={
-            fullBleed ? "" : "pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0"
+            fullBleed ? "" : "pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
           }
         >
           {/* Content slides left going deeper, right coming back. Untyped

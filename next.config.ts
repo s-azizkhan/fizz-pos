@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['127.0.0.1'],
+  allowedDevOrigins: ['127.0.0.1', '192.168.31.202'],
   experimental: {
     // Powers the directional route transitions in the dashboard shell.
     viewTransition: true,

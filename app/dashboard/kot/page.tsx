@@ -5,20 +5,22 @@ import KotBoard from "@/components/fizz/orders/KotBoard";
 
 export const metadata: Metadata = { title: "KOT board — Fizz" };
 
-// The queue lane is what the kitchen stares at all shift, so it is server
-// rendered; the board then polls for itself.
+// Every lane is server-rendered: the kitchen stares at this screen all shift,
+// so the first paint should already be the real board, not a spinner or a set
+// of zeroes. The client takes over polling from there.
 export default async function KotPage() {
   await getCurrentUser();
   const api = await trpc();
-  const [initialOrders, initialCounts] = await Promise.all([
+  const [newLane, accepted, ready, initialCounts] = await Promise.all([
     api.orders.kot("new"),
+    api.orders.kot("accepted"),
+    api.orders.kot("ready"),
     api.orders.kotCounts(),
   ]);
 
   return (
     <KotBoard
-      initialLane="new"
-      initialOrders={initialOrders}
+      initial={{ new: newLane, accepted, ready }}
       initialCounts={initialCounts}
     />
   );
