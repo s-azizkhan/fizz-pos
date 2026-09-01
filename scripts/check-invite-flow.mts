@@ -106,4 +106,24 @@ assert.ok((await call("team.remove", { userId: adminId }, admin)).error);
 // --- cleanup doubles as the remove check ------------------------------------
 assert.ok((await call("team.remove", { userId: newUserId }, admin)).ok, "member removed");
 
+// --- a removed member's cookie must not loop --------------------------------
+// Their JWT still verifies, so proxy.ts reads it as signed in and sends /login
+// to /dashboard, while the DAL sends /dashboard to /login. Regression guard for
+// the ERR_TOO_MANY_REDIRECTS that used to cause.
+const hop = async (path: string, cookie: string) => {
+  const res = await fetch(`${BASE}${path}`, { headers: { cookie }, redirect: "manual" });
+  return { status: res.status, to: res.headers.get("location"), set: res.headers.get("set-cookie") };
+};
+
+const dash = await hop("/dashboard", joined);
+assert.equal(dash.status, 307);
+assert.ok(dash.to?.endsWith("/logout"), `dead session goes to /logout, got ${dash.to}`);
+
+const cleared = await hop("/logout", joined);
+assert.ok(cleared.to?.endsWith("/login"), "logout lands on /login");
+assert.match(cleared.set ?? "", /fizz_session=;/, "logout actually clears the cookie");
+
+// With the cookie gone, /login renders instead of bouncing.
+assert.equal((await fetch(`${BASE}/login`, { redirect: "manual" })).status, 200);
+
 console.log("invite flow OK");

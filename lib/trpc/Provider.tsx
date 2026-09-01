@@ -47,8 +47,9 @@ export default function Provider({ children }: { children: React.ReactNode }) {
           onError: (error, _vars, _ctx, mutation) => {
             if (isExpiredSession(error)) {
               // Full navigation, not router.push: re-runs proxy.ts and drops
-              // the client cache.
-              window.location.href = "/login";
+              // the client cache. /logout, not /login — the cookie may still
+              // verify (deleted user), which /login would bounce back.
+              window.location.href = "/logout";
               return;
             }
             // Sites that render the error inline opt out with
@@ -59,7 +60,7 @@ export default function Provider({ children }: { children: React.ReactNode }) {
         }),
         queryCache: new QueryCache({
           onError: (error) => {
-            if (isExpiredSession(error)) window.location.href = "/login";
+            if (isExpiredSession(error)) window.location.href = "/logout";
           },
         }),
       }),

@@ -12,7 +12,7 @@ import { SESSION_COOKIE, decrypt } from "@/lib/auth/session";
 export const verifySession = cache(async () => {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const session = await decrypt(token);
-  if (!session) redirect("/login");
+  if (!session) redirect("/logout");
   return session;
 });
 
@@ -38,7 +38,10 @@ export const getSessionUser = cache(async () => {
   return rows[0] ?? null; // null also covers a session pointing at a deleted user
 });
 
-// Redirecting variant for RSC pages and Server Actions. Unchanged behaviour.
+// Redirecting variant for RSC pages and Server Actions. Sends dead sessions to
+// /logout, not /login: a cookie that still verifies but points at a deleted user
+// would be bounced straight back here by proxy.ts, looping forever. /logout
+// clears the cookie first, then lands on /login.
 export const getCurrentUser = cache(
-  async () => (await getSessionUser()) ?? redirect("/login"),
+  async () => (await getSessionUser()) ?? redirect("/logout"),
 );
