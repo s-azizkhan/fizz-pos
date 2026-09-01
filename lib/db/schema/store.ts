@@ -98,8 +98,8 @@ export const storeSettingsForm = z.object({
     .or(z.literal(""))
     .transform((v) => v || null)
     .refine(
-      (v) => v === null || /^https?:\/\/\S+$/.test(v),
-      "Paste a full image URL (https://...)",
+      (v) => v === null || /^https:\/\/\S+$/.test(v),
+      "Paste a full image URL over https",
     ),
   website: optionalText(160),
   addressLine1: optionalText(160),

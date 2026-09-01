@@ -36,6 +36,9 @@ export type MenuLayout = {
   // Everything on ONE page: no cover, no closing page — brand band on top,
   // contact band at the bottom.
   single?: boolean;
+  // A3 landscape sheets folded down the middle into an A4 booklet: one sheet
+  // holds two panels (back + front cover), the other the menu spread.
+  fold?: boolean;
 };
 
 export const MENU_LAYOUTS: MenuLayout[] = [
@@ -182,6 +185,17 @@ export const MENU_LAYOUTS: MenuLayout[] = [
     dashed: true,
     numbered: true,
     single: true,
+  },
+  {
+    id: "a3-fold",
+    name: "A3 Book Fold",
+    blurb: "Two A3 landscape sheets, folded down the middle into an A4 booklet.",
+    cover: "centered",
+    itemRow: "leaders",
+    uppercaseHeads: false,
+    density: "cozy",
+    columns: 2,
+    fold: true,
   },
   {
     id: "boutique",
