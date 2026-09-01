@@ -355,13 +355,16 @@ function Cover({
   );
 }
 
-// Printed diet marker: "(Veg)" / "(Non-Veg)", like an Indian street-food sheet.
+// Printed diet marker: the Indian packaged-food symbol — dot inside a square,
+// green for veg, red for non-veg. Sits before the item name.
 function DietTag({ diet }: { diet: string | null }) {
   if (diet !== "veg" && diet !== "nonveg") return null;
   return (
-    <span className="pdf-diet" data-diet={diet}>
-      ({diet === "veg" ? "Veg" : "Non-Veg"})
-    </span>
+    <span
+      className="pdf-diet"
+      data-diet={diet}
+      aria-label={diet === "veg" ? "Veg" : "Non-Veg"}
+    />
   );
 }
 
@@ -394,8 +397,8 @@ function ItemRow({
           {num !== undefined && (
             <span className="pdf-item-num">{String(num).padStart(2, "0")}</span>
           )}
-          {item.name}
           <DietTag diet={item.diet} />
+          {item.name}
         </span>
         {variant === "leaders" && showBase && <span className="pdf-leader" />}
         {showBase && <span className="pdf-item-price">{price(item.price)}</span>}
@@ -779,11 +782,23 @@ const PRINT_CSS = `
 .pdf-item-main { display: flex; align-items: baseline; gap: 10px; }
 .pdf-item-name { font-size: 1em; font-weight: 600; color: var(--pg-fg); }
 .pdf-diet {
-  font-size: 0.78em;
-  font-weight: 600;
-  margin-left: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.8em;
+  height: 0.8em;
+  margin-right: 5px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+  vertical-align: middle;
   color: var(--pg-muted);
-  white-space: nowrap;
+}
+.pdf-diet::before {
+  content: "";
+  width: 0.42em;
+  height: 0.42em;
+  border-radius: 50%;
+  background: currentColor;
 }
 .pdf-diet[data-diet="veg"] { color: #2E7D32; }
 .pdf-diet[data-diet="nonveg"] { color: #B3261E; }

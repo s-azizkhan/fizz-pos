@@ -110,15 +110,17 @@ export default async function PublicMenuPage({
                       <div className="flex items-start justify-between gap-6">
                         <div className="min-w-0">
                           <p className="text-[1.05em] font-semibold">
-                            {item.name}
+                            {/* Indian packaged-food diet symbol: dot in a square, before the name. */}
                             {(item.diet === "veg" || item.diet === "nonveg") && (
                               <span
-                                className="ml-2 text-[0.75em] font-semibold"
+                                aria-label={item.diet === "veg" ? "Veg" : "Non-Veg"}
+                                className="mr-2 inline-flex h-[0.8em] w-[0.8em] items-center justify-center rounded-[2px] border-[1.5px] border-current align-middle"
                                 style={{ color: item.diet === "veg" ? "#2E7D32" : "#B3261E" }}
                               >
-                                ({item.diet === "veg" ? "Veg" : "Non-Veg"})
+                                <span className="h-[0.42em] w-[0.42em] rounded-full bg-current" />
                               </span>
                             )}
+                            {item.name}
                           </p>
                           {item.description && (
                             <p className="mt-1 text-[0.9em] text-[var(--m-muted)]">{item.description}</p>
