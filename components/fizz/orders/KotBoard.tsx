@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useTRPC } from "@/lib/trpc/client";
@@ -88,7 +88,7 @@ function Ticket({
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-start justify-between gap-3 border-b border-ink-line px-5 py-4">
             <div className="min-w-0">
-              <p className="font-display text-4xl font-bold leading-none tracking-tight sm:text-[clamp(28px,3vw,40px)]">
+              <p className="font-display text-3xl font-bold leading-none tracking-tight sm:text-[clamp(28px,3vw,40px)]">
                 {order.number}
               </p>
               <p className="mt-2 flex flex-wrap items-center gap-2 text-base font-semibold uppercase tracking-[0.14em] text-steam sm:text-sm">
@@ -206,10 +206,29 @@ export default function KotBoard({
   // Mobile shows one ticket at a time. The carousel is native scroll-snap, so
   // the swipe has real momentum and costs no gesture code; the buttons just
   // drive the same scroller for anyone not swiping.
-  const track = useRef<HTMLDivElement>(null);
   const [card, setCard] = useState(0);
-  const nudge = (dir: -1 | 1) =>
-    track.current?.scrollBy({ left: dir * track.current.clientWidth, behavior: "smooth" });
+  // Clamp rather than store a corrected index: the poll can shrink the lane
+  // under us (another screen accepted a ticket) and a stale index would blank
+  // the deck.
+  const at = Math.min(card, Math.max(orders.length - 1, 0));
+  const step = (dir: -1 | 1) =>
+    setCard(Math.min(Math.max(at + dir, 0), Math.max(orders.length - 1, 0)));
+
+  // Horizontal drag on the deck. Pointer events only, same shape as
+  // useSwipeDismiss — the sheet hook is vertical and dismiss-only, so it can't
+  // be reused as is.
+  const [drag, setDrag] = useState<{ from: number; dx: number } | null>(null);
+  const SWIPE_PX = 60;
+  const swipe = {
+    onPointerDown: (e: React.PointerEvent) => setDrag({ from: e.clientX, dx: 0 }),
+    onPointerMove: (e: React.PointerEvent) =>
+      setDrag((d) => (d ? { ...d, dx: e.clientX - d.from } : null)),
+    onPointerUp: () => {
+      if (drag && Math.abs(drag.dx) > SWIPE_PX) step(drag.dx < 0 ? 1 : -1);
+      setDrag(null);
+    },
+    onPointerCancel: () => setDrag(null),
+  };
 
   return (
     <div className="mx-auto max-w-[1800px] px-4 sm:px-6 py-6 lg:py-10">
@@ -286,66 +305,103 @@ export default function KotBoard({
         </div>
       ) : (
         <>
+        {/* Mobile: a real deck. The next two tickets sit behind the live one,
+            scaled back and lifted, so the queue reads as a pile you push
+            through rather than a list you scroll. */}
         <div
-          ref={track}
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            setCard(el.clientWidth ? Math.round(el.scrollLeft / el.clientWidth) : 0);
-          }}
-          className="mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+          {...swipe}
+          className="relative mt-4 h-[46dvh] min-h-[17rem] touch-pan-y select-none sm:hidden"
         >
-          {orders.map((o) => (
-            <div
-              key={o.id}
-              // ponytail: a fixed 46dvh rather than a flex column measured
-              // against the app bar and the floating tab bar. It clears both on
-              // every phone size tried; make it a real flex fill if a device
-              // shows up where it doesn't.
-              className="flex h-[46dvh] min-h-[17rem] w-[calc(100vw-3.5rem)] shrink-0 snap-center sm:h-auto sm:min-h-0 sm:w-auto"
-            >
-            <Ticket
-              order={o}
-              seconds={now === null ? null : o.ageSeconds + sinceFetch}
-              onMove={(to) => {
-                move.mutate(
-                  { orderId: o.id, to },
-                  {
-                    onSuccess: () =>
-                      toast.success(
-                        to === "accepted" ? `${o.number} accepted` : `${o.number} is ready`,
-                      ),
-                  },
-                );
-              }}
-            />
-            </div>
-          ))}
+          {orders.slice(at, at + 3).map((o, depth) => {
+            const front = depth === 0;
+            return (
+              <div
+                key={o.id}
+                aria-hidden={!front}
+                className={`absolute top-0 flex h-full ${
+                  front ? "" : "pointer-events-none"
+                } ${drag && front ? "" : "transition-transform duration-200"}`}
+                // Cards deeper in the pile are WIDER and sit higher, so their
+                // edges show past the live one on three sides. That, not a
+                // shadow, is what makes it read as a stack.
+                style={{
+                  zIndex: 10 - depth,
+                  left: (2 - depth) * 9,
+                  right: (2 - depth) * 9,
+                  opacity: front ? 1 : 0.55 - depth * 0.18,
+                  transform: front
+                    ? `translateX(${drag?.dx ?? 0}px)`
+                    : `translateY(-${depth * 13}px)`,
+                }}
+              >
+                <Ticket
+                  order={o}
+                  seconds={now === null ? null : o.ageSeconds + sinceFetch}
+                  onMove={(to) => {
+                    move.mutate(
+                      { orderId: o.id, to },
+                      {
+                        onSuccess: () =>
+                          toast.success(
+                            to === "accepted" ? `${o.number} accepted` : `${o.number} is ready`,
+                          ),
+                      },
+                    );
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
 
-        {/* One ticket at a time needs a way through it that isn't a swipe. */}
+        {/* A deck still needs buttons — hands are wet, and Prev has no gesture
+            that isn't ambiguous with scrolling the item list. */}
         {orders.length > 1 && (
           <div className="mb-4 mt-4 flex items-center justify-between gap-3 sm:hidden">
             <button
               type="button"
-              onClick={() => nudge(-1)}
-              disabled={card === 0}
+              onClick={() => step(-1)}
+              disabled={at === 0}
               className="rounded-fizz border border-ink-line px-6 py-3 font-display text-lg font-bold text-cream transition-colors hover:border-fizz disabled:opacity-40"
             >
               ← Prev
             </button>
             <span className="font-display text-lg font-bold tabular-nums text-steam">
-              {Math.min(card + 1, orders.length)} / {orders.length}
+              {at + 1} / {orders.length}
             </span>
             <button
               type="button"
-              onClick={() => nudge(1)}
-              disabled={card >= orders.length - 1}
+              onClick={() => step(1)}
+              disabled={at >= orders.length - 1}
               className="rounded-fizz border border-ink-line px-6 py-3 font-display text-lg font-bold text-cream transition-colors hover:border-fizz disabled:opacity-40"
             >
               Next →
             </button>
           </div>
         )}
+
+        {/* Desktop keeps the full board — every ticket at once. */}
+        <div className="mt-8 hidden gap-4 sm:grid sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {orders.map((o) => (
+            <div key={o.id} className="flex">
+              <Ticket
+                  order={o}
+                  seconds={now === null ? null : o.ageSeconds + sinceFetch}
+                  onMove={(to) => {
+                    move.mutate(
+                      { orderId: o.id, to },
+                      {
+                        onSuccess: () =>
+                          toast.success(
+                            to === "accepted" ? `${o.number} accepted` : `${o.number} is ready`,
+                          ),
+                      },
+                    );
+                  }}
+                />
+            </div>
+          ))}
+        </div>
         </>
       )}
     </div>
