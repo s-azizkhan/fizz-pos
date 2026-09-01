@@ -81,17 +81,17 @@ function Ticket({
 
   return (
     <article className="fizz-ticket flex w-full flex-col overflow-hidden rounded-fizz border border-ink-line bg-ink-soft">
-      <div className="flex">
+      <div className="flex min-h-0 flex-1">
         {/* Urgency spine — colour does the shouting, not a banner. */}
         <span className={`w-1.5 shrink-0 ${tone.bar} ${tone.late ? "fizz-late" : ""}`} />
 
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-start justify-between gap-3 border-b border-ink-line px-5 py-4">
             <div className="min-w-0">
-              <p className="font-display text-[clamp(28px,3vw,40px)] font-bold leading-none tracking-tight">
+              <p className="font-display text-4xl font-bold leading-none tracking-tight sm:text-[clamp(28px,3vw,40px)]">
                 {order.number}
               </p>
-              <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold uppercase tracking-[0.14em] text-steam">
+              <p className="mt-2 flex flex-wrap items-center gap-2 text-base font-semibold uppercase tracking-[0.14em] text-steam sm:text-sm">
                 <span>{TYPE_LABEL[order.type]}</span>
                 {order.reference && (
                   <span className="rounded-full border border-ink-line px-2.5 py-0.5 text-cream">
@@ -102,25 +102,27 @@ function Ticket({
               </p>
             </div>
             <p
-              className={`shrink-0 font-display text-[clamp(22px,2.4vw,32px)] font-bold tabular-nums leading-none ${tone.text}`}
+              className={`shrink-0 font-display text-3xl font-bold tabular-nums leading-none sm:text-[clamp(22px,2.4vw,32px)] ${tone.text}`}
               title="Time since the order was rung"
             >
               {seconds === null ? "—" : ageLabel(seconds)}
             </p>
           </header>
 
-          <ul className="divide-y divide-ink-line/50">
+          {/* Long tickets scroll inside the card; the fade-free cut at the
+              bottom is the cue that there is more below. */}
+          <ul className="min-h-0 flex-1 divide-y divide-ink-line/50 overflow-y-auto pb-2">
             {order.items.map((it) => (
-              <li key={it.id} className="flex items-baseline gap-4 px-5 py-3">
-                <span className="min-w-[2.5rem] shrink-0 rounded-fizz bg-fizz px-2 py-1 text-center font-display text-2xl font-bold leading-none text-ink">
+              <li key={it.id} className="flex items-baseline gap-4 px-5 py-4 sm:py-3">
+                <span className="min-w-[3rem] shrink-0 rounded-fizz bg-fizz px-2 py-1.5 text-center font-display text-3xl font-bold leading-none text-ink sm:min-w-[2.5rem] sm:py-1 sm:text-2xl">
                   {it.quantity}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[clamp(18px,1.9vw,26px)] font-semibold leading-tight text-cream">
+                  <span className="block text-3xl font-semibold leading-tight text-cream sm:text-[clamp(18px,1.9vw,26px)]">
                     {it.name}
                   </span>
                   {it.variantName && (
-                    <span className="block text-base text-steam">{it.variantName}</span>
+                    <span className="block text-lg text-steam sm:text-base">{it.variantName}</span>
                   )}
                 </span>
               </li>
@@ -133,7 +135,7 @@ function Ticket({
         <button
           type="button"
           onClick={() => onMove(next.to)}
-          className="m-4 mt-auto rounded-fizz bg-fizz px-6 py-4 font-display text-xl font-bold text-ink transition-transform hover:scale-[1.02] active:scale-95"
+          className="m-4 mt-auto shrink-0 rounded-fizz bg-fizz px-6 py-5 font-display text-3xl font-bold text-ink transition-transform hover:scale-[1.02] active:scale-95 sm:py-4 sm:text-xl"
         >
           {next.label}
         </button>
@@ -221,7 +223,7 @@ export default function KotBoard({
               title={list.isFetching ? "Refreshing…" : `Auto-refreshes every ${POLL_MS / 1000}s`}
             />
           </p>
-          <h1 className="mt-2 font-display text-[clamp(28px,5vw,44px)] font-bold tracking-tight">
+          <h1 className="mt-2 hidden font-display text-[clamp(28px,5vw,44px)] font-bold tracking-tight sm:block">
             KOT board
           </h1>
         </div>
@@ -293,7 +295,14 @@ export default function KotBoard({
           className="mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 sm:grid sm:snap-none sm:overflow-visible sm:pb-0 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
         >
           {orders.map((o) => (
-            <div key={o.id} className="flex w-full shrink-0 snap-center sm:w-auto">
+            <div
+              key={o.id}
+              // ponytail: a fixed 46dvh rather than a flex column measured
+              // against the app bar and the floating tab bar. It clears both on
+              // every phone size tried; make it a real flex fill if a device
+              // shows up where it doesn't.
+              className="flex h-[46dvh] min-h-[17rem] w-[calc(100vw-3.5rem)] shrink-0 snap-center sm:h-auto sm:min-h-0 sm:w-auto"
+            >
             <Ticket
               order={o}
               seconds={now === null ? null : o.ageSeconds + sinceFetch}
@@ -315,7 +324,7 @@ export default function KotBoard({
 
         {/* One ticket at a time needs a way through it that isn't a swipe. */}
         {orders.length > 1 && (
-          <div className="mt-4 flex items-center justify-between gap-3 sm:hidden">
+          <div className="mb-4 mt-4 flex items-center justify-between gap-3 sm:hidden">
             <button
               type="button"
               onClick={() => nudge(-1)}
