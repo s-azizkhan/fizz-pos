@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -19,6 +19,11 @@ const INVITE_TTL_DAYS = 7;
 function expiry(): Date {
   return new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000);
 }
+
+// One definition of "still worth showing": unspent and unexpired. An expired
+// invite is a dead link — it's hidden rather than listed, and re-inviting the
+// same email clears the row anyway.
+const live = () => and(isNull(invites.acceptedAt), gt(invites.expiresAt, new Date()));
 
 export const teamRouter = router({
   list: adminProcedure.query(async () => {
@@ -43,7 +48,7 @@ export const teamRouter = router({
           createdAt: invites.createdAt,
         })
         .from(invites)
-        .where(isNull(invites.acceptedAt))
+        .where(live())
         .orderBy(desc(invites.createdAt)),
     ]);
     return { members, pending };
@@ -181,9 +186,9 @@ async function findLiveInvite(token: string) {
   const [invite] = await db
     .select()
     .from(invites)
-    .where(and(eq(invites.token, token), isNull(invites.acceptedAt)))
+    .where(and(eq(invites.token, token), live()))
     .limit(1);
-  if (!invite || invite.expiresAt.getTime() < Date.now()) {
+  if (!invite) {
     throw new TRPCError({
       code: "NOT_FOUND",
       message: "This invite link is expired or already used.",

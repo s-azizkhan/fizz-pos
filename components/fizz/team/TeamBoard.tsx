@@ -277,27 +277,24 @@ export default function TeamBoard({
             Pending invites
           </h2>
           <ul className="mt-5 flex flex-col gap-3">
-            {pending.map((p) => {
-              const expired = new Date(p.expiresAt).getTime() < Date.now();
-              return (
-                <li
-                  key={p.id}
-                  className="flex flex-wrap items-center gap-3 rounded-fizz border border-ink-line bg-ink-soft px-4 py-3"
-                >
-                  <span className="font-semibold text-cream">{p.email}</span>
-                  <span className="rounded-full border border-ink-line px-3 py-1 text-xs text-steam">
-                    {ROLE_LABEL[p.role]}
-                  </span>
-                  <span className="text-xs text-steam">
-                    {expired ? "Expired" : `Expires ${fmtDate(p.expiresAt)}`}
-                  </span>
-                  <span className="ml-auto flex items-center gap-2">
-                    {!expired && <CopyLinkButton token={p.token} />}
-                    <RevokeButton id={p.id} />
-                  </span>
-                </li>
-              );
-            })}
+            {pending.map((p) => (
+              <li
+                key={p.id}
+                className="flex flex-wrap items-center gap-3 rounded-fizz border border-ink-line bg-ink-soft px-4 py-3"
+              >
+                <span className="font-semibold text-cream">{p.email}</span>
+                <span className="rounded-full border border-ink-line px-3 py-1 text-xs text-steam">
+                  {ROLE_LABEL[p.role]}
+                </span>
+                <span className="text-xs text-steam">
+                  Expires {fmtDate(p.expiresAt)}
+                </span>
+                <span className="ml-auto flex items-center gap-2">
+                  <CopyLinkButton token={p.token} />
+                  <RevokeButton id={p.id} />
+                </span>
+              </li>
+            ))}
           </ul>
         </section>
       )}
