@@ -14,7 +14,7 @@ export default function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-ink-line bg-ink/80 backdrop-blur">
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="#top" className="font-display text-2xl font-bold tracking-tight">
+        <a href="#top" className="font-wordmark font-bold text-2xl">
           Fi<span className="text-fizz">zz</span>
           <span className="align-super text-xs text-bubble">●</span>
         </a>

@@ -11,7 +11,7 @@
  *    touched. Money and stock must never be served from a stale cache.
  */
 
-const VERSION = "fizz-v3";
+const VERSION = "fizz-v4";
 const SHELL = `${VERSION}-shell`;
 const PAGES = `${VERSION}-pages`;
 

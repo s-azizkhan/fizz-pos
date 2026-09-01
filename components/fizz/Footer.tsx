@@ -23,7 +23,7 @@ export default function Footer() {
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr]">
           {/* Brand */}
           <div>
-            <div className="font-display text-2xl font-bold tracking-tight">
+            <div className="font-wordmark font-bold text-2xl">
               Fi<span className="text-fizz">zz</span>
               <span className="align-super text-xs text-bubble">●</span>
             </div>

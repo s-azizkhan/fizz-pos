@@ -26,7 +26,7 @@ export default function Hero() {
             The Café Operating System
           </span>
 
-          <div className="mt-6 font-display text-[clamp(52px,10vw,104px)] font-bold leading-none tracking-[-0.04em]">
+          <div className="mt-6 font-wordmark font-bold text-[clamp(52px,10vw,104px)] leading-none">
             Fi<span className="text-fizz">zz</span>
             <span className="align-super text-[0.4em] text-bubble">●</span>
           </div>

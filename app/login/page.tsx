@@ -16,7 +16,7 @@ export default function LoginPage() {
         <Bubbles />
         <Link
           href="/"
-          className="relative z-10 font-display text-3xl font-bold tracking-tight"
+          className="relative z-10 font-wordmark font-bold text-3xl"
         >
           Fi<span className="text-fizz">zz</span>
           <span className="align-super text-xs text-bubble">●</span>
@@ -46,7 +46,7 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-sm">
           <Link
             href="/"
-            className="mb-10 inline-block font-display text-2xl font-bold tracking-tight lg:hidden"
+            className="mb-10 inline-block font-wordmark font-bold text-2xl lg:hidden"
           >
             Fi<span className="text-fizz">zz</span>
             <span className="align-super text-xs text-bubble">●</span>

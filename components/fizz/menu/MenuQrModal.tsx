@@ -448,7 +448,10 @@ export default function MenuQrModal({
 
               <div style={{ fontSize: 11, color: frame.muted, wordBreak: "break-all" }}>
                 {url.replace(/^https?:\/\//, "")}
-                <div style={{ marginTop: 8, fontSize: 11, color: frame.accent, fontWeight: 600 }}>
+                <div
+                  className="font-wordmark"
+                  style={{ marginTop: 8, fontSize: 12, color: frame.accent, fontWeight: 700 }}
+                >
                   Fizz ●
                 </div>
               </div>

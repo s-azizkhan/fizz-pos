@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
+import { Space_Grotesk, Inter, Pixelify_Sans } from "next/font/google";
 import "./globals.css";
 import { Agentation } from "agentation";
 import Toaster from "@/components/fizz/Toaster";
@@ -26,6 +26,13 @@ const sans = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-inter",
+});
+
+// Pixel face for the wordmark only.
+const wordmark = Pixelify_Sans({
+  subsets: ["latin"],
+  weight: ["500", "700"],
+  variable: "--font-pixel",
 });
 
 export const metadata: Metadata = {
@@ -71,7 +78,7 @@ export default function RootLayout({
     // <html> before React hydrates — suppress the mismatch they cause.
     <html
       lang="en"
-      className={`${display.variable} ${sans.variable} h-full antialiased`}
+      className={`${display.variable} ${sans.variable} ${wordmark.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-full bg-ink text-cream">

@@ -172,7 +172,7 @@ export default async function PublicMenuPage({
 
         <footer className="mt-16 border-t border-[var(--m-line)] pt-6 text-center text-[0.8em] text-[var(--m-muted)]">
           Menu by{" "}
-          <span className="font-semibold text-[var(--m-text)]">
+          <span className="font-wordmark font-bold text-[var(--m-text)]">
             Fi<span style={{ color: accent }}>zz</span>
             <span className="align-super text-[0.7em]" style={{ color: accent }}>●</span>
           </span>

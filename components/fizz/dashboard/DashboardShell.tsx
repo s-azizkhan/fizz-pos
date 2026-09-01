@@ -57,7 +57,7 @@ export default function DashboardShell({
               </h1>
             </>
           ) : (
-            <span className="font-display text-xl font-bold tracking-tight">
+            <span className="font-wordmark font-bold text-xl">
               Fi<span className="text-fizz">zz</span>
               <span className="align-super text-xs text-bubble">●</span>
             </span>

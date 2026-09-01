@@ -37,7 +37,7 @@ export default function ErrorScreen({
       <div className="relative max-w-[42ch] text-center">
         <Link
           href="/"
-          className="font-display text-2xl font-bold tracking-tight"
+          className="font-wordmark font-bold text-2xl"
           aria-label="Fizz home"
         >
           Fi<span className="text-fizz">zz</span>

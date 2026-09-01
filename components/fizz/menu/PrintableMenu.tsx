@@ -848,7 +848,7 @@ const PRINT_CSS = `
 .pdf-reach-value { font-size: 15px; color: var(--pg-fg); font-weight: 600; }
 .pdf-hours { margin: 22px 0 0; font-size: 14px; color: var(--pg-muted); }
 .pdf-thanks { margin: 48px 0 0; font-size: 26px; font-weight: 700; color: var(--pg-fg); }
-.pdf-wordmark { margin: 10px 0 0; font-size: 14px; color: var(--pg-muted); font-weight: 600; }
+.pdf-wordmark { margin: 10px 0 0; font-size: 14px; color: var(--pg-muted); font-weight: 700; font-family: var(--font-pixel), ui-monospace, monospace; }
 .pdf-dot { color: var(--pg-accent); vertical-align: super; font-size: 9px; margin-left: 1px; }
 
 /* ===== Creative layout extras ===== */

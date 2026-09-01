@@ -32,17 +32,23 @@ Rules:
 
 ## Typography
 
-- **Display / headings / wordmark / numerals:** Space Grotesk → `font-display` (`--font-space-grotesk`). Weights 400–700.
+- **Wordmark / brand mark (locked):** Pixelify Sans bold → `.font-wordmark` (`--font-pixel`). Every rendered "Fizz" mark and the standalone `F` icon use it — nav, footer, login, sidebar, splash, error screens, public menu, printable menu, QR frames, PWA icons. Prose mentions of Fizz inside sentences stay in body/display type.
+- **Display / headings / numerals:** Space Grotesk → `font-display` (`--font-space-grotesk`). Weights 400–700.
 - **Body / UI:** Inter → `font-sans` (default, `--font-inter`). Weights 400–600.
 - Headings: `font-display font-bold tracking-tight`. Hero/section heads use fluid sizing: `text-[clamp(26px,4vw,40px)]`; hero H1 `text-[clamp(28px,5vw,56px)]`.
 - Body copy: `text-lg text-steam` for intros; `text-cream` for primary.
 - Measure: cap line length — `max-w-[60ch]` for paragraphs, `max-w-[18ch]–[20ch]` for headlines.
 
 ### Wordmark
-Always: `Fi` cream + `zz` lime + `●` cyan superscript dot.
+Always: `Fi` cream + `zz` lime + `●` cyan superscript dot, set in Pixelify Sans bold.
 ```tsx
-Fi<span className="text-fizz">zz</span><span className="align-super text-xs text-bubble">●</span>
+<span className="font-wordmark font-bold">
+  Fi<span className="text-fizz">zz</span><span className="align-super text-xs text-bubble">●</span>
+</span>
 ```
+The `F` app icon is the same face rebuilt as a 5x7 pixel grid in
+`scripts/generate-pwa-assets.mts` (sharp cannot resolve fonts) — its cyan dot is
+squared to the grid. Regenerate icons with `npx tsx scripts/generate-pwa-assets.mts`.
 
 ## Shape & layout
 

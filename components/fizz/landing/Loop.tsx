@@ -40,7 +40,7 @@ export default function Loop() {
 
             {/* Center hub */}
             <div className="absolute left-1/2 top-1/2 flex h-28 w-28 -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full border border-ink-line bg-ink-soft text-center">
-              <span className="font-display text-lg font-bold tracking-tight">
+              <span className="font-wordmark font-bold text-lg">
                 Fi<span className="text-fizz">zz</span>
                 <span className="align-super text-[0.6em] text-bubble">●</span>
               </span>

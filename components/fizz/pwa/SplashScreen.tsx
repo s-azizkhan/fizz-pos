@@ -54,7 +54,7 @@ export default function SplashScreen() {
     >
       <Bubbles />
       <div className="relative flex flex-col items-center gap-5">
-        <span className="fizz-splash-mark font-display text-6xl font-bold tracking-tight">
+        <span className="fizz-splash-mark font-wordmark font-bold text-6xl">
           Fi<span className="text-fizz">zz</span>
           <span className="align-super text-xl text-bubble">●</span>
         </span>

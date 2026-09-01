@@ -48,7 +48,7 @@ export default function Sidebar({
       <div className="flex h-16 items-center justify-between gap-2 border-b border-ink-line px-5">
         <Link
           href="/dashboard"
-          className="font-display text-2xl font-bold tracking-tight"
+          className="font-wordmark font-bold text-2xl"
         >
           Fi<span className="text-fizz">zz</span>
           {!collapsed && (

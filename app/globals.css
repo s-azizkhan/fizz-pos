@@ -19,6 +19,12 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Wordmark face. Plain rule, not an @theme token — Tailwind's theme vars are
+   tree-shaken per generated utility and this one kept getting dropped. */
+.font-wordmark {
+  font-family: var(--font-pixel), ui-monospace, monospace;
+}
+
 body {
   background: var(--color-ink);
   color: var(--color-cream);

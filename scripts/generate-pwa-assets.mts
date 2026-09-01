@@ -15,16 +15,39 @@ const INK = "#0E1116";
 const LIME = "#C6F432";
 const CYAN = "#38E1D6";
 
-/** The "F" mark plus its cyan fizz dot, drawn in a 100x100 user-space box. */
+/**
+ * The "F" mark plus its cyan fizz dot, drawn in a 100x100 user-space box.
+ *
+ * The rectangles below are the real Pixelify Sans (700) "F" outline, traced off
+ * a canvas rasterisation of the glyph — sharp's SVG rasteriser can't resolve
+ * fonts, so the letterform is inlined rather than set as <text>. Coordinates
+ * are in the glyph's own 192x259 box; U is its pixel-grid unit.
+ */
+const GLYPH_W = 192;
+const GLYPH_H = 259;
+const U = 50;
+const F_RECTS: [number, number, number, number][] = [
+  [0, 0, 156, 35], // top bar
+  [0, 35, 192, 19], // ...and its overhanging step
+  [141, 54, 51, 34], // the hook dropping off the top-right
+  [0, 54, 50, 205], // stem
+  [0, 103, 121, 53], // middle bar
+];
+
 function mark(scale: number, cx: number, cy: number) {
-  const u = (n: number) => (n * scale).toFixed(2);
-  const x = (n: number) => (cx + (n - 50) * scale).toFixed(2);
-  const y = (n: number) => (cy + (n - 50) * scale).toFixed(2);
-  return `
-    <rect x="${x(28)}" y="${y(22)}" width="${u(13)}" height="${u(58)}" rx="${u(4)}" fill="${LIME}"/>
-    <rect x="${x(28)}" y="${y(22)}" width="${u(44)}" height="${u(13)}" rx="${u(4)}" fill="${LIME}"/>
-    <rect x="${x(28)}" y="${y(44)}" width="${u(33)}" height="${u(12)}" rx="${u(4)}" fill="${LIME}"/>
-    <circle cx="${x(78)}" cy="${y(28)}" r="${u(6)}" fill="${CYAN}"/>`;
+  // `scale` maps the old 100-unit box; keep the mark the same visual height.
+  const s = (scale * 78) / GLYPH_H;
+  const w = GLYPH_W * s + U * s * 1.6; // glyph + gap + dot
+  const left = cx - w / 2;
+  const top = cy - (GLYPH_H * s) / 2;
+  const n = (v: number) => v.toFixed(2);
+  const cells = F_RECTS.map(
+    ([x, y, rw, rh]) =>
+      `<rect x="${n(left + x * s)}" y="${n(top + y * s)}" width="${n((rw + 1) * s)}" height="${n((rh + 1) * s)}" fill="${LIME}"/>`,
+  ).join("");
+  // (+1 glyph unit on each rect so abutting edges don't show antialias seams.)
+  // The ● of the wordmark, squared off to the same pixel grid.
+  return `${cells}<rect x="${n(left + (GLYPH_W + U * 0.6) * s)}" y="${n(top)}" width="${n(U * s)}" height="${n(U * s)}" fill="${CYAN}"/>`;
 }
 
 function iconSvg(size: number, { maskable = false } = {}) {
