@@ -69,6 +69,7 @@ export default function PrintableMenu({
   packId,
   opacity,
   fontScale,
+  fold,
   embed = false,
 }: {
   store: Store;
@@ -80,6 +81,7 @@ export default function PrintableMenu({
   packId: string;
   opacity: number; // background watermark opacity, %
   fontScale: number; // menu body font size, %
+  fold: boolean; // A3 landscape sheets folded into an A4 booklet
   embed?: boolean;
 }) {
   const router = useRouter();
@@ -194,11 +196,13 @@ export default function PrintableMenu({
     scheme?: string;
     layout?: string;
     pack?: string;
+    fold?: boolean;
   }) =>
     router.replace(
       `/menu-pdf?scheme=${next.scheme ?? scheme.id}` +
         `&layout=${next.layout ?? layout.id}` +
-        `&pack=${next.pack ?? pack.id}&op=${op}&fs=${fs}`,
+        `&pack=${next.pack ?? pack.id}&op=${op}&fs=${fs}` +
+        `&fold=${(next.fold ?? fold) ? "1" : "0"}`,
       { scroll: false },
     );
 
@@ -210,11 +214,11 @@ export default function PrintableMenu({
       data-frame={layout.framed ? "1" : undefined}
       data-dash={layout.dashed ? "1" : undefined}
       data-single={layout.single ? layout.id : undefined}
-      data-fold={layout.fold ? "1" : undefined}
+      data-fold={fold ? "1" : undefined}
     >
       <style>{PRINT_CSS}</style>
       {/* Folded layouts print on A3 landscape; a later @page rule wins. */}
-      {layout.fold && <style>{"@page { size: A3 landscape; margin: 0; }"}</style>}
+      {fold && <style>{"@page { size: A3 landscape; margin: 0; }"}</style>}
 
       {!embed && (
         <Toolbar
@@ -224,6 +228,7 @@ export default function PrintableMenu({
           op={op}
           fs={fs}
           hasBg={pack.glyphs.length > 0}
+          fold={fold}
           onOpacity={setOp}
           onFontScale={setFs}
           onNavigate={navigate}
@@ -234,7 +239,7 @@ export default function PrintableMenu({
 
       <div className="menu-pdf-pages" ref={pagesRef}>
         {/* ---- A3 FOLD: outside sheet — back panel + front cover ---- */}
-        {layout.fold && (
+        {fold && (
           <section className="pdf-page pdf-sheet" data-cover={layout.cover}>
             <MenuBgLayer pack={pack} seed={0} />
             <div className="pdf-content pdf-sheet-inner">
@@ -254,7 +259,7 @@ export default function PrintableMenu({
         )}
 
         {/* ---- COVER (skipped by single-page and folded layouts) ---- */}
-        {!layout.single && !layout.fold && (
+        {!layout.single && !fold && (
           <section className="pdf-page pdf-cover" data-cover={layout.cover}>
             <MenuBgLayer pack={pack} seed={0} />
             <div className="pdf-content">
@@ -336,7 +341,7 @@ export default function PrintableMenu({
             </div>
           )}
 
-          {layout.single && (
+          {layout.single && !fold && (
             <div className="pdf-strip-wrap">
               <div className="pdf-strip" style={headStyle}>
                 {stripLine}
@@ -357,7 +362,7 @@ export default function PrintableMenu({
         </section>
 
         {/* ---- CLOSING / CONTACT (skipped by single-page and folded layouts) ---- */}
-        {!layout.single && !layout.fold && (
+        {!layout.single && !fold && (
         <section className="pdf-page pdf-close">
           <MenuBgLayer pack={pack} seed={4} />
           <div className="pdf-content">
@@ -546,6 +551,7 @@ function Toolbar({
   op,
   fs,
   hasBg,
+  fold,
   onOpacity,
   onFontScale,
   onNavigate,
@@ -558,9 +564,15 @@ function Toolbar({
   op: number;
   fs: number;
   hasBg: boolean;
+  fold: boolean;
   onOpacity: (v: number) => void;
   onFontScale: (v: number) => void;
-  onNavigate: (next: { scheme?: string; layout?: string; pack?: string }) => void;
+  onNavigate: (next: {
+    scheme?: string;
+    layout?: string;
+    pack?: string;
+    fold?: boolean;
+  }) => void;
   onPng: () => void;
   busy: boolean;
 }) {
@@ -618,6 +630,28 @@ function Toolbar({
                   {p.name}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="mpt-group">
+            <span className="mpt-label">Paper</span>
+            <div className="mpt-chips">
+              <button
+                type="button"
+                onClick={() => onNavigate({ fold: false })}
+                aria-pressed={!fold}
+                className={`mpt-chip${!fold ? " is-active" : ""}`}
+              >
+                A4
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate({ fold: true })}
+                aria-pressed={fold}
+                className={`mpt-chip${fold ? " is-active" : ""}`}
+              >
+                A3 book fold
+              </button>
             </div>
           </div>
 
@@ -1187,6 +1221,10 @@ const PRINT_CSS = `
 .menu-pdf-root[data-single] .pdf-cat { break-inside: avoid; }
 
 /* ----- Print ----- */
+/* Single-page presets set their own tighter page padding; folded sheets are
+   A3, so restore the sheet padding when both apply. */
+.menu-pdf-root[data-fold][data-single] .pdf-page { padding: 54px 60px 60px; }
+
 @page { size: A4; margin: 0; }
 @media print {
   .menu-pdf-toolbar { display: none !important; }

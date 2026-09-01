@@ -23,6 +23,7 @@ export default async function MenuPdfPage({
     pack?: string;
     op?: string;
     fs?: string;
+    fold?: string;
     embed?: string;
   }>;
 }) {
@@ -60,6 +61,7 @@ export default async function MenuPdfPage({
       packId={sp.pack ?? DEFAULT_MENU_BG_PACK}
       opacity={opacity}
       fontScale={fontScale}
+      fold={sp.fold === "1"}
       embed={sp.embed === "1"}
     />
   );
