@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   experimental: {
     // Powers the directional route transitions in the dashboard shell.
     viewTransition: true,
+    // Keep the RSC payload of dashboard pages (till menu, orders) in the client
+    // router cache while tab-switching. A hard reload still refetches, and
+    // Server Actions' revalidatePath still busts it after every mutation.
+    // ponytail: global 5-min TTL; per-route cacheLife if one page needs fresher.
+    staleTimes: { dynamic: 300, static: 300 },
   },
   async headers() {
     return [
