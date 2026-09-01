@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   orderItems,
@@ -12,6 +12,12 @@ import {
 import { STORE_ID } from "@/lib/store/constants";
 
 export type OrderWithItems = Order & { items: OrderItem[] };
+
+// A KOT ticket carries its own age, measured by the DATABASE. `created_at` is a
+// `timestamp` without a time zone, so the client would read it as local time and
+// be wrong by the UTC offset — on a board whose entire job is "how long has this
+// been waiting", that is the one number that must not drift.
+export type KotTicket = OrderWithItems & { ageSeconds: number };
 
 // List orders for the store, newest first. Optional status filter (open/paid/
 // void). Items are attached so the orders page can preview lines.
@@ -65,11 +71,12 @@ export async function getOrder(id: string): Promise<OrderWithItems | null> {
 // OLDEST FIRST: the queue is a queue, so the newest ticket lands at the back.
 // `ready` is final and unbounded, so that lane is capped; the working lanes are
 // small by nature and returned whole.
-export async function listKot(
-  lane: KitchenStatus,
-): Promise<OrderWithItems[]> {
+export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
   const rows = await db
-    .select()
+    .select({
+      ...getTableColumns(orders),
+      ageSeconds: sql<number>`extract(epoch from (now() - ${orders.createdAt}))`.mapWith(Number),
+    })
     .from(orders)
     .where(
       and(

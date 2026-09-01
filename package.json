@@ -10,7 +10,8 @@
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx --env-file=.env scripts/seed-admin.mts",
-    "check:invites": "tsx --env-file=.env scripts/check-invite-flow.mts"
+    "check:invites": "tsx --env-file=.env scripts/check-invite-flow.mts",
+    "check:kot": "tsx --env-file=.env scripts/check-kot-flow.mts"
   },
   "dependencies": {
     "@tanstack/react-query": "5.102.8",
