@@ -282,3 +282,16 @@ body {
     animation-delay: 0s !important;
   }
 }
+
+/* Thin, brand-tinted scrollbars everywhere. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-ink-line) transparent;
+}
+*::-webkit-scrollbar { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--color-ink-line);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--color-fizz); }

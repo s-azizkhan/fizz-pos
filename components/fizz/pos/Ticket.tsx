@@ -169,7 +169,7 @@ export default function Ticket({
                       aria-label={l.quantity === 1 ? "Remove line" : "Decrease"}
                       className="h-10 w-10 rounded-fizz border border-ink-line text-lg text-[#E2655A] transition-colors hover:border-[#E2655A] lg:h-8 lg:w-8 lg:text-base"
                     >
-                      {l.quantity === 1 ? "🗑" : "−"}
+                      {l.quantity === 1 ? "✕" : "−"}
                     </button>
                     <span className="w-8 text-center font-display font-bold">
                       {l.quantity}
