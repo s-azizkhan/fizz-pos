@@ -42,3 +42,43 @@ export const createUserSchema = baseUserInsert.extend({
   role: z.enum(userRole.enumValues).default("staff"),
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
+
+// --- Invites -----------------------------------------------------------------
+// No mail transport yet, so an invite is just a shareable link the admin copies
+// and sends by hand. The admin picks email + role; the invitee sets their own
+// name + password when they open the link.
+// ponytail: token stored raw so a pending link can be re-copied later. Hash it
+// if DB-read-only leaks become part of the threat model (kills re-copy).
+export const invites = pgTable("invites", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull(),
+  role: userRole("role").notNull().default("staff"),
+  token: text("token").notNull().unique(),
+  invitedBy: uuid("invited_by").references(() => users.id, {
+    onDelete: "set null",
+  }),
+  expiresAt: timestamp("expires_at").notNull(),
+  acceptedAt: timestamp("accepted_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Invite = typeof invites.$inferSelect;
+
+export const inviteSchema = z.object({
+  email: z.email("Enter a valid email").trim().toLowerCase(),
+  role: z.enum(userRole.enumValues).default("staff"),
+});
+export type InviteInput = z.infer<typeof inviteSchema>;
+
+// The invitee's half of the deal: identity + credentials, never the role.
+export const acceptInviteSchema = z.object({
+  token: z.string().min(1),
+  name: z.string().trim().min(1, "Enter your name").max(120),
+  password: createUserSchema.shape.password,
+});
+export type AcceptInviteInput = z.infer<typeof acceptInviteSchema>;
+
+export const updateRoleSchema = z.object({
+  userId: z.uuid(),
+  role: z.enum(userRole.enumValues),
+});
