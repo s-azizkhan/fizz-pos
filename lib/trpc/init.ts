@@ -55,3 +55,10 @@ export const editorProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next();
 });
 
+// Team management is admin-only — one gate, same shape as editorProcedure.
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== "admin") {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Admins only." });
+  }
+  return next();
+});
