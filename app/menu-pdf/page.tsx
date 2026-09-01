@@ -30,9 +30,10 @@ export default async function MenuPdfPage({
   const user = await getCurrentUser();
   if (user.role !== "admin" && user.role !== "manager") redirect("/dashboard");
 
-  const [store, categories, sp] = await Promise.all([
+  const [store, categories, ordering, sp] = await Promise.all([
     api.store.get(),
     api.menu.full(),
+    api.menu.orderSettings(),
     searchParams,
   ]);
 
@@ -53,6 +54,7 @@ export default async function MenuPdfPage({
     <PrintableMenu
       store={store}
       categories={printable}
+      ordering={ordering}
       schemeId={sp.scheme ?? DEFAULT_MENU_COLOR_SCHEME}
       layoutId={sp.layout ?? DEFAULT_MENU_LAYOUT}
       packId={sp.pack ?? DEFAULT_MENU_BG_PACK}

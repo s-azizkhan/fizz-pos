@@ -11,6 +11,10 @@ export const store = pgTable("store", {
   legalName: text("legal_name"),
   email: text("email"),
   phone: text("phone"),
+  instagram: text("instagram"),
+  // Logo lives elsewhere (no file storage) — this is a public image URL.
+  logoUrl: text("logo_url"),
+  website: text("website"),
   addressLine1: text("address_line1"),
   addressLine2: text("address_line2"),
   city: text("city"),
@@ -85,6 +89,19 @@ export const storeSettingsForm = z.object({
     .transform((v) => v || null)
     .refine((v) => v === null || z.email().safeParse(v).success, "Enter a valid email"),
   phone: optionalText(40),
+  instagram: optionalText(60),
+  logoUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .or(z.literal(""))
+    .transform((v) => v || null)
+    .refine(
+      (v) => v === null || /^https?:\/\/\S+$/.test(v),
+      "Paste a full image URL (https://...)",
+    ),
+  website: optionalText(160),
   addressLine1: optionalText(160),
   addressLine2: optionalText(160),
   city: optionalText(80),

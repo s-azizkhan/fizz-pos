@@ -109,6 +109,9 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
         <Field label="Legal name" name="legalName" defaultValue={store.legalName} />
         <Field label="Email" name="email" type="email" defaultValue={store.email} placeholder="hello@cafe.com" />
         <Field label="Phone" name="phone" defaultValue={store.phone} placeholder="+1 555 0100" />
+        <Field label="Instagram" name="instagram" defaultValue={store.instagram} placeholder="@yourcafe" />
+        <Field label="Logo URL" name="logoUrl" defaultValue={store.logoUrl} placeholder="https://.../logo.png" />
+        <Field label="Website" name="website" defaultValue={store.website} placeholder="yourcafe.com" />
         <Field label="Address line 1" name="addressLine1" defaultValue={store.addressLine1} />
         <Field label="Address line 2" name="addressLine2" defaultValue={store.addressLine2} />
         <Field label="City" name="city" defaultValue={store.city} />

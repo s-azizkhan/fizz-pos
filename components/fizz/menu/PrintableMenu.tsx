@@ -21,7 +21,40 @@ import {
   MenuBgLayer,
 } from "@/components/fizz/menu/bg-packs";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
-import type { Store } from "@/lib/db/schema";
+import type { OrderSettings, Store } from "@/lib/db/schema";
+
+// Contact icons — inline so html-to-image PNG export needs no font/icon lib.
+const svg = {
+  width: 14,
+  height: 14,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+} as const;
+
+const PhoneIcon = () => (
+  <svg {...svg}>
+    <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.5 2.8.6a2 2 0 0 1 1.7 2Z" />
+  </svg>
+);
+
+const InstagramIcon = () => (
+  <svg {...svg}>
+    <rect x="2" y="2" width="20" height="20" rx="5" />
+    <circle cx="12" cy="12" r="4" />
+    <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const GlobeIcon = () => (
+  <svg {...svg}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 0 20 15.3 15.3 0 0 1 0-20Z" />
+  </svg>
+);
 
 // Self-contained printable menu. Renders a cover page, the category sections
 // (page-break aware), and a closing/contact page. Browser print ("Save as PDF")
@@ -30,6 +63,7 @@ import type { Store } from "@/lib/db/schema";
 export default function PrintableMenu({
   store,
   categories,
+  ordering,
   schemeId,
   layoutId,
   packId,
@@ -39,6 +73,8 @@ export default function PrintableMenu({
 }: {
   store: Store;
   categories: MenuCategoryWithItems[];
+  /** null until the café saves ordering settings once. */
+  ordering: OrderSettings | null;
   schemeId: string; // color scheme (palette + type)
   layoutId: string; // appearance / layout
   packId: string;
@@ -109,15 +145,29 @@ export default function PrintableMenu({
     store.country,
   ].filter(Boolean);
 
+  // Fulfilment line on the single-page strip, from the ordering settings.
+  const modes = [
+    ordering?.dineIn && "Dine-in",
+    ordering?.takeaway && "Takeaway",
+    ordering?.delivery && "Home delivery",
+  ].filter(Boolean) as string[];
+  const stripLine = modes.length
+    ? `Order now! · ${modes.join(" & ")} available`
+    : "Order now!";
+
   const reachBits = [
-    store.phone && { label: "Call", value: store.phone },
-    store.email && { label: "Email", value: store.email },
-    store.menuSlug &&
-      store.menuPublished && {
-        label: "Online",
-        value: `/m/${store.menuSlug}`,
-      },
-  ].filter(Boolean) as { label: string; value: string }[];
+    store.phone && { label: "Call", icon: PhoneIcon, value: store.phone },
+    store.instagram && {
+      label: "Instagram",
+      icon: InstagramIcon,
+      value: `@${store.instagram.replace(/^@/, "")}`,
+    },
+    store.website && {
+      label: "Web",
+      icon: GlobeIcon,
+      value: store.website.replace(/^https?:\/\//, ""),
+    },
+  ].filter(Boolean) as { label: string; icon: () => React.ReactElement; value: string }[];
 
   const vars = {
     ["--pg-bg" as string]: scheme.bg,
@@ -197,7 +247,12 @@ export default function PrintableMenu({
           {layout.single ? (
             <div className="pdf-brand-head">
               <div className="pdf-brand-badge" style={headStyle}>
-                <span className="pdf-brand-name">{store.name}</span>
+                {store.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="pdf-brand-logo" src="/api/logo" alt={store.name} />
+                ) : (
+                  <span className="pdf-brand-name">{store.name}</span>
+                )}
                 {store.menuTagline && (
                   <span className="pdf-brand-tag">{store.menuTagline}</span>
                 )}
@@ -211,9 +266,14 @@ export default function PrintableMenu({
               <span className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
                 Menu
               </span>
-              <h2 className="pdf-body-title" style={headStyle}>
-                {store.name}
-              </h2>
+              {store.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img className="pdf-logo pdf-logo-body" src="/api/logo" alt={store.name} />
+              ) : (
+                <h2 className="pdf-body-title" style={headStyle}>
+                  {store.name}
+                </h2>
+              )}
             </div>
           )}
 
@@ -256,11 +316,16 @@ export default function PrintableMenu({
           {layout.single && (
             <div className="pdf-strip-wrap">
               <div className="pdf-strip" style={headStyle}>
-                Order now! · Dine-in &amp; takeaway available
+                {stripLine}
               </div>
               {reachBits.length > 0 && (
                 <p className="pdf-strip-reach">
-                  {reachBits.map((r) => r.value).join("   ·   ")}
+                  {reachBits.map((r) => (
+                    <span key={r.label} className="pdf-strip-reach-item">
+                      <r.icon />
+                      {r.value}
+                    </span>
+                  ))}
                 </p>
               )}
             </div>
@@ -296,7 +361,9 @@ export default function PrintableMenu({
               <div className="pdf-reach">
                 {reachBits.map((r) => (
                   <div key={r.label} className="pdf-reach-row">
-                    <span className="pdf-reach-label">{r.label}</span>
+                    <span className="pdf-reach-icon">
+                      <r.icon />
+                    </span>
                     <span className="pdf-reach-value">{r.value}</span>
                   </div>
                 ))}
@@ -341,9 +408,16 @@ function Cover({
       <p className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
         {store.legalName || "Café"}
       </p>
-      <h1 className="pdf-cover-title" style={headStyle}>
-        {store.name}
-      </h1>
+      {store.logoUrl ? (
+        // Served through /api/logo so it is same-origin — the PNG export
+        // rasterizes it instead of throwing on a tainted canvas.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img className="pdf-logo" src="/api/logo" alt={store.name} />
+      ) : (
+        <h1 className="pdf-cover-title" style={headStyle}>
+          {store.name}
+        </h1>
+      )}
       {layout.cover === "editorial" && <span className="pdf-cover-bigrule" />}
       {store.menuTagline ? (
         <p className="pdf-cover-tag">{store.menuTagline}</p>
@@ -700,6 +774,9 @@ const PRINT_CSS = `
   letter-spacing: 0.24em;
   color: var(--pg-accent);
 }
+.pdf-logo-body { max-height: 70px; max-width: 260px; margin: 8px 0 0; }
+.pdf-logo { display: block; max-height: 140px; max-width: 340px; object-fit: contain; margin: 18px 0 0; }
+.pdf-cover[data-cover="centered"] .pdf-logo { margin-left: auto; margin-right: auto; }
 .pdf-cover-title {
   margin: 18px 0 0;
   font-size: 68px;
@@ -847,19 +924,12 @@ const PRINT_CSS = `
 .pdf-reach { margin: 24px 0 0; display: flex; flex-direction: column; gap: 8px; max-width: 360px; }
 .pdf-reach-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16px;
   border-bottom: 1px solid var(--pg-divider);
   padding-bottom: 8px;
 }
-.pdf-reach-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: var(--pg-accent);
-  font-weight: 700;
-  align-self: center;
-}
+.pdf-reach-icon { color: var(--pg-accent); display: flex; align-items: center; }
 .pdf-reach-value { font-size: 15px; color: var(--pg-fg); font-weight: 600; }
 .pdf-hours { margin: 22px 0 0; font-size: 14px; color: var(--pg-muted); }
 .pdf-thanks { margin: 48px 0 0; font-size: 26px; font-weight: 700; color: var(--pg-fg); }
@@ -971,6 +1041,7 @@ const PRINT_CSS = `
   padding: 12px 34px;
 }
 .pdf-brand-name { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.pdf-brand-logo { display: block; max-height: 46px; max-width: 220px; object-fit: contain; }
 .pdf-brand-tag {
   font-size: 12px;
   font-weight: 600;
@@ -1016,8 +1087,14 @@ const PRINT_CSS = `
   font-size: 18px;
   font-weight: 700;
 }
+.pdf-strip-reach-item { display: inline-flex; align-items: center; gap: 5px; }
+.pdf-strip-reach-item + .pdf-strip-reach-item { margin-left: 18px; }
+.pdf-strip-reach-item svg { color: var(--pg-accent); }
 .pdf-strip-reach {
   margin: 10px 0 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   text-align: center;
   font-size: 13px;
   font-weight: 600;

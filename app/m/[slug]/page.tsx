@@ -71,18 +71,38 @@ export default async function PublicMenuPage({
           >
             Menu
           </p>
-          <h1
-            className="mt-3 text-[2.4em] font-bold leading-tight tracking-tight"
-            style={{ fontFamily: theme.display }}
-          >
-            {store.name}
-          </h1>
+          {store.logoUrl ? (
+            /* ponytail: plain <img> via /api/logo — the logo is an arbitrary
+               remote URL, so next/image would need a domain allowlist per café.
+               It replaces the wordmark; alt keeps the name for screen readers. */
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/api/logo"
+              alt={store.name}
+              className="mx-auto mt-4 max-h-28 w-auto object-contain"
+            />
+          ) : (
+            <h1
+              className="mt-3 text-[2.4em] font-bold leading-tight tracking-tight"
+              style={{ fontFamily: theme.display }}
+            >
+              {store.name}
+            </h1>
+          )}
           {store.menuTagline && (
             <p className="mt-3 text-[1.05em] text-[var(--m-muted)]">{store.menuTagline}</p>
           )}
-          {(store.city || store.phone) && (
+          {(store.city || store.phone || store.instagram || store.website) && (
             <p className="mt-4 text-[0.85em] text-[var(--m-muted)]">
-              {[store.addressLine1, store.city, store.phone].filter(Boolean).join(" · ")}
+              {[
+                store.addressLine1,
+                store.city,
+                store.phone,
+                store.instagram && `@${store.instagram.replace(/^@/, "")}`,
+                store.website?.replace(/^https?:\/\//, ""),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
           )}
         </header>
