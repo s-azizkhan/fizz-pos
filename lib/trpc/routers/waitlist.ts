@@ -11,7 +11,11 @@ export const waitlistRouter = router({
     try {
       await db
         .insert(waitlist)
-        .values({ email: input.email, cafeName: input.cafeName || null })
+        .values({
+          email: input.email,
+          cafeName: input.cafeName || null,
+          phone: input.phone || null,
+        })
         .onConflictDoNothing();
     } catch {
       throw new TRPCError({

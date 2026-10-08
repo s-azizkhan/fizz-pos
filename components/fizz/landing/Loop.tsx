@@ -2,14 +2,14 @@
 // Sell → Deduct → See, forever. Pure CSS orbit (deterministic, SSR-safe).
 
 const NODES = [
-  { icon: "☕", k: "Sell", v: "Ring an order in seconds.", pos: "left-1/2 top-0 -translate-x-1/2 -translate-y-1/2" },
-  { icon: "📦", k: "Deduct", v: "Stock updates itself.", pos: "bottom-0 left-0 -translate-x-1/4 translate-y-1/4" },
-  { icon: "📈", k: "See", v: "Margins, plainly.", pos: "bottom-0 right-0 translate-x-1/4 translate-y-1/4" },
+  { icon: "🍕", k: "Sell", v: "Bill in 3 taps. UPI QR on screen.", pos: "left-1/2 top-0 -translate-x-1/2 -translate-y-1/2" },
+  { icon: "🧀", k: "Deduct", v: "Recipe pulls from stock — cheese, buns, chicken.", pos: "bottom-0 left-0 -translate-x-1/4 translate-y-1/4" },
+  { icon: "₹", k: "See", v: "Margin per item, live.", pos: "bottom-0 right-0 translate-x-1/4 translate-y-1/4" },
 ];
 
 export default function Loop() {
   return (
-    <section className="border-b border-ink-line">
+    <section id="how" className="border-b border-ink-line">
       <div className="mx-auto grid max-w-6xl items-center gap-16 px-6 py-24 lg:grid-cols-[0.9fr_1.1fr]">
         {/* Copy */}
         <div>
@@ -17,12 +17,12 @@ export default function Loop() {
             One live loop
           </div>
           <h2 className="max-w-[16ch] font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
-            The counter and the storeroom, finally on the same wire.
+            The counter and the kitchen store, finally on the same wire.
           </h2>
           <p className="mt-4 max-w-[52ch] text-lg text-steam">
-            Every tap of <span className="text-cream">sell</span> ripples through
-            the whole café — stock drops, costs settle, margins surface. No
-            export, no reconciliation, no midnight count.
+            Bill a Margherita and Fizz already knows: 160 g mozzarella gone,
+            one base gone, ₹112 cost, ₹87 margin. No export, no Excel, no
+            midnight count. Set recipes once — it runs forever.
           </p>
         </div>
 

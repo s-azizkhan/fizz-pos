@@ -5,7 +5,10 @@ import { useUi } from "@/lib/store/ui";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
 
-export default function WaitlistForm() {
+const INPUT =
+  "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
+
+export default function WaitlistForm({ cta = "Plug my leaks →" }: { cta?: string }) {
   const trpc = useTRPC();
   const { joined, setJoined } = useUi();
   const join = useMutation(
@@ -20,10 +23,10 @@ export default function WaitlistForm() {
     return (
       <div className="rounded-fizz border border-fizz/40 bg-fizz/5 p-6 text-center">
         <p className="font-display text-xl font-semibold text-fizz">
-          You&apos;re on the list ●
+          You&apos;re in ●
         </p>
         <p className="mt-1 text-sm text-steam">
-          We&apos;ll be in touch when Fizz opens its doors.
+          We&apos;ll WhatsApp you within 24 hours to set up your café.
         </p>
       </div>
     );
@@ -36,31 +39,33 @@ export default function WaitlistForm() {
           e.preventDefault();
           join.mutate(fields(e.currentTarget));
         }}
-        className="flex flex-col gap-3 sm:flex-row sm:items-start"
+        className="grid gap-3 sm:grid-cols-2"
       >
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-          <input
-            type="email"
-            name="email"
-            required
-            placeholder="you@cafe.com"
-            className="w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
-          />
-          <input
-            type="text"
-            name="cafeName"
-            placeholder="Café name (optional)"
-            className="w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
-          />
-        </div>
+        <input type="email" name="email" required placeholder="you@yourcafe.in" className={INPUT} />
+        <input
+          type="tel"
+          name="phone"
+          inputMode="numeric"
+          placeholder="WhatsApp number (+91…)"
+          className={INPUT}
+        />
+        <input
+          type="text"
+          name="cafeName"
+          placeholder="Café / outlet name"
+          className={INPUT}
+        />
         <button
           type="submit"
           disabled={join.isPending}
-          className="shrink-0 rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
+          className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
         >
-          {join.isPending ? "Joining…" : "Get early access"}
+          {join.isPending ? "Saving…" : cta}
         </button>
       </form>
+      <p className="text-xs text-steam">
+        Free during early access · No card · No hardware to buy · Setup over WhatsApp
+      </p>
       {join.error && <p className="text-sm text-[#E2655A]">{join.error.message}</p>}
     </div>
   );

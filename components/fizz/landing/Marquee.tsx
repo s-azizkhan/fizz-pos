@@ -2,13 +2,13 @@
 // duplicated and shifted -50% so the loop is seamless. Edges faded via mask.
 
 const ITEMS = [
-  "Independent roasters",
-  "Neighbourhood cafés",
-  "Brunch spots",
-  "Artisan bakeries",
-  "Espresso bars",
-  "Specialty tea houses",
-  "Corner coffee shops",
+  "Pizza cafés",
+  "Burger joints",
+  "Fried chicken outlets",
+  "Wings & shakes counters",
+  "Cloud kitchens",
+  "Fast-food franchises",
+  "Café + QSR combos",
 ];
 
 function Track() {
@@ -28,7 +28,7 @@ export default function Marquee() {
   return (
     <section className="border-b border-ink-line py-7">
       <div className="mb-5 text-center text-xs font-semibold uppercase tracking-[0.18em] text-steam">
-        Poured for
+        Built for India&apos;s
       </div>
       <div
         className="flex overflow-hidden"

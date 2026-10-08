@@ -38,7 +38,7 @@ function MiniRing() {
         </div>
       </div>
       <div className="text-sm text-steam">
-        Real margin, per item — not a guess.
+        Your real margin on the Zinger — not a guess.
       </div>
     </div>
   );
@@ -49,10 +49,10 @@ export default function WhyFizz() {
     <section id="why" className="border-b border-ink-line">
       <div className="mx-auto max-w-6xl px-6 py-24">
         <div className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-          Why Fizz
+          What you get
         </div>
         <h2 className="max-w-[20ch] font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
-          Effervescent on the surface. Ruthless underneath.
+          Everything a QSR counter needs. Nothing it doesn&apos;t.
         </h2>
 
         <div className="mt-10 grid gap-5 md:grid-cols-3 md:auto-rows-[minmax(0,1fr)]">
@@ -62,16 +62,16 @@ export default function WhyFizz() {
               Fast at the counter
             </div>
             <h3 className="mt-3 max-w-[18ch] font-display text-2xl font-bold tracking-tight">
-              Ring the rush without breaking a sweat.
+              Bill the Friday rush in 3 taps.
             </h3>
             <p className="mt-2.5 max-w-[44ch] text-steam">
-              Tap, total, settle. The line keeps moving while every sale quietly
-              updates what you own in the back.
+              Tap item, tap UPI, show QR. GST on the bill automatically. Any
+              staff learns it in ten minutes — on the tablet you already have.
             </p>
 
             {/* Mini keypad / ticket */}
             <div className="mt-auto grid grid-cols-3 gap-2.5 pt-7">
-              {["Latte", "Croissant", "Cold brew", "Mocha", "Bagel", "Settle"].map(
+              {["Margherita", "Zinger", "Wings 6pc", "Fries", "Coke", "UPI ₹"].map(
                 (k, i) => (
                   <div
                     key={k}
@@ -90,18 +90,19 @@ export default function WhyFizz() {
 
           {/* Sharp in the back */}
           <div className="rounded-fizz border border-ink-line bg-ink-soft p-7">
-            <h3 className="font-display text-lg font-bold">Sharp in the back</h3>
+            <h3 className="font-display text-lg font-bold">Recipe-level stock</h3>
             <p className="mt-2 text-sm text-steam">
-              Every sale deducts ingredients automatically. Stock you can trust.
+              Cheese in grams, chicken in pieces, buns in units. Every bill
+              deducts automatically.
             </p>
             <MiniBars />
           </div>
 
           {/* Honest about money */}
           <div className="rounded-fizz border border-ink-line bg-ink-soft p-7">
-            <h3 className="font-display text-lg font-bold">Honest about money</h3>
+            <h3 className="font-display text-lg font-bold">Margin per item</h3>
             <p className="mt-2 text-sm text-steam">
-              Margins, waste, and your real best-sellers — plainly.
+              Which item makes money, which one just makes noise. Plain numbers.
             </p>
             <MiniRing />
           </div>
@@ -110,15 +111,16 @@ export default function WhyFizz() {
           <div className="flex flex-col justify-between gap-5 rounded-fizz border border-ink-line bg-ink-soft p-7 md:col-span-3 md:flex-row md:items-center">
             <div>
               <h3 className="font-display text-lg font-bold">
-                Low-stock alerts before you open
+                Low-stock alerts before the rush
               </h3>
               <p className="mt-2 max-w-[54ch] text-sm text-steam">
-                Find out you&apos;re low on oat milk at 7am — not at the 8am
-                rush. Reorder in two taps, from your phone.
+                Know you&apos;re short on buns Friday morning — not Friday 9pm.
+                Plus: expenses, daily cash-up, QR menu, WhatsApp orders, staff
+                roles. All in.
               </p>
             </div>
             <div className="flex flex-wrap gap-2.5">
-              {["Oat milk · low", "Espresso beans · 2 days", "Reorder ↻"].map(
+              {["Burger buns · low", "Chicken · 1 day", "Reorder ↻"].map(
                 (a, i) => (
                   <span
                     key={a}

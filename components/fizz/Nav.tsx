@@ -3,9 +3,11 @@
 import { useUi } from "@/lib/store/ui";
 
 const LINKS = [
-  { href: "#problem", label: "The problem" },
-  { href: "#how", label: "The loop" },
-  { href: "#why", label: "Why Fizz" },
+  { href: "#problem", label: "The leak" },
+  { href: "#calc", label: "Your number" },
+  { href: "#why", label: "What you get" },
+  { href: "#compare", label: "Compare" },
+  { href: "#faq", label: "FAQ" },
 ];
 
 export default function Nav() {
@@ -39,7 +41,7 @@ export default function Nav() {
             href="#waitlist"
             className="rounded-full bg-fizz px-4 py-2 text-sm font-semibold text-ink transition-transform hover:scale-105"
           >
-            Get early access
+            Plug my leaks
           </a>
         </div>
 
@@ -78,7 +80,7 @@ export default function Nav() {
               onClick={closeMobileNav}
               className="rounded-full bg-fizz px-4 py-2 text-center text-sm font-semibold text-ink"
             >
-              Get early access
+              Plug my leaks
             </a>
           </div>
         </div>

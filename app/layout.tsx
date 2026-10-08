@@ -36,9 +36,9 @@ const wordmark = Pixelify_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Fizz — The Café Operating System",
+  title: "Fizz — POS for pizza, burger & fried chicken cafés in India",
   description:
-    "Fizz runs the till and tracks every ingredient — so cafés stop guessing. POS, inventory, and margins in one effervescent live loop.",
+    "Your pizza sells. Your profit leaks. Fizz bills with UPI + GST and deducts every gram of cheese and every bun from stock — so you know today's real margin. Free during early access.",
   applicationName: "Fizz",
   manifest: "/manifest.webmanifest",
   icons: {
