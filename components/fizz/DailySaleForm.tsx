@@ -6,7 +6,8 @@ import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
-import { formatMoney } from "@/lib/store/format";
+import { currencySymbol, formatMoney } from "@/lib/store/format";
+import NumberInput from "@/components/fizz/ui/NumberInput";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -73,45 +74,26 @@ export default function DailySaleForm({
             className={inputCls}
           />
         </label>
-        <label className="flex flex-col gap-2">
-          <span className={labelCls}>Cash sale</span>
-          <input
-            name="cashSale"
-            type="number"
-            min={0}
-            step="0.01"
-            required
-            value={cash}
-            onChange={(e) => setCash(e.target.value)}
-            className={inputCls}
-          />
-        </label>
-        <label className="flex flex-col gap-2">
-          <span className={labelCls}>Online sale</span>
-          <input
-            name="onlineSale"
-            type="number"
-            min={0}
-            step="0.01"
-            required
-            value={online}
-            onChange={(e) => setOnline(e.target.value)}
-            className={inputCls}
-          />
-        </label>
-        <label className="flex flex-col gap-2">
-          <span className={labelCls}>Credit sale</span>
-          <input
-            name="creditSale"
-            type="number"
-            min={0}
-            step="0.01"
-            required
-            value={credit}
-            onChange={(e) => setCredit(e.target.value)}
-            className={inputCls}
-          />
-        </label>
+        {(
+          [
+            ["cashSale", "Cash sale", cash, setCash],
+            ["onlineSale", "Online sale", online, setOnline],
+            ["creditSale", "Credit sale", credit, setCredit],
+          ] as const
+        ).map(([name, label, value, set]) => (
+          <label key={name} className="flex flex-col gap-2">
+            <span className={labelCls}>{label}</span>
+            <NumberInput
+              name={name}
+              required
+              value={value}
+              onChange={set}
+              step={100}
+              stepper
+              prefix={currencySymbol(currency)}
+            />
+          </label>
+        ))}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
