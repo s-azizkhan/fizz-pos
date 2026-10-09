@@ -19,7 +19,7 @@ import type {
   TaxConfig,
   UpiConfig,
 } from "./types";
-import MenuGrid from "./MenuGrid";
+import MenuGrid, { type MenuSection } from "./MenuGrid";
 import Ticket from "./Ticket";
 import VariantPicker from "./VariantPicker";
 import PayModal from "./PayModal";
@@ -74,6 +74,11 @@ export default function PosTerminal({
   const [cartOpen, setCartOpen] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const chipsRef = useRef<HTMLDivElement>(null);
+  // While a chip tap smooth-scrolls the grid, don't let scroll-spy flicker
+  // the active chip through every section it passes.
+  const jumpingRef = useRef(false);
   const money = (n: number | string) => formatMoney(n, currency);
 
   // Build the line payload from the cart for either save or checkout.
@@ -99,16 +104,66 @@ export default function PosTerminal({
     if (loaded) router.replace("/dashboard/till");
   }
 
-  // Visible items: search across all categories, else show the active tab.
-  const visibleItems = useMemo<PosItem[]>(() => {
+  // Search → one untitled section of matches; otherwise every category
+  // stacked into one continuous scroll.
+  const sections = useMemo<MenuSection[]>(() => {
     const q = query.trim().toLowerCase();
-    if (q) {
-      return categories
-        .flatMap((c) => c.items)
-        .filter((it) => it.name.toLowerCase().includes(q));
+    if (!q) return categories;
+    const hits = categories
+      .flatMap((c) => c.items)
+      .filter((it) => it.name.toLowerCase().includes(q));
+    return [{ id: "search", name: "", items: hits }];
+  }, [query, categories]);
+
+  // Items the 1-9 quick-add keys address: search hits, or the active section.
+  const visibleItems = useMemo<PosItem[]>(
+    () =>
+      query.trim()
+        ? sections[0].items
+        : (categories.find((c) => c.id === activeCat)?.items ?? []),
+    [query, sections, activeCat, categories],
+  );
+
+  // Scroll-spy: the active category is the last section whose top has passed
+  // the top of the grid (or the last one once scrolled to the bottom).
+  function spy() {
+    const grid = gridRef.current;
+    if (!grid || query || jumpingRef.current) return;
+    const secs = grid.querySelectorAll<HTMLElement>("[data-cat]");
+    let id = secs[0]?.dataset.cat;
+    const atBottom = grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 2;
+    for (const el of secs) {
+      if (atBottom || el.offsetTop - grid.scrollTop <= 24) id = el.dataset.cat;
     }
-    return categories.find((c) => c.id === activeCat)?.items ?? [];
-  }, [query, activeCat, categories]);
+    if (id && id !== activeCat) setActiveCat(id);
+  }
+
+  // Chip tap: smooth-scroll the grid to that category's section.
+  function jumpTo(id: string) {
+    setActiveCat(id);
+    jumpingRef.current = true;
+    gridRef.current?.addEventListener(
+      "scrollend",
+      () => {
+        jumpingRef.current = false;
+      },
+      { once: true },
+    );
+    // ponytail: fallback for browsers without `scrollend` (older Safari).
+    setTimeout(() => (jumpingRef.current = false), 800);
+    document.getElementById(`till-cat-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Keep the active chip centred in the horizontal chip rail.
+  useEffect(() => {
+    const rail = chipsRef.current;
+    const chip = rail?.querySelector<HTMLElement>(`[data-chip="${activeCat}"]`);
+    if (!rail || !chip) return;
+    rail.scrollTo({
+      left: chip.offsetLeft - rail.clientWidth / 2 + chip.clientWidth / 2,
+      behavior: "smooth",
+    });
+  }, [activeCat]);
 
   // Add an item; open the variant picker first if it has variants.
   function addItem(item: PosItem) {
@@ -311,11 +366,12 @@ export default function PosTerminal({
 
             {/* Category tabs (hidden while searching) */}
             {!query && (
-              <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              <div ref={chipsRef} className="relative mt-3 flex gap-2 overflow-x-auto pb-1">
                 {categories.map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => setActiveCat(c.id)}
+                    data-chip={c.id}
+                    onClick={() => jumpTo(c.id)}
                     className={`flex shrink-0 items-center gap-2 rounded-full border px-4 py-1.5 text-sm transition-colors ${
                       c.id === activeCat
                         ? "border-fizz bg-fizz text-ink"
@@ -330,7 +386,15 @@ export default function PosTerminal({
             )}
           </header>
 
-          <MenuGrid items={visibleItems} onAdd={addItem} money={money} empty={query ? "No matches." : "Nothing on this tab yet."} />
+          <MenuGrid
+            ref={gridRef}
+            sections={sections}
+            activeId={activeCat}
+            onScroll={spy}
+            onAdd={addItem}
+            money={money}
+            empty={query ? "No matches." : "Nothing on the menu yet."}
+          />
           <KeyboardHints />
         </div>
 
