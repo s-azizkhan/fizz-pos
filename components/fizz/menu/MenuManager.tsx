@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { formatMoney } from "@/lib/store/format";
+import { currencySymbol, formatMoney } from "@/lib/store/format";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { MenuCategoryIconGlyph } from "./category-icons";
@@ -14,6 +14,7 @@ import type {
 } from "@/lib/store/menu";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { RecipeComponent } from "@/lib/db/schema";
+import NumberInput from "@/components/fizz/ui/NumberInput";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -45,28 +46,23 @@ function VariantEditor({
             }
             className={inputCls}
           />
-          <input
+          <NumberInput
             value={v.price}
-            type="number"
-            min={0}
-            step="0.01"
             placeholder="Price"
-            onChange={(e) =>
-              setVariants(variants.map((x, j) => (j === i ? { ...x, price: e.target.value } : x)))
+            aria-label="Variant price"
+            onChange={(price) =>
+              setVariants(variants.map((x, j) => (j === i ? { ...x, price } : x)))
             }
-            className={`${inputCls} max-w-[110px]`}
+            className="max-w-[110px]"
           />
-          <input
+          <NumberInput
             value={v.cost}
-            type="number"
-            min={0}
-            step="0.01"
             placeholder="Cost"
-            title="Cost of goods for this variant"
-            onChange={(e) =>
-              setVariants(variants.map((x, j) => (j === i ? { ...x, cost: e.target.value } : x)))
+            aria-label="Variant cost of goods"
+            onChange={(cost) =>
+              setVariants(variants.map((x, j) => (j === i ? { ...x, cost } : x)))
             }
-            className={`${inputCls} max-w-[110px]`}
+            className="max-w-[110px]"
           />
           <button
             type="button"
@@ -162,11 +158,11 @@ function ItemForm({
         </label>
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Base price ({currency})</span>
-          <input value={price} type="number" min={0} step="0.01" onChange={(e) => setPrice(e.target.value)} className={inputCls} />
+          <NumberInput value={price} onChange={setPrice} prefix={currencySymbol(currency)} />
         </label>
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Item cost ({currency})</span>
-          <input value={cost} type="number" min={0} step="0.01" placeholder="0.00" onChange={(e) => setCost(e.target.value)} className={inputCls} />
+          <NumberInput value={cost} placeholder="0.00" onChange={setCost} prefix={currencySymbol(currency)} />
         </label>
         {priceN > 0 && (
           <div className="rounded-fizz border border-ink-line bg-ink px-4 py-3 text-sm sm:col-span-2">

@@ -9,6 +9,7 @@ import { MENU_FONT_SCALES } from "@/lib/db/schema";
 import { MENU_THEMES } from "@/lib/store/menu-themes";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { OrderSettings, Store } from "@/lib/db/schema";
+import NumberInput from "@/components/fizz/ui/NumberInput";
 
 
 const inputCls =
@@ -215,14 +216,7 @@ export default function PublicMenuModal({
                 <div className="grid gap-5 sm:grid-cols-2">
                 <label className="flex flex-col gap-2">
                   <span className={labelCls}>Delivery fee ({store.currency})</span>
-                  <input
-                    name="deliveryFee"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    defaultValue={settings.deliveryFee}
-                    className={inputCls}
-                  />
+                  <NumberInput name="deliveryFee" defaultValue={settings.deliveryFee} />
                   <span className="text-xs text-steam">
                     {delivery
                       ? "Added to the guest's total when they pick delivery. 0 = free."
@@ -232,14 +226,7 @@ export default function PublicMenuModal({
 
                 <label className="flex flex-col gap-2">
                   <span className={labelCls}>Packaging, per item ({store.currency})</span>
-                  <input
-                    name="packagingFee"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    defaultValue={settings.packagingFee}
-                    className={inputCls}
-                  />
+                  <NumberInput name="packagingFee" defaultValue={settings.packagingFee} />
                   <span className="text-xs text-steam">
                     Charged per item on takeaway and delivery. Dine-in never pays it.
                   </span>

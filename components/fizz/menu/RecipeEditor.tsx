@@ -7,6 +7,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { MenuItemWithVariants } from "@/lib/store/menu";
 import type { RecipeComponent } from "@/lib/db/schema";
+import NumberInput from "@/components/fizz/ui/NumberInput";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -142,16 +143,15 @@ export default function RecipeEditor({
               ))}
             </select>
             <div className="flex items-center gap-2">
-              <input
+              <NumberInput
                 value={row.quantity}
-                type="number"
-                min={0}
-                step="0.001"
+                decimals={3}
                 placeholder="Qty"
-                onChange={(e) =>
-                  setRows(rows.map((x, j) => (j === i ? { ...x, quantity: e.target.value } : x)))
+                aria-label="Quantity"
+                onChange={(v) =>
+                  setRows(rows.map((x, j) => (j === i ? { ...x, quantity: v } : x)))
                 }
-                className={`${inputCls} max-w-[110px]`}
+                className="max-w-[110px]"
               />
               <span className="w-10 text-sm text-steam">{unitOf(row.inventoryItemId)}</span>
             </div>

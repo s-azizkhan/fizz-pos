@@ -7,6 +7,7 @@ import type { InventoryItem } from "@/lib/db/schema";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
+import NumberInput from "@/components/fizz/ui/NumberInput";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -66,7 +67,7 @@ export default function StockMovementForm({
         </label>
         <label className="flex flex-col gap-2">
           <span className={labelCls}>{type === "adjust" ? "New count" : "Amount"}</span>
-          <input name="amount" type="number" min={0} step="0.001" required value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" className={inputCls} />
+          <NumberInput name="amount" decimals={3} required value={amount} onChange={setAmount} />
         </label>
         <label className="flex flex-col gap-2 sm:col-span-2">
           <span className={labelCls}>Note</span>

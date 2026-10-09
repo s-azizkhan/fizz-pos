@@ -11,6 +11,7 @@ import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
+import NumberInput from "@/components/fizz/ui/NumberInput";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -88,23 +89,20 @@ export default function InventoryItemForm({
         </label>
         <label className="flex flex-col gap-2">
           <span className={labelCls}>{item ? "On hand (read-only)" : "Opening quantity"}</span>
-          <input
+          <NumberInput
             name="quantity"
-            type="number"
-            min={0}
-            step="0.001"
+            decimals={3}
             defaultValue={item ? Number(item.quantity) : 0}
             disabled={!!item}
-            className={`${inputCls} ${item ? "opacity-60" : ""}`}
           />
         </label>
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Reorder level</span>
-          <input name="reorderLevel" type="number" min={0} step="0.001" defaultValue={item ? Number(item.reorderLevel) : 0} className={inputCls} />
+          <NumberInput name="reorderLevel" decimals={3} defaultValue={item ? Number(item.reorderLevel) : 0} />
         </label>
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Cost per unit ({currency})</span>
-          <input name="costPerUnit" type="number" min={0} step="0.01" defaultValue={item ? Number(item.costPerUnit) : 0} className={inputCls} />
+          <NumberInput name="costPerUnit" defaultValue={item ? Number(item.costPerUnit) : 0} />
         </label>
       </div>
 

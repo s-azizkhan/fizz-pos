@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Keypad, { type KeypadKey } from "./Keypad";
 
 // Brand number field with Fizz's own on-screen keypad. On touch devices focus
-// opens the keypad right under the field; inputMode="none" keeps the phone keyboard shut, while
-// a hardware keyboard still types normally. The value is a string (like every
+// docks the keypad at the bottom of the screen, like a native keyboard;
+// inputMode="none" keeps the phone keyboard shut. Desktop types normally. The value is a string (like every
 // money column) so "12." survives mid-entry; the form posts it via `name`.
 //
 // Controlled (`value` + `onChange`) or uncontrolled (`defaultValue`).
@@ -99,7 +100,7 @@ export default function NumberInput({
     "grid h-full w-10 shrink-0 place-items-center text-lg font-semibold text-steam transition-colors hover:text-fizz disabled:opacity-40";
 
   return (
-    <div className={`flex flex-col gap-2 ${className}`}>
+    <div className={className}>
       <div
         className={`flex items-center overflow-hidden rounded-fizz border bg-ink-soft text-cream ${open ? "border-fizz ring-2 ring-fizz/40" : "border-ink-line"} ${disabled ? "opacity-60" : ""}`}
       >
@@ -139,11 +140,9 @@ export default function NumberInput({
             // Touch devices only (phones, tablets); desktop types on the real keyboard.
             if (!keypad || !matchMedia("(pointer: coarse)").matches) return;
             setOpen(true);
-            // Keypad renders under the field; keep it in view inside sheets.
+            // scroll-mb on the input keeps it above the docked keypad.
             const el = e.currentTarget;
-            requestAnimationFrame(() =>
-              el.closest("[data-numinput]")?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
-            );
+            requestAnimationFrame(() => el.scrollIntoView({ block: "nearest", behavior: "smooth" }));
           }}
           onBlur={() => {
             setOpen(false);
@@ -163,7 +162,7 @@ export default function NumberInput({
             e.preventDefault();
             bump(e.key === "ArrowUp" ? 1 : -1);
           }}
-          className={`min-w-0 flex-1 bg-transparent py-3 font-display tabular-nums caret-fizz outline-none placeholder:text-steam ${prefix != null ? "pl-2" : "pl-4"} ${suffix != null ? "pr-2" : "pr-4"}`}
+          className={`min-w-0 flex-1 bg-transparent py-3 font-display tabular-nums caret-fizz outline-none scroll-mb-80 placeholder:text-steam ${prefix != null ? "pl-2" : "pl-4"} ${suffix != null ? "pr-2" : "pr-4"}`}
         />
         {suffix != null && <span className="pr-4 text-sm text-steam">{suffix}</span>}
         {stepper && (
@@ -180,11 +179,19 @@ export default function NumberInput({
           </button>
         )}
       </div>
-      {open && (
-        <div data-numinput>
-          <Keypad onKey={press} decimal={decimals > 0} />
-        </div>
-      )}
+      {open &&
+        // Portal: modal sheets are transformed/scrolling, which would trap a
+        // fixed element. Stop pointer events so the sheet's swipe-dismiss
+        // doesn't see keypad taps (React bubbles through portals).
+        createPortal(
+          <div
+            onPointerDown={(e) => e.stopPropagation()}
+            className="fixed inset-x-0 bottom-0 z-[60] border-t border-ink-line bg-ink/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm"
+          >
+            <Keypad onKey={press} decimal={decimals > 0} className="mx-auto max-w-md" />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
