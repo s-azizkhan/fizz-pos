@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { EXPENSE_CATEGORIES, expenseMethod } from "@/lib/db/schema";
-import { formatMoney } from "@/lib/store/format";
+import { currencySymbol, formatMoney } from "@/lib/store/format";
+import NumberInput from "@/components/fizz/ui/NumberInput";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
@@ -78,16 +79,16 @@ export default function ExpenseForm({
         </label>
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Amount</span>
-          <input
+          <NumberInput
             name="amount"
-            type="number"
             min={0.01}
-            step="0.01"
             required
             placeholder="0.00"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className={inputCls}
+            onChange={setAmount}
+            step={100}
+            stepper
+            prefix={currencySymbol(currency)}
           />
         </label>
         <label className="flex flex-col gap-2">
