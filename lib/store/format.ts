@@ -48,6 +48,54 @@ export function formatMoney(amount: string | number, currency: string): string {
   }
 }
 
+// Date labels for SSR'd client components. Locale is pinned (never
+// `undefined`) so the server's Node locale and the browser's can't disagree
+// and break hydration. "en-GB" → "Tue, 16 Jun 2026", matching KotTicket.
+const DATE_LOCALE = "en-GB";
+
+// `YYYY-MM-DD` date column (or a Date) → "Tue, 16 Jun 2026". Date strings are
+// parsed as local dates so they never shift a day across timezones.
+export function formatDate(
+  d: string | Date,
+  opts: Intl.DateTimeFormatOptions = { weekday: "short", day: "2-digit", month: "short", year: "numeric" },
+): string {
+  let date: Date;
+  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+    const [y, m, day] = d.split("-").map(Number);
+    date = new Date(y, m - 1, day);
+  } else {
+    date = new Date(d);
+  }
+  return date.toLocaleDateString(DATE_LOCALE, opts);
+}
+
+// Timestamp → "16 Jun 2026, 14:05".
+// ponytail: still uses the runtime timezone; pin `timeZone` if the server
+// runs in a different zone from the till (e.g. UTC host, IST café).
+export function formatDateTime(d: string | Date): string {
+  return new Date(d).toLocaleString(DATE_LOCALE, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// Just the currency symbol ("₹", "$") for input adornments. Same fixed locale
+// as formatMoney so SSR and client agree.
+export function currencySymbol(currency: string): string {
+  try {
+    return (
+      new Intl.NumberFormat("en-US", { style: "currency", currency })
+        .formatToParts(0)
+        .find((p) => p.type === "currency")?.value ?? currency
+    );
+  } catch {
+    return currency;
+  }
+}
+
 // Build a UPI deep link (NPCI spec) that a customer's UPI app can scan to pay
 // a pre-filled amount. `pa` (VPA) is the only truly required field; `am` locks
 // the amount so the cashier never re-keys it. Values are URI-encoded because

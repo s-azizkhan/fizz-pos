@@ -1,5 +1,6 @@
 "use client";
 
+import { formatDate } from "@/lib/store/format";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc/client";
@@ -37,16 +38,10 @@ const ROLE_LABEL = Object.fromEntries(ROLES.map((r) => [r.value, r.label])) as R
   string
 >;
 
+const SHORT_DATE = { day: "2-digit", month: "short", year: "numeric" } as const;
+
 const inviteUrl = (token: string) =>
   typeof window === "undefined" ? "" : `${window.location.origin}/join/${token}`;
-
-function fmtDate(d: Date | string): string {
-  return new Date(d).toLocaleDateString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 // The whole point of this feature: no mail goes out, so the admin copies the
 // link and sends it however they already talk to their staff.
@@ -290,7 +285,7 @@ export default function TeamBoard({
                   {ROLE_LABEL[p.role]}
                 </span>
                 <span className="text-xs text-steam">
-                  Expires {fmtDate(p.expiresAt)}
+                  Expires {formatDate(p.expiresAt, SHORT_DATE)}
                 </span>
                 <span className="ml-auto flex items-center gap-2">
                   <CopyLinkButton token={p.token} />
@@ -327,7 +322,7 @@ export default function TeamBoard({
                     <td className={cell}>
                       <RoleSelect member={m} self={self} />
                     </td>
-                    <td className={`${cell} text-steam`}>{fmtDate(m.createdAt)}</td>
+                    <td className={`${cell} text-steam`}>{formatDate(m.createdAt, SHORT_DATE)}</td>
                     <td className={`${cell} text-right`}>
                       {!self && <RemoveButton member={m} />}
                     </td>

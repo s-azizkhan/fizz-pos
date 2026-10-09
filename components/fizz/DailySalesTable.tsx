@@ -1,31 +1,10 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { formatMoney } from "@/lib/store/format";
+import { formatDate, formatDateTime, formatMoney } from "@/lib/store/format";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import type { DailySaleRow } from "@/lib/store/daily-sales";
-
-function fmtDate(d: string): string {
-  // saleDate is a YYYY-MM-DD string from the date column.
-  const [y, m, day] = d.split("-").map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function fmtDateTime(d: Date | string): string {
-  return new Date(d).toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function DeleteButton({ id }: { id: string }) {
   const trpc = useTRPC();
@@ -75,7 +54,7 @@ export default function DailySalesTable({
             className="rounded-fizz border border-ink-line bg-ink-soft p-4"
           >
             <div className="flex items-start justify-between gap-3">
-              <span className="font-medium text-cream">{fmtDate(r.saleDate)}</span>
+              <span className="font-medium text-cream">{formatDate(r.saleDate)}</span>
               <span className="font-display text-lg font-semibold text-fizz">
                 {formatMoney(r.total, currency)}
               </span>
@@ -98,7 +77,7 @@ export default function DailySalesTable({
 
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink-line/60 pt-3 text-xs text-steam">
               <span>
-                by {r.enteredByName ?? "—"} · {fmtDateTime(r.createdAt)}
+                by {r.enteredByName ?? "—"} · {formatDateTime(r.createdAt)}
               </span>
               {canDelete && <DeleteButton id={r.id} />}
             </div>
@@ -124,7 +103,7 @@ export default function DailySalesTable({
           <tbody>
             {rows.map((r) => (
               <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
-                <td className={`${cls} font-medium text-cream`}>{fmtDate(r.saleDate)}</td>
+                <td className={`${cls} font-medium text-cream`}>{formatDate(r.saleDate)}</td>
                 <td className={`${cls} text-right text-cream`}>{formatMoney(r.cashSale, currency)}</td>
                 <td className={`${cls} text-right text-cream`}>{formatMoney(r.onlineSale, currency)}</td>
                 <td className={`${cls} text-right text-cream`}>{formatMoney(r.creditSale, currency)}</td>
@@ -132,7 +111,7 @@ export default function DailySalesTable({
                   {formatMoney(r.total, currency)}
                 </td>
                 <td className={`${cls} text-steam`}>{r.enteredByName ?? "—"}</td>
-                <td className={`${cls} text-steam`}>{fmtDateTime(r.createdAt)}</td>
+                <td className={`${cls} text-steam`}>{formatDateTime(r.createdAt)}</td>
                 {canDelete && (
                   <td className={`${cls} text-right`}>
                     <DeleteButton id={r.id} />

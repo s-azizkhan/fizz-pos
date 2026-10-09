@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { formatMoney } from "@/lib/store/format";
+import { formatDate, formatDateTime, formatMoney } from "@/lib/store/format";
 import { toast } from "@/lib/store/toast";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import { useTRPC } from "@/lib/trpc/client";
@@ -14,26 +14,6 @@ const METHOD_LABELS: Record<string, string> = {
   credit: "Credit",
   other: "Other",
 };
-
-function fmtDate(d: string): string {
-  const [y, m, day] = d.split("-").map(Number);
-  return new Date(y, m - 1, day).toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function fmtDateTime(d: Date | string): string {
-  return new Date(d).toLocaleString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function DeleteButton({ id }: { id: string }) {
   const trpc = useTRPC();
@@ -108,7 +88,7 @@ export default function ExpensesTable({
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-1.5">
-                <span className="font-medium text-cream">{fmtDate(r.expenseDate)}</span>
+                <span className="font-medium text-cream">{formatDate(r.expenseDate)}</span>
                 <span className="w-fit rounded-full border border-ink-line px-2.5 py-0.5 text-xs text-cream">
                   {r.category}
                 </span>
@@ -135,7 +115,7 @@ export default function ExpensesTable({
 
             <div className="mt-3 flex items-center justify-between gap-3 border-t border-ink-line/60 pt-3 text-xs text-steam">
               <span>
-                by {r.enteredByName ?? "—"} · {fmtDateTime(r.createdAt)}
+                by {r.enteredByName ?? "—"} · {formatDateTime(r.createdAt)}
               </span>
               {canDelete && <DeleteButton id={r.id} />}
             </div>
@@ -162,7 +142,7 @@ export default function ExpensesTable({
           <tbody>
             {shown.map((r) => (
               <tr key={r.id} className="border-b border-ink-line/60 last:border-0">
-                <td className={`${cls} font-medium text-cream`}>{fmtDate(r.expenseDate)}</td>
+                <td className={`${cls} font-medium text-cream`}>{formatDate(r.expenseDate)}</td>
                 <td className={cls}>
                   <span className="rounded-full border border-ink-line px-2.5 py-0.5 text-xs text-cream">
                     {r.category}
@@ -175,7 +155,7 @@ export default function ExpensesTable({
                   {formatMoney(r.amount, currency)}
                 </td>
                 <td className={`${cls} text-steam`}>{r.enteredByName ?? "—"}</td>
-                <td className={`${cls} text-steam`}>{fmtDateTime(r.createdAt)}</td>
+                <td className={`${cls} text-steam`}>{formatDateTime(r.createdAt)}</td>
                 {canDelete && (
                   <td className={`${cls} text-right`}>
                     <DeleteButton id={r.id} />
