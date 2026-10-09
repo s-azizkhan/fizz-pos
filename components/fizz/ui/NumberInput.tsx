@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import Keypad, { type KeypadKey } from "./Keypad";
 
@@ -55,6 +55,7 @@ export default function NumberInput({
   const ref = useRef<HTMLInputElement>(null);
   const [inner, setInner] = useState(String(defaultValue));
   const [open, setOpen] = useState(false);
+  const padRef = useRef<HTMLDivElement>(null);
   // First keypad press replaces the value (calculator-style), later ones append.
   const [fresh, setFresh] = useState(true);
   const current = value ?? inner;
@@ -95,6 +96,26 @@ export default function NumberInput({
     set(next);
     setFresh(false);
   };
+
+  // The docked keypad covers the bottom of the screen. Pad the field's scroll
+  // container (modal sheet, or the page) by the keypad's height so there is
+  // always room to scroll the field above it, then scroll it there.
+  useLayoutEffect(() => {
+    const input = ref.current;
+    const pad = padRef.current;
+    if (!open || !input || !pad) return;
+    let box = input.parentElement;
+    while (box && !/auto|scroll/.test(getComputedStyle(box).overflowY)) box = box.parentElement;
+    const target = box ?? document.body;
+    const prev = target.style.paddingBottom;
+    const h = pad.offsetHeight;
+    target.style.paddingBottom = `${parseFloat(getComputedStyle(target).paddingBottom) + h}px`;
+    input.style.scrollMarginBottom = `${h + 16}px`;
+    input.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    return () => {
+      target.style.paddingBottom = prev;
+    };
+  }, [open]);
 
   const btnCls =
     "grid h-full w-10 shrink-0 place-items-center text-lg font-semibold text-steam transition-colors hover:text-fizz disabled:opacity-40";
@@ -140,9 +161,6 @@ export default function NumberInput({
             // Touch devices only (phones, tablets); desktop types on the real keyboard.
             if (!keypad || !matchMedia("(pointer: coarse)").matches) return;
             setOpen(true);
-            // scroll-mb on the input keeps it above the docked keypad.
-            const el = e.currentTarget;
-            requestAnimationFrame(() => el.scrollIntoView({ block: "nearest", behavior: "smooth" }));
           }}
           onBlur={() => {
             setOpen(false);
@@ -162,7 +180,7 @@ export default function NumberInput({
             e.preventDefault();
             bump(e.key === "ArrowUp" ? 1 : -1);
           }}
-          className={`min-w-0 flex-1 bg-transparent py-3 font-display tabular-nums caret-fizz outline-none scroll-mb-80 placeholder:text-steam ${prefix != null ? "pl-2" : "pl-4"} ${suffix != null ? "pr-2" : "pr-4"}`}
+          className={`min-w-0 flex-1 bg-transparent py-3 font-display tabular-nums caret-fizz outline-none placeholder:text-steam ${prefix != null ? "pl-2" : "pl-4"} ${suffix != null ? "pr-2" : "pr-4"}`}
         />
         {suffix != null && <span className="pr-4 text-sm text-steam">{suffix}</span>}
         {stepper && (
@@ -185,6 +203,7 @@ export default function NumberInput({
         // doesn't see keypad taps (React bubbles through portals).
         createPortal(
           <div
+            ref={padRef}
             onPointerDown={(e) => e.stopPropagation()}
             className="fixed inset-x-0 bottom-0 z-[60] border-t border-ink-line bg-ink/95 p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-sm"
           >
