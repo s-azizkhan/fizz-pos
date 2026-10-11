@@ -105,7 +105,9 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   }
   p.line(rule);
 
-  const totals: [string, string][] = [["Subtotal", m(d.subtotal)]];
+  // Subtotal only earns its line when something moved the total.
+  const totals: [string, string][] =
+    Number(d.subtotal) === Number(d.total) ? [] : [["Subtotal", m(d.subtotal)]];
   if (Number(d.discount) > 0) totals.push(["Discount", `-${m(d.discount)}`]);
   if (Number(d.tax) > 0) totals.push([d.taxLabel, m(d.tax)]);
   if (Number(d.fees.service) > 0) totals.push(["Service", m(d.fees.service)]);

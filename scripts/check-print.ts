@@ -50,6 +50,8 @@ const footer = (store: object) => body(receipt({ ...base, store: { name: "X", ..
 assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));
 assert.ok(footer({ instagram: "@fizz" }).includes("Insta @fizz\n"));
 assert.ok(text.includes("GST"));
+assert.ok(text.includes("Subtotal"), "subtotal when tax moved the total");
+assert.ok(!body(receipt({ ...base, tax: "0", total: "240.00" }, 58)).includes("Subtotal"), "no subtotal when equal to total");
 assert.ok(text.includes("~252.00"), "₹ on the custom glyph slot");
 assert.ok(text.includes("9:30am 11 oct 26"), "short receipt time");
 assert.ok(!text.includes("Discount"), "zero lines are skipped");
