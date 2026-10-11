@@ -1,7 +1,7 @@
 // Self-check for the ESC/POS builder and receipt layout. No printer needed.
 // Run: npx tsx scripts/check-print.ts
 import assert from "node:assert/strict";
-import { ascii, escpos } from "../lib/print/escpos";
+import { ascii, escpos, INSTA } from "../lib/print/escpos";
 import { kot, kotSeq, shortTime, printMoney, receipt, receiptDoc, row, RECEIPT_LAYOUT } from "../lib/print/templates";
 import { kotDelta } from "../lib/print/print-order";
 import { NeedsPairingError, pair, print } from "../lib/print/bluetooth";
@@ -9,8 +9,8 @@ import { NeedsPairingError, pair, print } from "../lib/print/bluetooth";
 assert.equal(ascii("Café ☕"), "Cafe ?");
 assert.deepEqual([...escpos().line("A").bytes()].slice(-2), [0x41, 0x0a]);
 const head = [...escpos().bytes()];
-assert.deepEqual(head.slice(0, 6), [0x1b, 0x40, 0x1b, 0x26, 3, 0x7e], "reset + define ₹");
-const HEAD = 2 + 6 + 36 + 3;
+assert.deepEqual(head.slice(0, 7), [0x1b, 0x40, 0x1b, 0x26, 3, 0x7c, 0x7e], "reset + define Insta + ₹");
+const HEAD = 2 + 5 + 3 * 37 + 3;
 assert.equal(head.length, HEAD);
 // Ticket text after the init header (the ₹ bitmap is binary).
 const body = (b: Uint8Array) => new TextDecoder().decode(b.slice(HEAD));
@@ -18,6 +18,7 @@ const body = (b: Uint8Array) => new TextDecoder().decode(b.slice(HEAD));
 assert.equal(printMoney("120", "INR"), "₹120");
 assert.equal(printMoney("4.5", "EUR"), "EUR 4.50");
 assert.equal(ascii("₹5 ~ok"), "~5 -ok");
+assert.equal(ascii(`a|b} ${INSTA}`), "a/b) |}", "real | } never hit the icon slots");
 assert.equal(printMoney("4.5", "USD"), "$4.50");
 
 // Fits: padded to the full width. Too long: wraps, value stays on line one.
@@ -48,11 +49,11 @@ assert.ok(text.includes("fizz.cafe\n"), "website, no scheme");
 assert.ok(text.includes("We look forward to serving you\nagain\n"), "default footer, word-wrapped on 58mm");
 const footer = (store: object) => body(receipt({ ...base, store: { name: "X", ...store } }, { paper: 58 }));
 assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));
-assert.ok(footer({ instagram: "@fizz" }).includes("Insta @fizz\n"));
+assert.ok(footer({ instagram: "@fizz" }).includes("Insta |} @fizz\n"));
 const both = body(receipt({ ...base, store: { name: "X", delivery: true, instagram: "fizz" } }, { paper: 58, receipt: [{ id: "t", type: "tagline", on: true, both: true }] }));
-assert.ok(both.includes("Home delivery available") && both.includes("Insta @fizz"), "delivery + insta");
+assert.ok(both.includes("Home delivery available") && both.includes("Insta |} @fizz"), "delivery + insta");
 const noDel = body(receipt({ ...base, store: { name: "X", delivery: true, instagram: "fizz" } }, { paper: 58, receipt: [{ id: "t", type: "tagline", on: true, noDelivery: true }] }));
-assert.ok(!noDel.includes("delivery") && noDel.includes("Insta @fizz"), "delivery hidden, insta takes the line");
+assert.ok(!noDel.includes("delivery") && noDel.includes("Insta |} @fizz"), "delivery hidden, insta takes the line");
 assert.ok(text.includes("GST"));
 assert.ok(text.includes("Subtotal"), "subtotal when tax moved the total");
 assert.ok(!body(receipt({ ...base, tax: "0", total: "240.00" }, { paper: 58 })).includes("Subtotal"), "no subtotal when equal to total");
@@ -66,6 +67,11 @@ assert.deepEqual(orderBlk({}), ["#A-7", "9:30am 11 oct 26", "DINE IN - T4"], "de
 assert.deepEqual(orderBlk({ label: "Bill", h24: true, hide: ["date", "ref"] }), ["Bill A-7", "09:30", "DINE IN"], "label, 24h, hidden parts");
 assert.deepEqual(orderBlk({ label: "", inline: true, hide: ["type", "ref"] }), ["A-7".padEnd(15) + " 9:30am 11 oct 26"], "one-line no. + time");
 assert.deepEqual(orderBlk({ hide: ["num", "time", "date", "type", "ref"] }), [], "all hidden prints nothing");
+const totalOps = (o: object) =>
+  receiptDoc(base, { paper: 58, receipt: [{ id: "t", type: "total", on: true, ...o }] }).ops[0];
+assert.deepEqual([totalOps({}).text.trim().split(/ +/), totalOps({}).h, totalOps({}).bold], [["TOTAL", "₹252"], 2, true], "default total");
+const bigTotal = totalOps({ label: "Grand total", size: "big", bold: false });
+assert.deepEqual([bigTotal.text, bigTotal.w, bigTotal.bold], ["Grand total".padEnd(11) + " ₹252", 2, false], "label, big = half columns, not bold");
 assert.ok(!/[^\x00-\x7f]/.test(text), "output is pure ASCII");
 
 const ticket = body(

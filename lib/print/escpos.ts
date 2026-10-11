@@ -2,7 +2,8 @@
 // receipt or KOT needs: text, alignment, bold, double size, feed, cut.
 // ponytail: ASCII only. Thermal codepages can't print ₹ or most non-Latin
 // glyphs, so text goes through `ascii()`. ₹ is the exception: it's downloaded
-// as a user-defined glyph over "~" (ESC &). Images are 1-bit pixel art only.
+// as a user-defined glyph over "~" (ESC &), and the Instagram icon over "|}".
+// Images are 1-bit pixel art only.
 
 const ESC = 0x1b;
 const GS = 0x1d;
@@ -10,13 +11,21 @@ const LF = 0x0a;
 
 // ₹ rides on the "~" slot, so a real "~" prints as "-".
 export const RUPEE = "~";
+// Instagram icon: two private-use chars in template text (two columns wide,
+// so wrapping counts it right), printed on the "|" + "}" slots. A real "|"
+// prints as "/" and "}" as ")".
+export const INSTA = "\uE000\uE001";
+export const INSTA_SLOTS = "|}";
 
 // Strip accents ("café" → "cafe"), then swap anything still outside
 // printable ASCII for "?" so the printer never renders codepage garbage.
 export function ascii(s: string): string {
   return s
     .replace(/~/g, "-")
+    .replace(/\|/g, "/")
+    .replace(/\}/g, ")")
     .replace(/₹/g, RUPEE)
+    .replaceAll(INSTA, INSTA_SLOTS)
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^\x20-\x7e\n]/g, "?");
@@ -51,16 +60,54 @@ const RUPEE_GLYPH = [
   "............",
 ];
 
-// ESC & 3 c c 12 <36 bytes>: column-major, 3 bytes per column, MSB on top.
-function defineRupee(): number[] {
-  const out = [ESC, 0x26, 3, RUPEE.charCodeAt(0), RUPEE.charCodeAt(0), 12];
-  for (let x = 0; x < 12; x++) {
-    for (let b = 0; b < 3; b++) {
-      let byte = 0;
-      for (let bit = 0; bit < 8; bit++) {
-        if (RUPEE_GLYPH[b * 8 + bit][x] === "#") byte |= 0x80 >> bit;
+// Instagram as 24x24: left half on "|", right half on "}". Drawn from a
+// rounded square, ring and dot.
+export const INSTA_GLYPH = [
+  "........................",
+  "........................",
+  "......############......",
+  "....################....",
+  "...####..........####...",
+  "...##..............##...",
+  "..###...........##.###..",
+  "..##......####..##..##..",
+  "..##.....######.....##..",
+  "..##....###..###....##..",
+  "..##...###....###...##..",
+  "..##...##......##...##..",
+  "..##...##......##...##..",
+  "..##...###....###...##..",
+  "..##....###..###....##..",
+  "..##.....######.....##..",
+  "..##......####......##..",
+  "..###..............###..",
+  "...##..............##...",
+  "...####..........####...",
+  "....################....",
+  "......############......",
+  "........................",
+  "........................",
+];
+
+// ESC & 3 c1 c2, then per char: 12 <36 bytes>, column-major, 3 bytes per
+// column, MSB on top. One contiguous range: "|" "}" "~".
+function defineGlyphs(): number[] {
+  const glyphs = [
+    INSTA_GLYPH.map((r) => r.slice(0, 12)),
+    INSTA_GLYPH.map((r) => r.slice(12)),
+    RUPEE_GLYPH,
+  ];
+  const out = [ESC, 0x26, 3, INSTA_SLOTS.charCodeAt(0), RUPEE.charCodeAt(0)];
+  for (const g of glyphs) {
+    out.push(12);
+    for (let x = 0; x < 12; x++) {
+      for (let b = 0; b < 3; b++) {
+        let byte = 0;
+        for (let bit = 0; bit < 8; bit++) {
+          if (g[b * 8 + bit][x] === "#") byte |= 0x80 >> bit;
+        }
+        out.push(byte);
       }
-      out.push(byte);
     }
   }
   return out;
@@ -81,8 +128,8 @@ export type PrintOp = {
 };
 
 export function escpos() {
-  // ESC @ = reset, then download ₹ and switch the user-defined set on (ESC %).
-  const out: number[] = [ESC, 0x40, ...defineRupee(), ESC, 0x25, 1];
+  // ESC @ = reset, then download ₹ + Insta and switch the user-defined set on (ESC %).
+  const out: number[] = [ESC, 0x40, ...defineGlyphs(), ESC, 0x25, 1];
   const st: Omit<PrintOp, "text"> = { align: "left", bold: false, w: 1, h: 1, lh: 30, gap: 0 };
   const ops: PrintOp[] = [];
   const api = {

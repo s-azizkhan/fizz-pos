@@ -2,7 +2,7 @@ import { boolean, integer, jsonb, numeric, pgTable, text, timestamp, uuid } from
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/store/currencies";
 import { MENU_THEME_KEYS } from "@/lib/store/menu-themes";
-import { ORDER_PARTS, type Block } from "@/lib/print/templates";
+import { ORDER_PARTS, TEXT_SIZES, type Block } from "@/lib/print/templates";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -193,6 +193,7 @@ export const ticketLayoutInput = z.object({
         inline: z.boolean().optional(),
         both: z.boolean().optional(),
         noDelivery: z.boolean().optional(),
+        size: z.enum(Object.keys(TEXT_SIZES) as [keyof typeof TEXT_SIZES]).optional(),
       }),
     )
     .max(60, "That's a long ticket"),

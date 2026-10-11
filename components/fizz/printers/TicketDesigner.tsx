@@ -2,7 +2,7 @@
 
 import { useRef, useState, useSyncExternalStore } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ascii, RUPEE, type Align, type PrintOp } from "@/lib/print/escpos";
+import { ascii, INSTA_GLYPH, INSTA_SLOTS, RUPEE, type Align, type PrintOp } from "@/lib/print/escpos";
 import {
   KOT_LAYOUT,
   kotDoc,
@@ -11,6 +11,7 @@ import {
   type Block,
   type OrderPart,
   type ReceiptData,
+  type TextSize,
 } from "@/lib/print/templates";
 import { usePrinter } from "@/lib/store/printer";
 import { useTRPC } from "@/lib/trpc/client";
@@ -38,6 +39,12 @@ const LABELS: Record<string, string> = {
   space: "Blank line",
 };
 const CUSTOM = ["text", "rule", "space"];
+const TOTAL_SIZES: [TextSize, string][] = [
+  ["normal", "Normal"],
+  ["tall", "Tall"],
+  ["wide", "Wide"],
+  ["big", "Big"],
+];
 const PART_LABELS: [OrderPart, string][] = [
   ["num", "Order no."],
   ["time", "Time"],
@@ -294,6 +301,29 @@ export default function TicketDesigner({
                 </ChipBar>
               )}
 
+              {blk.type === "total" && blk.on && (
+                <div className="mt-3 space-y-3 pl-7">
+                  <input
+                    value={blk.label ?? "TOTAL"}
+                    onChange={(e) => patch(i, { label: e.target.value })}
+                    maxLength={30}
+                    placeholder="No label"
+                    aria-label="Total label"
+                    className="w-40 rounded-fizz border border-ink-line bg-ink px-4 py-2 text-sm text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+                  />
+                  <ChipBar label="Size">
+                    {TOTAL_SIZES.map(([sz, name]) => (
+                      <Chip key={sz} active={(blk.size ?? "tall") === sz} onClick={() => patch(i, { size: sz })}>
+                        {name}
+                      </Chip>
+                    ))}
+                    <Chip active={blk.bold ?? true} onClick={() => patch(i, { bold: !(blk.bold ?? true) })}>
+                      Bold
+                    </Chip>
+                  </ChipBar>
+                </div>
+              )}
+
               {blk.type === "text" && (
                 <div className="mt-3 space-y-2 pl-7">
                   <textarea
@@ -411,6 +441,18 @@ function OrderOptions({ blk, onChange }: { blk: Block; onChange: (p: Partial<Blo
   );
 }
 
+// The same pixels the printer downloads, two columns wide.
+const INSTA_PATH = INSTA_GLYPH.flatMap((r, y) =>
+  [...r].flatMap((c, x) => (c === "#" ? [`M${x} ${y}h1v1h-1z`] : [])),
+).join("");
+function InstaGlyph() {
+  return (
+    <svg viewBox="0 0 24 24" className="inline-block h-[1.2em] w-[1.2em] align-top" aria-label="Instagram">
+      <path d={INSTA_PATH} fill="currentColor" />
+    </svg>
+  );
+}
+
 function IconBtn({
   label,
   onClick,
@@ -467,7 +509,10 @@ function Paper({ ops, paper }: { ops: PrintOp[]; paper: 58 | 80 }) {
                 transform: o.h !== o.w ? `scaleY(${o.h / o.w})` : undefined,
               }}
             >
-              {ascii(o.text).replaceAll(RUPEE, "₹")}
+              {ascii(o.text)
+                .replaceAll(RUPEE, "₹")
+                .split(INSTA_SLOTS)
+                .flatMap((t, j) => (j ? [<InstaGlyph key={j} />, t] : [t]))}
             </span>
           </div>
         ))}

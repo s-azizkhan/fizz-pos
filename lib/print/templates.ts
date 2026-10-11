@@ -1,4 +1,4 @@
-import { escpos, type Align } from "./escpos";
+import { escpos, INSTA, type Align } from "./escpos";
 import { currencySymbol, formatMoney } from "@/lib/store/format";
 
 export type PaperWidth = 58 | 80;
@@ -38,7 +38,12 @@ export type Block = {
   // "tagline" block: delivery and Insta lines together / no delivery line.
   both?: boolean;
   noDelivery?: boolean;
+  size?: TextSize; // "total" block
 };
+
+// Printer magnification [width, height] per size choice.
+export const TEXT_SIZES = { normal: [1, 1], tall: [1, 2], wide: [2, 1], big: [2, 2] } as const;
+export type TextSize = keyof typeof TEXT_SIZES;
 
 export const ORDER_PARTS = ["num", "time", "date", "type", "ref"] as const;
 export type OrderPart = (typeof ORDER_PARTS)[number];
@@ -214,11 +219,14 @@ export function receiptDoc(d: ReceiptData, { paper, receipt: layout = RECEIPT_LA
         for (const [k, v] of totals) row(k, v, cols).forEach((s) => p.line(s));
         break;
       }
-      case "total":
-        p.align("left").bold(true).size(1, 2);
-        row("TOTAL", m(d.total), cols).forEach((s) => p.line(s));
+      case "total": {
+        // Default: bold, double height. Double width halves the columns.
+        const [w, h] = TEXT_SIZES[blk.size ?? "tall"];
+        p.align("left").bold(blk.bold ?? true).size(w, h);
+        row(blk.label ?? "TOTAL", m(d.total), cols / w).forEach((s) => p.line(s));
         p.size(1).bold(false);
         break;
+      }
       case "payment":
         p.align("left");
         if (d.paymentMethod) row("Paid by", d.paymentMethod.toUpperCase(), cols).forEach((s) => p.line(s));
@@ -226,7 +234,7 @@ export function receiptDoc(d: ReceiptData, { paper, receipt: layout = RECEIPT_LA
       case "tagline": {
         // Delivery wins the line unless `both` asks for Insta under it too;
         // `noDelivery` drops it so Insta (or the thank-you) prints instead.
-        const insta = d.store.instagram && `Follow us on Insta @${d.store.instagram.replace(/^@/, "")}`;
+        const insta = d.store.instagram && `Follow us on Insta ${INSTA} @${d.store.instagram.replace(/^@/, "")}`;
         const lines = d.store.delivery && !blk.noDelivery
           ? ["Home delivery available", ...(blk.both && insta ? [insta] : [])]
           : [insta || "We look forward to serving you again"];
