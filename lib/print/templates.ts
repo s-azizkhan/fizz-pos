@@ -84,7 +84,7 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   const cols = COLS[paper];
   const rule = "-".repeat(cols);
   const m = (v: string | number) => printMoney(v, d.currency);
-  const p = escpos().dark(true);
+  const p = escpos();
 
   p.align("center").bold(true).size(2).line(d.store.name).size(1).bold(false);
   const site = d.store.website?.replace(/^https?:\/\/(www\.)?|\/$/g, "");

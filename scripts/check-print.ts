@@ -173,4 +173,4 @@ const spaced = receipt(base, 58);
 assert.ok(!has(spaced, 0x1b, 0x20), "receipt: no letter spacing");
 assert.ok(!has(spaced, 0x1b, 0x33), "receipt: default line height");
 assert.ok(has(kot({ storeName: "", orderNumber: "1", type: "takeaway", reference: null, createdAt: new Date(), items: [] }, 58), 0x1b, 0x20, 1));
-assert.ok(has(spaced, 0x1b, 0x47, 1), "double-strike on");
+assert.ok(!has(spaced, 0x1b, 0x47), "receipt: no double-strike");
