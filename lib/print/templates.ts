@@ -107,24 +107,52 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   return p.bytes();
 }
 
-// Kitchen ticket: no prices, big type, quantities first.
+// "11:09pm 9 oct 26" — short and 12h for the pass.
+export function kotTime(d: string | Date): string {
+  const t = new Date(d);
+  const h = t.getHours();
+  const mm = String(t.getMinutes()).padStart(2, "0");
+  const mon = t.toLocaleString("en-GB", { month: "short" }).toLowerCase();
+  return `${h % 12 || 12}:${mm}${h < 12 ? "am" : "pm"} ${t.getDate()} ${mon} ${String(t.getFullYear()).slice(-2)}`;
+}
+
+// Wrap text to `cols`, continuation lines indented by `indent` spaces.
+function wrap(text: string, cols: number, indent: number): string[] {
+  const out: string[] = [];
+  let cur = "";
+  for (const w of text.split(" ")) {
+    const next = cur ? `${cur} ${w}` : w;
+    if (next.length <= cols || !cur) cur = next;
+    else {
+      out.push(cur);
+      cur = " ".repeat(indent) + w;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+// Kitchen ticket: no prices, big type, quantities first, minimal paper.
 export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
   const cols = COLS[paper];
   const rule = "-".repeat(cols);
-  const p = escpos();
+  const p = escpos().spacing(40);
 
-  p.align("center").line(d.storeName).bold(true).size(2).line(d.addOn ? "KOT ADD-ON" : "KOT").line(typeLabel(d.type));
-  if (d.reference) p.size(1, 2).line(`Table/Tab: ${d.reference}`);
-  p.size(1).bold(false);
-  p.line(`Order ${d.orderNumber}  ${formatDateTime(d.createdAt)}`);
+  p.align("center").bold(true).size(2).line(typeLabel(d.type));
+  if (d.reference) p.size(1, 2).line(d.reference);
+  p.size(1);
+  if (d.addOn) p.line("+ ADD-ON");
+  p.bold(false).line(`${d.orderNumber}  ${kotTime(d.createdAt)}`);
   p.align("left").line(rule);
 
-  p.bold(true).size(1, 2);
   for (const i of d.items) {
-    p.line(`${i.quantity} x ${i.name}`);
-    if (i.variantName) p.size(1).bold(false).line(`    ${i.variantName}`).bold(true).size(1, 2);
+    const qty = `${i.quantity} x `;
+    p.bold(true).size(1, 2);
+    wrap(qty + i.name, cols, qty.length).forEach((s) => p.line(s));
+    p.bold(false).size(1);
+    if (i.variantName) p.line(" ".repeat(qty.length) + i.variantName);
   }
-  p.size(1).bold(false).line(rule).feed(3).cut();
+  p.line(rule).feed(3).cut();
   return p.bytes();
 }
 

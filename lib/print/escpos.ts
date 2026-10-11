@@ -63,6 +63,11 @@ export function escpos() {
       }
       return api;
     },
+    // Line height in dots (ESC 3). Printer default is ~30.
+    spacing(dots: number) {
+      out.push(ESC, 0x33, dots);
+      return api;
+    },
     feed(lines = 1) {
       out.push(ESC, 0x64, lines);
       return api;

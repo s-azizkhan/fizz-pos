@@ -2,7 +2,7 @@
 // Run: npx tsx scripts/check-print.ts
 import assert from "node:assert/strict";
 import { ascii, escpos } from "../lib/print/escpos";
-import { kot, printMoney, receipt, row } from "../lib/print/templates";
+import { kot, kotTime, printMoney, receipt, row } from "../lib/print/templates";
 import { kotDelta } from "../lib/print/print-order";
 import { NeedsPairingError, pair, print } from "../lib/print/bluetooth";
 
@@ -46,6 +46,13 @@ const ticket = new TextDecoder().decode(
 );
 assert.ok(ticket.includes("2 x Latte") && ticket.includes("TAKEAWAY"));
 assert.ok(!ticket.includes("INR"), "KOT has no prices");
+assert.ok(!ticket.includes("KOT"), "no KOT title");
+assert.equal(kotTime("2026-10-09T23:09:00"), "11:09pm 9 oct 26");
+assert.equal(kotTime("2026-10-09T00:05:00"), "12:05am 9 oct 26");
+const long = new TextDecoder().decode(
+  kot({ storeName: "", orderNumber: "A-8", type: "dine_in", reference: "T4", createdAt: new Date(), items: [{ name: "Extra large oat milk vanilla latte", quantity: 12 }] }, 58),
+);
+assert.ok(long.includes("12 x Extra large oat milk\n     vanilla latte"), "wraps under the name");
 
 // KOT delta: new lines + extra quantity only; reductions never print.
 const L = (key: string, quantity: number) => ({ key, name: key, variantName: null, quantity });
