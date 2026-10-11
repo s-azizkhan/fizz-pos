@@ -24,10 +24,10 @@ function fmtTime(iso: string): string {
   });
 }
 
-// Kitchen Order Ticket. Renders on a white slip (thermal-printer friendly),
-// big and high-contrast so cooks can read it across the pass. The "Print"
-// button sends it to this device's Bluetooth printer when one is paired,
-// otherwise window.print() with a print stylesheet that hides the app chrome.
+// Kitchen Order Ticket modal. Renders on a white slip (thermal-printer
+// friendly), big and high-contrast so cooks can read it across the pass. The
+// "Print" button sends it to this device's Bluetooth printer when one is
+// paired, otherwise window.print() with a print stylesheet that hides the app.
 export default function KotTicket({
   storeName,
   orderNumber,
@@ -36,6 +36,7 @@ export default function KotTicket({
   status,
   createdAt,
   items,
+  onClose,
 }: {
   storeName: string;
   orderNumber: string;
@@ -44,12 +45,18 @@ export default function KotTicket({
   status: string;
   createdAt: string;
   items: KotItem[];
+  onClose: () => void;
 }) {
-  // Hide the dashboard chrome while this page is shown and restore on leave.
+  // Hide the dashboard chrome from window.print() while open; Escape closes.
   useEffect(() => {
     document.body.classList.add("kot-print");
-    return () => document.body.classList.remove("kot-print");
-  }, []);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("kot-print");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
 
   async function handlePrint() {
     try {
@@ -65,15 +72,21 @@ export default function KotTicket({
   }
 
   return (
-    <div className="kot-root mx-auto max-w-sm p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/85 p-4 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+    >
+    <div className="kot-root w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
       {/* On-screen controls (hidden when printing) */}
       <div className="kot-actions mb-4 flex items-center justify-between gap-2">
-        <a
-          href="/dashboard/orders"
+        <button
+          onClick={onClose}
           className="rounded-fizz border border-ink-line bg-ink-soft px-4 py-2 text-sm text-cream transition-colors hover:border-fizz hover:text-fizz"
         >
-          ← Orders
-        </a>
+          ✕ Close
+        </button>
         <button
           onClick={handlePrint}
           className="rounded-fizz bg-fizz px-5 py-2 font-semibold text-ink transition-transform hover:scale-105"
@@ -155,6 +168,7 @@ export default function KotTicket({
           }
         }
       `}</style>
+    </div>
     </div>
   );
 }

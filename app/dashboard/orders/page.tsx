@@ -62,5 +62,5 @@ export default async function OrdersPage() {
         : null,
   }));
 
-  return <OrdersClient orders={orders} currency={store.currency} />;
+  return <OrdersClient orders={orders} currency={store.currency} storeName={store.name} />;
 }

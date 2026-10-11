@@ -10,6 +10,7 @@ import { toast } from "@/lib/store/toast";
 import { printToDefault } from "@/lib/print/print-order";
 import { receipt as receiptTicket, type ReceiptData } from "@/lib/print/templates";
 import type { OrderRow, StatusFilter } from "./types";
+import KotTicket from "./KotTicket";
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine in",
@@ -20,6 +21,12 @@ const METHOD_LABEL: Record<string, string> = {
   cash: "Cash",
   card: "Card",
   online: "Online",
+};
+
+const KOT_TYPE: Record<string, string> = {
+  dine_in: "DINE IN",
+  takeaway: "TAKEAWAY",
+  delivery: "DELIVERY",
 };
 
 const FILTERS: { value: StatusFilter; label: string }[] = [
@@ -33,9 +40,11 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 export default function OrdersClient({
   orders,
   currency,
+  storeName,
 }: {
   orders: OrderRow[];
   currency: string;
+  storeName: string;
 }) {
   const router = useRouter();
   const trpc = useTRPC();
@@ -43,6 +52,7 @@ export default function OrdersClient({
   const [filter, setFilter] = useState<StatusFilter>("open");
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [kotFor, setKotFor] = useState<OrderRow | null>(null);
   const money = (n: string) => formatMoney(n, currency);
 
   const counts = useMemo(
@@ -255,14 +265,12 @@ export default function OrdersClient({
               )}
 
               {/* Kitchen ticket — print/reprint for any order */}
-              <a
-                href={`/dashboard/orders/${o.id}/kot`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 block rounded-fizz border border-ink-line px-3 py-2 text-center text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
+              <button
+                onClick={() => setKotFor(o)}
+                className="mt-2 block w-full rounded-fizz border border-ink-line px-3 py-2 text-center text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
               >
                 🧾 {o.status === "open" ? "Print KOT" : "Reprint KOT"}
-              </a>
+              </button>
               {o.receipt && (
                 <button
                   onClick={() => reprint(o.receipt!)}
@@ -274,6 +282,19 @@ export default function OrdersClient({
             </article>
           ))}
         </div>
+      )}
+
+      {kotFor && (
+        <KotTicket
+          storeName={storeName}
+          orderNumber={kotFor.number}
+          type={KOT_TYPE[kotFor.type] ?? kotFor.type}
+          reference={kotFor.reference}
+          status={kotFor.status}
+          createdAt={kotFor.createdAt}
+          items={kotFor.items}
+          onClose={() => setKotFor(null)}
+        />
       )}
     </div>
   );
