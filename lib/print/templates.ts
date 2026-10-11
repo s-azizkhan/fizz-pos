@@ -29,7 +29,19 @@ export type Block = {
   align?: Align;
   bold?: boolean;
   big?: boolean;
+  // "order" block only: number label, parts left off, 24h clock, number and
+  // time on one row.
+  label?: string;
+  hide?: OrderPart[];
+  h24?: boolean;
+  inline?: boolean;
+  // "tagline" block: delivery and Insta lines together / no delivery line.
+  both?: boolean;
+  noDelivery?: boolean;
 };
+
+export const ORDER_PARTS = ["num", "time", "date", "type", "ref"] as const;
+export type OrderPart = (typeof ORDER_PARTS)[number];
 
 export type PrintCfg = { paper: PaperWidth; receipt?: Block[]; kot?: Block[] };
 
@@ -161,10 +173,27 @@ export function receiptDoc(d: ReceiptData, { paper, receipt: layout = RECEIPT_LA
         for (const l of [d.store.phone, site]) if (l) p.line(l);
         break;
       }
-      case "order":
-        p.align("left").line(`Order ${d.orderNumber}`).line(shortTime(d.createdAt));
-        p.line(typeLabel(d.type) + (d.reference ? ` - ${d.reference}` : ""));
+      case "order": {
+        const off = new Set(blk.hide);
+        // "#" hugs the number ("#FZ-07"); a word label gets a space ("Bill FZ-07").
+        const label = blk.label ?? "#";
+        const num = off.has("num") ? "" : `${label}${/#$/.test(label) ? "" : " "}${d.orderNumber}`.trim();
+        const when = stamp(d.createdAt, { time: !off.has("time"), date: !off.has("date"), h24: blk.h24 });
+        const kind = [!off.has("type") && typeLabel(d.type), !off.has("ref") && d.reference]
+          .filter(Boolean)
+          .join(" - ");
+        p.align(blk.align ?? "left");
+        if (blk.inline && num && when) {
+          p.bold(!!blk.bold).size(1, blk.big ? 2 : 1);
+          row(num, when, cols).forEach((s) => p.line(s));
+          p.size(1).bold(false);
+        } else {
+          if (num) p.bold(!!blk.bold).size(1, blk.big ? 2 : 1).line(num).size(1).bold(false);
+          if (when) p.line(when);
+        }
+        if (kind) p.line(kind);
         break;
+      }
       case "items":
         p.align("left");
         for (const l of d.lines) {
@@ -195,13 +224,14 @@ export function receiptDoc(d: ReceiptData, { paper, receipt: layout = RECEIPT_LA
         if (d.paymentMethod) row("Paid by", d.paymentMethod.toUpperCase(), cols).forEach((s) => p.line(s));
         break;
       case "tagline": {
-        const tagline = d.store.delivery
-          ? "Home delivery available"
-          : d.store.instagram
-            ? `Follow us on Insta @${d.store.instagram.replace(/^@/, "")}`
-            : "We look forward to serving you again";
+        // Delivery wins the line unless `both` asks for Insta under it too;
+        // `noDelivery` drops it so Insta (or the thank-you) prints instead.
+        const insta = d.store.instagram && `Follow us on Insta @${d.store.instagram.replace(/^@/, "")}`;
+        const lines = d.store.delivery && !blk.noDelivery
+          ? ["Home delivery available", ...(blk.both && insta ? [insta] : [])]
+          : [insta || "We look forward to serving you again"];
         p.align("center");
-        wrap(tagline, cols, 0).forEach((s) => p.line(s));
+        for (const l of lines) wrap(l, cols, 0).forEach((s) => p.line(s));
         break;
       }
       default:
@@ -214,12 +244,23 @@ export function receiptDoc(d: ReceiptData, { paper, receipt: layout = RECEIPT_LA
 export const receipt = (d: ReceiptData, cfg: PrintCfg) => receiptDoc(d, cfg).bytes();
 
 // "11:09pm 9 oct 26" — short and 12h, for KOTs and receipts.
-export function shortTime(d: string | Date): string {
+export const shortTime = (d: string | Date) => stamp(d, {});
+
+// Time and/or date, "11:09pm 9 oct 26" or "23:09 9 oct 26". Both off = "".
+export function stamp(
+  d: string | Date,
+  { time = true, date = true, h24 = false }: { time?: boolean; date?: boolean; h24?: boolean },
+): string {
   const t = new Date(d);
   const h = t.getHours();
   const mm = String(t.getMinutes()).padStart(2, "0");
   const mon = t.toLocaleString("en-GB", { month: "short" }).toLowerCase();
-  return `${h % 12 || 12}:${mm}${h < 12 ? "am" : "pm"} ${t.getDate()} ${mon} ${String(t.getFullYear()).slice(-2)}`;
+  return [
+    time && (h24 ? `${String(h).padStart(2, "0")}:${mm}` : `${h % 12 || 12}:${mm}${h < 12 ? "am" : "pm"}`),
+    date && `${t.getDate()} ${mon} ${String(t.getFullYear()).slice(-2)}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 // "FZ-20261009-07" -> "07": the kitchen only calls the running number.

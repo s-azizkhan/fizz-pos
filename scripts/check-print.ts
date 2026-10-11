@@ -15,7 +15,7 @@ assert.equal(head.length, HEAD);
 // Ticket text after the init header (the ₹ bitmap is binary).
 const body = (b: Uint8Array) => new TextDecoder().decode(b.slice(HEAD));
 
-assert.equal(printMoney("120", "INR"), "₹120.00");
+assert.equal(printMoney("120", "INR"), "₹120");
 assert.equal(printMoney("4.5", "EUR"), "EUR 4.50");
 assert.equal(ascii("₹5 ~ok"), "~5 -ok");
 assert.equal(printMoney("4.5", "USD"), "$4.50");
@@ -49,12 +49,23 @@ assert.ok(text.includes("We look forward to serving you\nagain\n"), "default foo
 const footer = (store: object) => body(receipt({ ...base, store: { name: "X", ...store } }, { paper: 58 }));
 assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));
 assert.ok(footer({ instagram: "@fizz" }).includes("Insta @fizz\n"));
+const both = body(receipt({ ...base, store: { name: "X", delivery: true, instagram: "fizz" } }, { paper: 58, receipt: [{ id: "t", type: "tagline", on: true, both: true }] }));
+assert.ok(both.includes("Home delivery available") && both.includes("Insta @fizz"), "delivery + insta");
+const noDel = body(receipt({ ...base, store: { name: "X", delivery: true, instagram: "fizz" } }, { paper: 58, receipt: [{ id: "t", type: "tagline", on: true, noDelivery: true }] }));
+assert.ok(!noDel.includes("delivery") && noDel.includes("Insta @fizz"), "delivery hidden, insta takes the line");
 assert.ok(text.includes("GST"));
 assert.ok(text.includes("Subtotal"), "subtotal when tax moved the total");
 assert.ok(!body(receipt({ ...base, tax: "0", total: "240.00" }, { paper: 58 })).includes("Subtotal"), "no subtotal when equal to total");
-assert.ok(text.includes("~252.00"), "₹ on the custom glyph slot");
+assert.ok(text.includes("~252"), "₹ on the custom glyph slot");
 assert.ok(text.includes("9:30am 11 oct 26"), "short receipt time");
 assert.ok(!text.includes("Discount"), "zero lines are skipped");
+// Order block options, read off the printed lines.
+const orderBlk = (o: object) =>
+  receiptDoc(base, { paper: 58, receipt: [{ id: "o", type: "order", on: true, ...o }] }).ops.map((op) => op.text).slice(0, -3); // minus the tear feed
+assert.deepEqual(orderBlk({}), ["#A-7", "9:30am 11 oct 26", "DINE IN - T4"], "default order block");
+assert.deepEqual(orderBlk({ label: "Bill", h24: true, hide: ["date", "ref"] }), ["Bill A-7", "09:30", "DINE IN"], "label, 24h, hidden parts");
+assert.deepEqual(orderBlk({ label: "", inline: true, hide: ["type", "ref"] }), ["A-7".padEnd(15) + " 9:30am 11 oct 26"], "one-line no. + time");
+assert.deepEqual(orderBlk({ hide: ["num", "time", "date", "type", "ref"] }), [], "all hidden prints nothing");
 assert.ok(!/[^\x00-\x7f]/.test(text), "output is pure ASCII");
 
 const ticket = body(
@@ -191,7 +202,7 @@ assert.ok(!has(spaced, 0x1b, 0x47), "receipt: no double-strike");
   const layout = RECEIPT_LAYOUT.map((b) => (b.type === "tagline" ? { ...b, on: false } : b));
   layout.unshift({ id: "x", type: "text", on: true, text: "WIFI fizz123" });
   const t = body(receipt(base, { paper: 58, receipt: layout }));
-  assert.ok(t.indexOf("WIFI fizz123") < t.indexOf("Order"), "custom text first");
+  assert.ok(t.indexOf("WIFI fizz123") < t.indexOf("#A-7"), "custom text first");
   assert.ok(!t.includes("serving you again"), "hidden tagline gone");
   const ops = receiptDoc(base, { paper: 58 }).ops;
   assert.ok(ops.some((o) => o.text === "Thank you!" && o.align === "center"), "preview ops recorded");

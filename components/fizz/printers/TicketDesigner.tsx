@@ -9,11 +9,12 @@ import {
   RECEIPT_LAYOUT,
   receiptDoc,
   type Block,
+  type OrderPart,
   type ReceiptData,
 } from "@/lib/print/templates";
 import { usePrinter } from "@/lib/store/printer";
 import { useTRPC } from "@/lib/trpc/client";
-import { Chip } from "@/components/fizz/ui/controls";
+import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import { EyeIcon, EyeOffIcon } from "@/components/fizz/dashboard/icons";
 
 type Kind = "receipt" | "kot";
@@ -37,6 +38,13 @@ const LABELS: Record<string, string> = {
   space: "Blank line",
 };
 const CUSTOM = ["text", "rule", "space"];
+const PART_LABELS: [OrderPart, string][] = [
+  ["num", "Order no."],
+  ["time", "Time"],
+  ["date", "Date"],
+  ["type", "Order type"],
+  ["ref", "Table / ref"],
+];
 
 const noop = () => () => {};
 const newId = () => Math.random().toString(36).slice(2);
@@ -261,6 +269,31 @@ export default function TicketDesigner({
                 )}
               </div>
 
+              {blk.type === "order" && blk.on && (
+                <OrderOptions blk={blk} onChange={(p) => patch(i, p)} />
+              )}
+
+              {blk.type === "tagline" && blk.on && (
+                <ChipBar label="Show" className="mt-3 pl-7">
+                  <Chip
+                    active={!blk.noDelivery}
+                    onClick={() => patch(i, { noDelivery: !blk.noDelivery })}
+                    title="Home delivery available"
+                  >
+                    Delivery
+                  </Chip>
+                  {!blk.noDelivery && (
+                    <Chip
+                      active={!!blk.both}
+                      onClick={() => patch(i, { both: !blk.both })}
+                      title="Print the Insta line under delivery too"
+                    >
+                      Delivery + Insta
+                    </Chip>
+                  )}
+                </ChipBar>
+              )}
+
               {blk.type === "text" && (
                 <div className="mt-3 space-y-2 pl-7">
                   <textarea
@@ -309,6 +342,71 @@ export default function TicketDesigner({
         </p>
         <Paper ops={doc.ops} paper={paper} />
       </div>
+    </div>
+  );
+}
+
+// Receipt "order" block: what prints, how the number reads, and where it sits.
+function OrderOptions({ blk, onChange }: { blk: Block; onChange: (p: Partial<Block>) => void }) {
+  const off = blk.hide ?? [];
+  const inline = !!blk.inline;
+  return (
+    <div className="mt-3 space-y-3 pl-7">
+      <ChipBar label="Show">
+        {PART_LABELS.map(([part, name]) => (
+          <Chip
+            key={part}
+            active={!off.includes(part)}
+            onClick={() =>
+              onChange({ hide: off.includes(part) ? off.filter((x) => x !== part) : [...off, part] })
+            }
+          >
+            {name}
+          </Chip>
+        ))}
+      </ChipBar>
+      {!off.includes("num") && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={blk.label ?? "#"}
+            onChange={(e) => onChange({ label: e.target.value })}
+            maxLength={30}
+            placeholder="No label"
+            aria-label="Order number label"
+            className="w-40 rounded-fizz border border-ink-line bg-ink px-4 py-2 text-sm text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+          />
+          <span className="text-xs text-steam">before the number — # or a word like Order, Bill</span>
+        </div>
+      )}
+      <ChipBar label="Clock">
+        <Chip active={!blk.h24} onClick={() => onChange({ h24: false })}>
+          12h · 9:30pm
+        </Chip>
+        <Chip active={!!blk.h24} onClick={() => onChange({ h24: true })}>
+          24h · 21:30
+        </Chip>
+      </ChipBar>
+      <ChipBar label="Layout">
+        <Chip active={!inline} onClick={() => onChange({ inline: false })}>
+          Stacked
+        </Chip>
+        <Chip active={inline} onClick={() => onChange({ inline: true })} title="Number left, time right">
+          No. + time on one line
+        </Chip>
+      </ChipBar>
+      <ChipBar label="Style">
+        {(["left", "center", "right"] as const).map((a) => (
+          <Chip key={a} active={(blk.align ?? "left") === a} onClick={() => onChange({ align: a })}>
+            {a[0].toUpperCase() + a.slice(1)}
+          </Chip>
+        ))}
+        <Chip active={!!blk.bold} onClick={() => onChange({ bold: !blk.bold })}>
+          Bold no.
+        </Chip>
+        <Chip active={!!blk.big} onClick={() => onChange({ big: !blk.big })}>
+          Tall no.
+        </Chip>
+      </ChipBar>
     </div>
   );
 }
