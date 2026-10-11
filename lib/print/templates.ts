@@ -12,6 +12,7 @@ export type ReceiptData = {
     addressLine1?: string | null;
     addressLine2?: string | null;
     phone?: string | null;
+    website?: string | null;
   };
   currency: string;
   orderNumber: string;
@@ -103,7 +104,9 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   if (d.paymentMethod) row("Paid by", d.paymentMethod.toUpperCase(), cols).forEach((s) => p.line(s));
   if (d.changeDue && Number(d.changeDue) > 0) row("Change", m(d.changeDue), cols).forEach((s) => p.line(s));
 
-  p.line(rule).align("center").line("Thank you!").feed(3).cut();
+  p.line(rule).align("center").line("Thank you!");
+  if (d.store.website) p.line(d.store.website.replace(/^https?:\/\/(www\.)?|\/$/g, ""));
+  p.feed(3).cut();
   return p.bytes();
 }
 

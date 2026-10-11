@@ -286,6 +286,7 @@ export const ordersRouter = router({
           addressLine1: store.addressLine1,
           addressLine2: store.addressLine2,
           phone: store.phone,
+          website: store.website,
         },
         currency: store.currency,
         createdAt: new Date(),

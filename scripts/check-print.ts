@@ -20,7 +20,7 @@ assert.ok(wrapped[0].endsWith("$4.00"));
 assert.equal(wrapped.slice(1).join(""), "Very long oat milk latte".slice(14));
 
 const base = {
-  store: { name: "Fizz Café" },
+  store: { name: "Fizz Café", website: "https://www.fizz.cafe/" },
   currency: "INR",
   orderNumber: "A-7",
   createdAt: "2026-10-11T09:30:00",
@@ -36,6 +36,7 @@ const base = {
 };
 const text = new TextDecoder().decode(receipt(base, 58));
 assert.ok(text.includes("Fizz Cafe"));
+assert.ok(text.includes("fizz.cafe\n"), "website, no scheme");
 assert.ok(text.includes("GST"));
 assert.ok(text.includes("INR 252.00"));
 assert.ok(!text.includes("Discount"), "zero lines are skipped");
