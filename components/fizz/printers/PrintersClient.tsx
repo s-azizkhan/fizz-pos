@@ -7,11 +7,15 @@ import {
   canRememberPrinters,
   forget,
   isConnected,
-  pair,
+  pairBluetooth,
+  pairLike,
+  pairUsb,
   print,
   rememberedPrinters,
+  usbSupported,
   type PrinterInfo,
-} from "@/lib/print/bluetooth";
+} from "@/lib/print/transport";
+import { isUsbId } from "@/lib/print/usb";
 import { testTicket } from "@/lib/print/templates";
 import { usePrinter } from "@/lib/store/printer";
 import { toast } from "@/lib/store/toast";
@@ -31,22 +35,23 @@ export default function PrintersClient() {
   // rehydrate from localStorage synchronously, so "mounted" = hydrated.
   // (usePrinter.persist doesn't exist on the server — no storage there.)
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
-  const supported = useSyncExternalStore(noop, bluetoothSupported, () => false);
+  const btOk = useSyncExternalStore(noop, bluetoothSupported, () => false);
+  const usbOk = useSyncExternalStore(noop, usbSupported, () => false);
   const remembers = useSyncExternalStore(noop, canRememberPrinters, () => false);
   const secure = useSyncExternalStore(noop, () => window.isSecureContext, () => true);
 
   const [known, setKnown] = useState<PrinterInfo[]>([]);
-  const [busy, setBusy] = useState<"pair" | "test" | null>(null);
+  const [busy, setBusy] = useState<"bt" | "usb" | "test" | null>(null);
   const [, bump] = useState(0); // re-read isConnected() after an action
 
   useEffect(() => {
-    if (remembers) rememberedPrinters().then(setKnown, () => {});
-  }, [remembers]);
+    if (btOk || usbOk) rememberedPrinters().then(setKnown, () => {});
+  }, [btOk, usbOk]);
 
-  async function handlePair() {
-    setBusy("pair");
+  async function handlePair(kind: "bt" | "usb", again?: string) {
+    setBusy(kind);
     try {
-      const p = await pair();
+      const p = await (again ? pairLike(again) : kind === "usb" ? pairUsb() : pairBluetooth());
       setPrinter(p);
       setKnown((k) => (k.some((x) => x.id === p.id) ? k : [...k, p]));
       toast.success(`${p.name} connected`);
@@ -81,16 +86,16 @@ export default function PrintersClient() {
 
   if (!hydrated) return null;
 
-  if (!supported) {
+  if (!btOk && !usbOk) {
     return (
       <div className="rounded-fizz border border-ink-line bg-ink-soft p-7">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-          Bluetooth unavailable
+          Printing unavailable
         </p>
         <p className="mt-3 max-w-[60ch] text-cream">
           {!secure
-            ? "Bluetooth needs a secure (https) connection. Open Fizz over https to pair a printer."
-            : "This browser can't talk to Bluetooth printers. Use Chrome or Edge on Android, Windows, Mac or Linux. On iPhone or iPad, open Fizz in the Bluefy browser."}
+            ? "Printers need a secure (https) connection. Open Fizz over https to pair one."
+            : "This browser can't talk to Bluetooth or USB printers. Use Chrome or Edge on Android, Windows, Mac or Linux. On iPhone or iPad, open Fizz in the Bluefy browser."}
         </p>
         <p className="mt-3 max-w-[60ch] text-sm text-steam">
           Tickets still print through the system print dialog in the meantime.
@@ -101,6 +106,7 @@ export default function PrintersClient() {
 
   const others = known.filter((k) => k.id !== deviceId);
   const live = deviceId ? isConnected(deviceId) : false;
+  const usbDefault = !!deviceId && isUsbId(deviceId);
 
   return (
     <div className="space-y-6">
@@ -112,20 +118,49 @@ export default function PrintersClient() {
           <div className="mt-3 flex items-center gap-2">
             <span className={`h-2 w-2 rounded-full ${live ? "bg-fizz" : "bg-steam"}`} />
             <p className="font-display text-2xl font-bold text-cream">{deviceName}</p>
-            <span className="text-sm text-steam">{live ? "Connected" : "Idle"}</span>
+            <span className="text-sm text-steam">
+              {live ? "Connected" : usbDefault ? "Ready — wakes on next print" : "Idle"}
+            </span>
           </div>
         ) : (
-          <p className="mt-3 text-cream">None yet. Turn the printer on, then pair it.</p>
+          <p className="mt-3 text-cream">
+            None yet. Turn the printer on (or plug it in), then pair it.
+          </p>
         )}
 
         <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            onClick={handlePair}
-            disabled={busy !== null}
-            className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
-          >
-            {busy === "pair" ? "Searching…" : deviceId && !live ? "Connect" : deviceId ? "Change printer" : "Pair printer"}
-          </button>
+          {/* USB reopens a granted printer on the next print — no picker needed. */}
+          {deviceId && !live && !usbDefault && (
+            <button
+              onClick={() => handlePair("bt", deviceId)}
+              disabled={busy !== null}
+              className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
+            >
+              Connect
+            </button>
+          )}
+          {btOk && (
+            <button
+              onClick={() => handlePair("bt")}
+              disabled={busy !== null}
+              className={
+                deviceId && !live && !usbDefault
+                  ? "rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz disabled:opacity-60"
+                  : "rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
+              }
+            >
+              {busy === "bt" ? "Searching…" : "Pair Bluetooth"}
+            </button>
+          )}
+          {usbOk && (
+            <button
+              onClick={() => handlePair("usb")}
+              disabled={busy !== null}
+              className="rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz disabled:opacity-60"
+            >
+              {busy === "usb" ? "Searching…" : "Pair USB"}
+            </button>
+          )}
           {deviceId && (
             <>
               <button
@@ -146,7 +181,14 @@ export default function PrintersClient() {
           )}
         </div>
 
-        {!remembers && deviceId && (
+        {usbOk && (
+          <p className="mt-4 max-w-[60ch] text-sm text-steam">
+            USB on Windows: the printer&apos;s own driver blocks the browser — switch
+            it to WinUSB with Zadig first.
+          </p>
+        )}
+
+        {!remembers && deviceId && !usbDefault && (
           <p className="mt-4 max-w-[60ch] text-sm text-steam">
             This browser forgets printers when the tab closes — tap Connect once
             at the start of each shift.

@@ -35,7 +35,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Analytics", href: "/dashboard/analytics", icon: TrendIcon, roles: ["admin", "manager"], blurb: "Sales trends and what's selling." },
   { label: "Daily report", href: "/dashboard/report", icon: ReceiptIcon, roles: ["admin", "manager"], blurb: "Today at a glance, with what to do." },
   { label: "Team", href: "/dashboard/team", icon: UsersIcon, roles: ["admin"], blurb: "Add staff, set permissions." },
-  { label: "Printers", href: "/dashboard/printers", icon: ReceiptIcon, roles: ["admin", "manager", "staff"], blurb: "Pair a Bluetooth receipt printer." },
+  { label: "Printers", href: "/dashboard/printers", icon: ReceiptIcon, roles: ["admin", "manager", "staff"], blurb: "Pair a Bluetooth or USB receipt printer." },
   { label: "Store settings", href: "/dashboard/store", icon: GearIcon, roles: ["admin"], blurb: "Profile, hours, invoice numbering." },
   { label: "Help & docs", href: "/dashboard/docs", icon: HelpIcon, roles: ["admin", "manager", "staff"], blurb: "How every page works, step by step." },
 ];

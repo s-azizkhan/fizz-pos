@@ -14,7 +14,7 @@ export default function PrintersPage() {
         Printers
       </h1>
       <p className="mt-3 max-w-[60ch] text-lg text-steam">
-        Pair a Bluetooth receipt printer — tickets print straight from the till,
+        Pair a Bluetooth or USB receipt printer — tickets print straight from the till,
         no dialog.
       </p>
 

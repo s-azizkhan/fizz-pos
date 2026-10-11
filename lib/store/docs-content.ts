@@ -297,13 +297,13 @@ export const DOC_SECTIONS: DocSection[] = [
     title: "Printers",
     href: "/dashboard/printers",
     roles: "Everyone",
-    intro: "Pair a Bluetooth receipt printer so receipts and kitchen tickets print straight from the till. Set up once per device.",
+    intro: "Pair a Bluetooth or USB receipt printer so receipts and kitchen tickets print straight from the till. Set up once per device.",
     blocks: [
       {
         kind: "steps",
         items: [
-          "Turn the printer on and open Printers on the till device.",
-          "Tap Pair printer and pick it from the list.",
+          "Turn the printer on (or plug it into the till by USB) and open Printers on the till device.",
+          "Tap Pair Bluetooth or Pair USB and pick it from the list.",
           "Tap Test print. If the ticket looks cramped or cut off, switch the paper width.",
           "Choose what prints by itself: the receipt on payment, the KOT on save & pay.",
         ],
@@ -312,6 +312,7 @@ export const DOC_SECTIONS: DocSection[] = [
         kind: "list",
         items: [
           ["Works on", "Chrome or Edge on Android, Windows, Mac and Linux, over https."],
+          ["USB on Windows", "The printer's own driver blocks the browser. Switch it to WinUSB with Zadig once, then pair. On Linux, unload the usblp module."],
           ["iPhone / iPad", "Safari and Chrome can't reach Bluetooth printers. Use the Bluefy browser, or print through the system dialog."],
           ["Add-ons", "Adding to a saved tab prints only the new items, marked KOT ADD-ON."],
         ],

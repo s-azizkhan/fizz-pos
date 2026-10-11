@@ -1,10 +1,10 @@
-import { bluetoothSupported, NeedsPairingError, pair, print } from "./bluetooth";
+import { NeedsPairingError, pairLike, print, printingSupported } from "./transport";
 import type { KotData, PrintCfg } from "./templates";
 import { usePrinter } from "@/lib/store/printer";
 import { toast } from "@/lib/store/toast";
 
 // Send a ticket to this device's default printer. Resolves false when there's
-// no Bluetooth printer to use, so callers can fall back (window.print) or skip.
+// no printer to use, so callers can fall back (window.print) or skip.
 // `interactive` = called from a tap: if the browser forgot the printer (full
 // page load without getDevices()), reopen the picker instead of failing.
 export async function printToDefault(
@@ -12,13 +12,13 @@ export async function printToDefault(
   { interactive = false } = {},
 ): Promise<boolean> {
   const { deviceId, paper, receipt, kot, setPrinter } = usePrinter.getState();
-  if (!deviceId || !bluetoothSupported()) return false;
+  if (!deviceId || !printingSupported()) return false;
   const cfg = { paper, receipt, kot };
   try {
     await print(deviceId, build(cfg));
   } catch (e) {
     if (!interactive || !(e instanceof NeedsPairingError)) throw e;
-    const p = await pair();
+    const p = await pairLike(deviceId);
     setPrinter(p);
     await print(p.id, build(cfg));
   }
