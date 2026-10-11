@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   bluetoothSupported,
@@ -182,6 +183,21 @@ export default function PrintersClient() {
           Kitchen tickets only carry what&apos;s new — adding a flat white to a
           saved tab prints just the flat white.
         </p>
+      </section>
+
+      <section className="rounded-fizz border border-ink-line bg-ink-soft p-7">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
+          Ticket design
+        </p>
+        <p className="mt-3 max-w-[60ch] text-cream">
+          Reorder, hide or add lines on the receipt and KOT, with a live paper preview.
+        </p>
+        <Link
+          href="/dashboard/printers/design"
+          className="mt-6 inline-block rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+        >
+          Design tickets
+        </Link>
       </section>
 
       {others.length > 0 && (

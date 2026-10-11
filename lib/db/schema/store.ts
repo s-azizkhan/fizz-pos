@@ -1,7 +1,8 @@
-import { boolean, integer, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/store/currencies";
 import { MENU_THEME_KEYS } from "@/lib/store/menu-themes";
+import type { Block } from "@/lib/print/templates";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -51,6 +52,9 @@ export const store = pgTable("store", {
   nextOrderSeq: integer("next_order_seq").notNull().default(1),
   // Public menu page. `menuSlug` is the shareable URL token; null = not shared.
   menuSlug: text("menu_slug").unique(),
+  // Printed ticket layouts (Printers → Ticket design), shared by every till.
+  // A missing kind falls back to the built-in default layout.
+  ticketLayouts: jsonb("ticket_layouts").$type<{ receipt?: Block[]; kot?: Block[] }>(),
   menuPublished: boolean("menu_published").notNull().default(false),
   menuTagline: text("menu_tagline"),
   // Legacy: typography now comes from menuTheme. Column kept so the change
@@ -168,3 +172,22 @@ export const menuAppearanceShape = {
 
 export const menuAppearanceForm = z.object(menuAppearanceShape);
 export type MenuAppearanceInput = z.infer<typeof menuAppearanceForm>;
+
+// One ticket layout save from the designer. Unknown block types print nothing,
+// so `type` stays a plain string.
+export const ticketLayoutInput = z.object({
+  kind: z.enum(["receipt", "kot"]),
+  blocks: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        type: z.string().min(1).max(20),
+        on: z.boolean(),
+        text: z.string().max(500).optional(),
+        align: z.enum(["left", "center", "right"]).optional(),
+        bold: z.boolean().optional(),
+        big: z.boolean().optional(),
+      }),
+    )
+    .max(60, "That's a long ticket"),
+});

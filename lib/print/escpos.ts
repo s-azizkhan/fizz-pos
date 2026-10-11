@@ -68,29 +68,48 @@ function defineRupee(): number[] {
 
 export type Align = "left" | "center" | "right";
 
+// One printed line as the printer will lay it out — feeds the on-screen
+// preview so it matches the bytes. ponytail: images aren't recorded.
+export type PrintOp = {
+  text: string;
+  align: Align;
+  bold: boolean;
+  w: 1 | 2;
+  h: 1 | 2;
+  lh: number; // line height in dots
+  gap: number; // letter spacing in dots
+};
+
 export function escpos() {
   // ESC @ = reset, then download ₹ and switch the user-defined set on (ESC %).
   const out: number[] = [ESC, 0x40, ...defineRupee(), ESC, 0x25, 1];
+  const st: Omit<PrintOp, "text"> = { align: "left", bold: false, w: 1, h: 1, lh: 30, gap: 0 };
+  const ops: PrintOp[] = [];
   const api = {
+    ops,
     text(s: string) {
       for (const ch of ascii(s)) out.push(ch.charCodeAt(0));
       return api;
     },
     line(s = "") {
+      ops.push({ ...st, text: s });
       api.text(s);
       out.push(LF);
       return api;
     },
     align(a: Align) {
+      st.align = a;
       out.push(ESC, 0x61, a === "left" ? 0 : a === "center" ? 1 : 2);
       return api;
     },
     bold(on: boolean) {
+      st.bold = on;
       out.push(ESC, 0x45, on ? 1 : 0);
       return api;
     },
     // 1 = normal, 2 = double. Width and height scale independently.
     size(w: 1 | 2, h: 1 | 2 = w) {
+      Object.assign(st, { w, h });
       out.push(GS, 0x21, ((w - 1) << 4) | (h - 1));
       return api;
     },
@@ -116,6 +135,7 @@ export function escpos() {
     },
     // Line height in dots (ESC 3). Printer default is ~30.
     spacing(dots: number) {
+      st.lh = dots;
       out.push(ESC, 0x33, dots);
       return api;
     },
@@ -128,10 +148,12 @@ export function escpos() {
     // Extra dots to the right of each character (ESC SP). Doubles with
     // double-width text.
     letterSpacing(dots: number) {
+      st.gap = dots;
       out.push(ESC, 0x20, dots);
       return api;
     },
     feed(lines = 1) {
+      for (let i = 0; i < lines; i++) ops.push({ ...st, text: "" });
       out.push(ESC, 0x64, lines);
       return api;
     },

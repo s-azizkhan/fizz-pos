@@ -85,6 +85,13 @@
       "when": 1791489378806,
       "tag": "0011_even_unus",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791731145045,
+      "tag": "0012_lucky_king_bedlam",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { bluetoothSupported, NeedsPairingError, pair, print } from "./bluetooth";
-import type { KotData, PaperWidth } from "./templates";
+import type { KotData, PrintCfg } from "./templates";
 import { usePrinter } from "@/lib/store/printer";
 import { toast } from "@/lib/store/toast";
 
@@ -8,18 +8,19 @@ import { toast } from "@/lib/store/toast";
 // `interactive` = called from a tap: if the browser forgot the printer (full
 // page load without getDevices()), reopen the picker instead of failing.
 export async function printToDefault(
-  build: (paper: PaperWidth) => Uint8Array<ArrayBuffer>,
+  build: (cfg: PrintCfg) => Uint8Array<ArrayBuffer>,
   { interactive = false } = {},
 ): Promise<boolean> {
-  const { deviceId, paper, setPrinter } = usePrinter.getState();
+  const { deviceId, paper, receipt, kot, setPrinter } = usePrinter.getState();
   if (!deviceId || !bluetoothSupported()) return false;
+  const cfg = { paper, receipt, kot };
   try {
-    await print(deviceId, build(paper));
+    await print(deviceId, build(cfg));
   } catch (e) {
     if (!interactive || !(e instanceof NeedsPairingError)) throw e;
     const p = await pair();
     setPrinter(p);
-    await print(p.id, build(paper));
+    await print(p.id, build(cfg));
   }
   return true;
 }
@@ -27,7 +28,7 @@ export async function printToDefault(
 // Fire-and-forget for auto-print: a failed ticket must never block the sale.
 export function autoPrint(
   what: string,
-  build: (paper: PaperWidth) => Uint8Array<ArrayBuffer>,
+  build: (cfg: PrintCfg) => Uint8Array<ArrayBuffer>,
 ): void {
   printToDefault(build).catch((e) => {
     toast.error(

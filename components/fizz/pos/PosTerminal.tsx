@@ -199,7 +199,7 @@ export default function PosTerminal({
       // away. Revisit/settle the saved tab from the orders page.
       toast.success(`Saved tab ${res.orderNumber} — ready for the next order`);
       if (usePrinter.getState().autoKot && fresh.length > 0) {
-        autoPrint("KOT", (paper) =>
+        autoPrint("KOT", (cfg) =>
           kotTicket(
             {
               storeName,
@@ -210,7 +210,7 @@ export default function PosTerminal({
               addOn: !!loaded,
               items: fresh,
             },
-            paper,
+            cfg,
           ),
         );
       }
@@ -341,9 +341,9 @@ export default function PosTerminal({
       toast.success("Order settled");
       // Receipt first (the customer is waiting), then the kitchen's lines.
       const { autoReceipt, autoKot } = usePrinter.getState();
-      if (autoReceipt) autoPrint("Receipt", (paper) => receiptTicket(res, paper));
+      if (autoReceipt) autoPrint("Receipt", (cfg) => receiptTicket(res, cfg));
       if (autoKot && fresh.length > 0) {
-        autoPrint("KOT", (paper) =>
+        autoPrint("KOT", (cfg) =>
           kotTicket(
             {
               storeName: res.store.name,
@@ -354,7 +354,7 @@ export default function PosTerminal({
               addOn: !!loaded,
               items: fresh,
             },
-            paper,
+            cfg,
           ),
         );
       }
@@ -367,7 +367,7 @@ export default function PosTerminal({
 
   // Manual reprint from the success modal.
   function printReceipt(r: NonNullable<typeof receipt>) {
-    printToDefault((paper) => receiptTicket(r, paper), { interactive: true }).then(
+    printToDefault((cfg) => receiptTicket(r, cfg), { interactive: true }).then(
       () => toast.success("Receipt sent to printer"),
       (e) => toast.error(e instanceof Error ? e.message : "Print fizzled"),
     );

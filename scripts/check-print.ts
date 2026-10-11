@@ -2,7 +2,7 @@
 // Run: npx tsx scripts/check-print.ts
 import assert from "node:assert/strict";
 import { ascii, escpos } from "../lib/print/escpos";
-import { kot, kotSeq, shortTime, printMoney, receipt, row } from "../lib/print/templates";
+import { kot, kotSeq, shortTime, printMoney, receipt, receiptDoc, row, RECEIPT_LAYOUT } from "../lib/print/templates";
 import { kotDelta } from "../lib/print/print-order";
 import { NeedsPairingError, pair, print } from "../lib/print/bluetooth";
 
@@ -42,23 +42,23 @@ const base = {
   fees: { service: "0", packaging: "0", delivery: "0" },
   total: "252.00",
 };
-const text = body(receipt(base, 58));
+const text = body(receipt(base, { paper: 58 }));
 assert.ok(text.includes("Fizz Cafe"));
 assert.ok(text.includes("fizz.cafe\n"), "website, no scheme");
 assert.ok(text.includes("We look forward to serving you\nagain\n"), "default footer, word-wrapped on 58mm");
-const footer = (store: object) => body(receipt({ ...base, store: { name: "X", ...store } }, 58));
+const footer = (store: object) => body(receipt({ ...base, store: { name: "X", ...store } }, { paper: 58 }));
 assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));
 assert.ok(footer({ instagram: "@fizz" }).includes("Insta @fizz\n"));
 assert.ok(text.includes("GST"));
 assert.ok(text.includes("Subtotal"), "subtotal when tax moved the total");
-assert.ok(!body(receipt({ ...base, tax: "0", total: "240.00" }, 58)).includes("Subtotal"), "no subtotal when equal to total");
+assert.ok(!body(receipt({ ...base, tax: "0", total: "240.00" }, { paper: 58 })).includes("Subtotal"), "no subtotal when equal to total");
 assert.ok(text.includes("~252.00"), "₹ on the custom glyph slot");
 assert.ok(text.includes("9:30am 11 oct 26"), "short receipt time");
 assert.ok(!text.includes("Discount"), "zero lines are skipped");
 assert.ok(!/[^\x00-\x7f]/.test(text), "output is pure ASCII");
 
 const ticket = body(
-  kot({ storeName: "Fizz", orderNumber: "A-7", type: "takeaway", reference: null, createdAt: new Date(), items: [{ name: "Latte", quantity: 2 }] }, 80),
+  kot({ storeName: "Fizz", orderNumber: "A-7", type: "takeaway", reference: null, createdAt: new Date(), items: [{ name: "Latte", quantity: 2 }] }, { paper: 80 }),
 );
 assert.ok(ticket.includes("2 x Latte") && ticket.includes("TAKEAWAY"));
 assert.ok(!ticket.includes("~"), "KOT has no prices");
@@ -68,7 +68,7 @@ assert.equal(kotSeq("A7"), "A7");
 assert.equal(shortTime("2026-10-09T23:09:00"), "11:09pm 9 oct 26");
 assert.equal(shortTime("2026-10-09T00:05:00"), "12:05am 9 oct 26");
 const long = body(
-  kot({ storeName: "", orderNumber: "A-8", type: "dine_in", reference: "T4", createdAt: new Date(), items: [{ name: "Extra large oat milk vanilla latte", quantity: 12 }] }, 58),
+  kot({ storeName: "", orderNumber: "A-8", type: "dine_in", reference: "T4", createdAt: new Date(), items: [{ name: "Extra large oat milk vanilla latte", quantity: 12 }] }, { paper: 58 }),
 );
 assert.ok(long.includes("12 x Extra large oat milk\n     vanilla latte"), "wraps under the name");
 
@@ -180,8 +180,20 @@ assert.deepEqual(
 // Receipt keeps default spacing; KOT gets letter spacing (ESC SP 1).
 const has = (bytes: Uint8Array, ...seq: number[]) =>
   [...bytes].some((_, i) => seq.every((b, j) => bytes[i + j] === b));
-const spaced = receipt(base, 58);
+const spaced = receipt(base, { paper: 58 });
 assert.ok(!has(spaced, 0x1b, 0x20), "receipt: no letter spacing");
 assert.ok(!has(spaced, 0x1b, 0x33), "receipt: default line height");
-assert.ok(has(kot({ storeName: "", orderNumber: "1", type: "takeaway", reference: null, createdAt: new Date(), items: [] }, 58), 0x1b, 0x20, 1));
+assert.ok(has(kot({ storeName: "", orderNumber: "1", type: "takeaway", reference: null, createdAt: new Date(), items: [] }, { paper: 58 }), 0x1b, 0x20, 1));
 assert.ok(!has(spaced, 0x1b, 0x47), "receipt: no double-strike");
+
+// Layouts: hidden blocks drop out, custom text prints, order follows the list.
+{
+  const layout = RECEIPT_LAYOUT.map((b) => (b.type === "tagline" ? { ...b, on: false } : b));
+  layout.unshift({ id: "x", type: "text", on: true, text: "WIFI fizz123" });
+  const t = body(receipt(base, { paper: 58, receipt: layout }));
+  assert.ok(t.indexOf("WIFI fizz123") < t.indexOf("Order"), "custom text first");
+  assert.ok(!t.includes("serving you again"), "hidden tagline gone");
+  const ops = receiptDoc(base, { paper: 58 }).ops;
+  assert.ok(ops.some((o) => o.text === "Thank you!" && o.align === "center"), "preview ops recorded");
+}
+console.log("layout checks ok");

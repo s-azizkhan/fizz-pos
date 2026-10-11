@@ -90,7 +90,7 @@ export default function OrdersClient({
 
   async function reprint(r: ReceiptData) {
     try {
-      const sent = await printToDefault((paper) => receiptTicket(r, paper), { interactive: true });
+      const sent = await printToDefault((cfg) => receiptTicket(r, cfg), { interactive: true });
       if (sent) toast.success("Receipt sent to printer");
       else toast.error("Pair a printer in Printers first.");
     } catch (e) {

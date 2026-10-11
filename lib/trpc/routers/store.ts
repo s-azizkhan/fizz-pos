@@ -1,14 +1,31 @@
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { store, storeSettingsForm } from "@/lib/db/schema";
+import { store, storeSettingsForm, ticketLayoutInput } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { getStore } from "@/lib/store/data";
-import { router, protectedProcedure } from "@/lib/trpc/init";
+import { router, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
 
 export const storeRouter = router({
   get: protectedProcedure.query(() => getStore()),
+
+  // Every till refetches this on focus so a design change lands without a reload.
+  ticketLayouts: protectedProcedure.query(async () => (await getStore()).ticketLayouts ?? {}),
+
+  setTicketLayout: editorProcedure
+    .input(ticketLayoutInput)
+    .mutation(async ({ input }) => {
+      // Merge one kind in SQL so saving the KOT never clobbers the receipt.
+      await db
+        .update(store)
+        .set({
+          ticketLayouts: sql`coalesce(${store.ticketLayouts}, '{}'::jsonb) || jsonb_build_object(${input.kind}::text, ${JSON.stringify(input.blocks)}::jsonb)`,
+          updatedAt: new Date(),
+        })
+        .where(eq(store.id, STORE_ID));
+      return { ok: true as const };
+    }),
 
   update: protectedProcedure
     .input(storeSettingsForm)

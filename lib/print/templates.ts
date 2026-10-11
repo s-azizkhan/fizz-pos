@@ -1,4 +1,4 @@
-import { escpos } from "./escpos";
+import { escpos, type Align } from "./escpos";
 import { currencySymbol, formatMoney } from "@/lib/store/format";
 
 export type PaperWidth = 58 | 80;
@@ -17,6 +17,65 @@ const KOT_COLS: Record<PaperWidth, number> = {
 };
 // KOT line height in dots (printer default ~30).
 const LINE_GAP = 50;
+
+// A ticket is an ordered list of blocks the owner can reorder, hide, or add
+// to (Printers → Ticket design). Built-in blocks (name, items, …) render order
+// data; "text", "rule" and "space" are free-form and can repeat.
+export type Block = {
+  id: string;
+  type: string;
+  on: boolean;
+  text?: string;
+  align?: Align;
+  bold?: boolean;
+  big?: boolean;
+};
+
+export type PrintCfg = { paper: PaperWidth; receipt?: Block[]; kot?: Block[] };
+
+const b = (type: string, extra: Partial<Block> = {}): Block => ({ id: type, type, on: true, ...extra });
+const ruleB = (n: number) => b("rule", { id: `rule${n}` });
+
+export const RECEIPT_LAYOUT: Block[] = [
+  b("name"),
+  b("address"),
+  b("contact"),
+  ruleB(1),
+  b("order"),
+  ruleB(2),
+  b("items"),
+  ruleB(3),
+  b("totals"),
+  b("total"),
+  b("payment"),
+  ruleB(4),
+  b("text", { id: "thanks", text: "Thank you!", align: "center" }),
+  b("tagline"),
+];
+
+export const KOT_LAYOUT: Block[] = [
+  b("title"),
+  b("reference"),
+  b("addon"),
+  b("meta"),
+  ruleB(1),
+  b("items"),
+  ruleB(2),
+];
+
+type Doc = ReturnType<typeof escpos>;
+
+// Free-form blocks, shared by both tickets.
+function custom(p: Doc, blk: Block, cols: number) {
+  if (blk.type === "rule") p.align("left").line("-".repeat(cols));
+  else if (blk.type === "space") p.feed(1);
+  else if (blk.type === "text" && blk.text?.trim()) {
+    p.align(blk.align ?? "center").bold(!!blk.bold).size(blk.big ? 2 : 1);
+    const room = blk.big ? Math.floor(cols / 2) : cols;
+    for (const l of blk.text.split("\n")) wrap(l, room, 0).forEach((s) => p.line(s));
+    p.size(1).bold(false);
+  }
+}
 
 export type ReceiptData = {
   store: {
@@ -81,57 +140,78 @@ export function row(left: string, right: string, cols: number): string[] {
   );
 }
 
-export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
+export function receiptDoc(d: ReceiptData, { paper, receipt: layout = RECEIPT_LAYOUT }: PrintCfg): Doc {
   const cols = COLS[paper];
-  const rule = "-".repeat(cols);
   const m = (v: string | number) => printMoney(v, d.currency);
   const p = escpos();
 
-  p.align("center").bold(true).size(2).line(d.store.name).size(1).bold(false);
-  const site = d.store.website?.replace(/^https?:\/\/(www\.)?|\/$/g, "");
-  for (const l of [d.store.addressLine1, d.store.addressLine2, d.store.phone, site]) {
-    if (l) p.line(l);
+  for (const blk of layout) {
+    if (!blk.on) continue;
+    switch (blk.type) {
+      case "name":
+        p.align("center").bold(true).size(2).line(d.store.name).size(1).bold(false);
+        break;
+      case "address":
+        p.align("center");
+        for (const l of [d.store.addressLine1, d.store.addressLine2]) if (l) p.line(l);
+        break;
+      case "contact": {
+        p.align("center");
+        const site = d.store.website?.replace(/^https?:\/\/(www\.)?|\/$/g, "");
+        for (const l of [d.store.phone, site]) if (l) p.line(l);
+        break;
+      }
+      case "order":
+        p.align("left").line(`Order ${d.orderNumber}`).line(shortTime(d.createdAt));
+        p.line(typeLabel(d.type) + (d.reference ? ` - ${d.reference}` : ""));
+        break;
+      case "items":
+        p.align("left");
+        for (const l of d.lines) {
+          const name = `${l.quantity} x ${l.name}${l.variantName ? ` (${l.variantName})` : ""}`;
+          row(name, m(l.lineTotal), cols).forEach((s) => p.line(s));
+        }
+        break;
+      case "totals": {
+        // Subtotal only earns its line when something moved the total.
+        const totals: [string, string][] =
+          Number(d.subtotal) === Number(d.total) ? [] : [["Subtotal", m(d.subtotal)]];
+        if (Number(d.discount) > 0) totals.push(["Discount", `-${m(d.discount)}`]);
+        if (Number(d.tax) > 0) totals.push([d.taxLabel, m(d.tax)]);
+        if (Number(d.fees.service) > 0) totals.push(["Service", m(d.fees.service)]);
+        if (Number(d.fees.packaging) > 0) totals.push(["Packaging", m(d.fees.packaging)]);
+        if (Number(d.fees.delivery) > 0) totals.push(["Delivery", m(d.fees.delivery)]);
+        p.align("left");
+        for (const [k, v] of totals) row(k, v, cols).forEach((s) => p.line(s));
+        break;
+      }
+      case "total":
+        p.align("left").bold(true).size(1, 2);
+        row("TOTAL", m(d.total), cols).forEach((s) => p.line(s));
+        p.size(1).bold(false);
+        break;
+      case "payment":
+        p.align("left");
+        if (d.paymentMethod) row("Paid by", d.paymentMethod.toUpperCase(), cols).forEach((s) => p.line(s));
+        break;
+      case "tagline": {
+        const tagline = d.store.delivery
+          ? "Home delivery available"
+          : d.store.instagram
+            ? `Follow us on Insta @${d.store.instagram.replace(/^@/, "")}`
+            : "We look forward to serving you again";
+        p.align("center");
+        wrap(tagline, cols, 0).forEach((s) => p.line(s));
+        break;
+      }
+      default:
+        custom(p, blk, cols);
+    }
   }
-
-  p.align("left").line(rule);
-  p.line(`Order ${d.orderNumber}`);
-  p.line(shortTime(d.createdAt));
-  p.line(typeLabel(d.type) + (d.reference ? ` - ${d.reference}` : ""));
-  p.line(rule);
-
-  for (const l of d.lines) {
-    const name = `${l.quantity} x ${l.name}${l.variantName ? ` (${l.variantName})` : ""}`;
-    row(name, m(l.lineTotal), cols).forEach((s) => p.line(s));
-  }
-  p.line(rule);
-
-  // Subtotal only earns its line when something moved the total.
-  const totals: [string, string][] =
-    Number(d.subtotal) === Number(d.total) ? [] : [["Subtotal", m(d.subtotal)]];
-  if (Number(d.discount) > 0) totals.push(["Discount", `-${m(d.discount)}`]);
-  if (Number(d.tax) > 0) totals.push([d.taxLabel, m(d.tax)]);
-  if (Number(d.fees.service) > 0) totals.push(["Service", m(d.fees.service)]);
-  if (Number(d.fees.packaging) > 0) totals.push(["Packaging", m(d.fees.packaging)]);
-  if (Number(d.fees.delivery) > 0) totals.push(["Delivery", m(d.fees.delivery)]);
-  for (const [k, v] of totals) row(k, v, cols).forEach((s) => p.line(s));
-
-  p.bold(true).size(1, 2);
-  row("TOTAL", m(d.total), cols).forEach((s) => p.line(s));
-  p.size(1).bold(false);
-
-  if (d.paymentMethod) row("Paid by", d.paymentMethod.toUpperCase(), cols).forEach((s) => p.line(s));
-
-  p.line(rule).align("center").line("Thank you!");
-  const tagline =
-    d.store.delivery
-      ? "Home delivery available"
-      : d.store.instagram
-        ? `Follow us on Insta @${d.store.instagram.replace(/^@/, "")}`
-        : "We look forward to serving you again";
-  wrap(tagline, cols, 0).forEach((s) => p.line(s));
-  p.feed(3).cut();
-  return p.bytes();
+  return p.feed(3).cut();
 }
+
+export const receipt = (d: ReceiptData, cfg: PrintCfg) => receiptDoc(d, cfg).bytes();
 
 // "11:09pm 9 oct 26" — short and 12h, for KOTs and receipts.
 export function shortTime(d: string | Date): string {
@@ -166,30 +246,45 @@ function wrap(text: string, cols: number, indent: number): string[] {
 }
 
 // Kitchen ticket: no prices, big type, quantities first, minimal paper.
-export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
+export function kotDoc(d: KotData, { paper, kot: layout = KOT_LAYOUT }: PrintCfg): Doc {
   const cols = KOT_COLS[paper];
-  const rule = "-".repeat(cols);
   const p = escpos().spacing(LINE_GAP).letterSpacing(LETTER_GAP).dark(true);
 
-  p.align("center").bold(true).size(2).line(`KOT:${typeLabel(d.type)}`);
-  if (d.reference) p.size(1, 2).line(d.reference);
-  p.size(1);
-  if (d.addOn) p.line("+ ADD-ON");
-  p.line(`#${kotSeq(d.orderNumber)}  ${shortTime(d.createdAt)}`).bold(false);
-  p.align("left").line(rule);
-
-  for (const i of d.items) {
-    const qty = `${i.quantity} x `;
-    p.bold(true).size(1, 2);
-    wrap(qty + i.name, cols, qty.length).forEach((s) => p.line(s));
-    p.bold(false).size(1);
-    if (i.variantName) p.line(" ".repeat(qty.length) + i.variantName);
+  for (const blk of layout) {
+    if (!blk.on) continue;
+    switch (blk.type) {
+      case "title":
+        p.align("center").bold(true).size(2).line(`KOT:${typeLabel(d.type)}`).size(1).bold(false);
+        break;
+      case "reference":
+        if (d.reference) p.align("center").bold(true).size(1, 2).line(d.reference).size(1).bold(false);
+        break;
+      case "addon":
+        if (d.addOn) p.align("center").bold(true).line("+ ADD-ON").bold(false);
+        break;
+      case "meta":
+        p.align("center").bold(true).line(`#${kotSeq(d.orderNumber)}  ${shortTime(d.createdAt)}`).bold(false);
+        break;
+      case "items":
+        p.align("left");
+        for (const i of d.items) {
+          const qty = `${i.quantity} x `;
+          p.bold(true).size(1, 2);
+          wrap(qty + i.name, cols, qty.length).forEach((s) => p.line(s));
+          p.bold(false).size(1);
+          if (i.variantName) p.line(" ".repeat(qty.length) + i.variantName);
+        }
+        break;
+      default:
+        custom(p, blk, cols);
+    }
   }
   // ponytail: 2 lines (~10mm) clears most tear bars; raise if the last item
   // tears off.
-  p.line(rule).feed(2).cut();
-  return p.bytes();
+  return p.feed(2).cut();
 }
+
+export const kot = (d: KotData, cfg: PrintCfg) => kotDoc(d, cfg).bytes();
 
 // The Fizz wordmark as 1-bit pixel art: FIZZ + the squared-off dot.
 const LOGO = [
