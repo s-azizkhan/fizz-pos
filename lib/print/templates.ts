@@ -119,6 +119,13 @@ export function kotTime(d: string | Date): string {
   return `${h % 12 || 12}:${mm}${h < 12 ? "am" : "pm"} ${t.getDate()} ${mon} ${String(t.getFullYear()).slice(-2)}`;
 }
 
+// "FZ-20261009-07" -> "07": the kitchen only calls the running number.
+// ponytail: assumes {SEQ} is the last separated chunk of the number format
+// (the default); a format ending in a date would print the date instead.
+export function kotSeq(orderNumber: string): string {
+  return orderNumber.split(/[-/ ]/).pop() || orderNumber;
+}
+
 // Wrap text to `cols`, continuation lines indented by `indent` spaces.
 function wrap(text: string, cols: number, indent: number): string[] {
   const out: string[] = [];
@@ -145,7 +152,7 @@ export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
   if (d.reference) p.size(1, 2).line(d.reference);
   p.size(1);
   if (d.addOn) p.line("+ ADD-ON");
-  p.line(`${d.orderNumber}  ${kotTime(d.createdAt)}`).bold(false);
+  p.line(`#${kotSeq(d.orderNumber)}  ${kotTime(d.createdAt)}`).bold(false);
   p.align("left").line(rule);
 
   for (const i of d.items) {
