@@ -68,6 +68,12 @@ export function escpos() {
       out.push(ESC, 0x33, dots);
       return api;
     },
+    // Extra dots to the right of each character (ESC SP). Doubles with
+    // double-width text.
+    letterSpacing(dots: number) {
+      out.push(ESC, 0x20, dots);
+      return api;
+    },
     feed(lines = 1) {
       out.push(ESC, 0x64, lines);
       return api;

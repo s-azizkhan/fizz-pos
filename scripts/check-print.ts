@@ -37,7 +37,7 @@ const base = {
 const text = new TextDecoder().decode(receipt(base, 58));
 assert.ok(text.includes("Fizz Cafe"));
 assert.ok(text.includes("fizz.cafe\n"), "website, no scheme");
-assert.ok(text.includes("We look forward to serving you\nagain\n"), "default footer, word-wrapped on 58mm");
+assert.ok(text.includes("We look forward to serving\nyou again\n"), "default footer, word-wrapped on 58mm");
 const footer = (store: object) => new TextDecoder().decode(receipt({ ...base, store: { name: "X", ...store } }, 58));
 assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));
 assert.ok(footer({ instagram: "@fizz" }).includes("Insta @fizz\n"));
@@ -165,3 +165,7 @@ assert.deepEqual(
   [...escpos().image(["#."], 4).bytes()].slice(2),
   [0x1d, 0x76, 0x30, 0, 1, 0, 4, 0, 0xf0, 0xf0, 0xf0, 0xf0],
 );
+
+// Letter spacing (ESC SP 2) shrinks 58mm lines to 27 columns.
+const spaced = [...receipt(base, 58)];
+assert.ok(spaced.some((b, i) => b === 0x1b && spaced[i + 1] === 0x20 && spaced[i + 2] === 2));
