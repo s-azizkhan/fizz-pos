@@ -37,6 +37,10 @@ const base = {
 const text = new TextDecoder().decode(receipt(base, 58));
 assert.ok(text.includes("Fizz Cafe"));
 assert.ok(text.includes("fizz.cafe\n"), "website, no scheme");
+assert.ok(text.includes("We look forward to serving you\nagain\n"), "default footer, word-wrapped on 58mm");
+const footer = (store: object) => new TextDecoder().decode(receipt({ ...base, store: { name: "X", ...store } }, 58));
+assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));
+assert.ok(footer({ instagram: "@fizz" }).includes("Insta @fizz\n"));
 assert.ok(text.includes("GST"));
 assert.ok(text.includes("INR 252.00"));
 assert.ok(!text.includes("Discount"), "zero lines are skipped");

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
+import { receiptStore } from "@/lib/store/order-settings";
 import OrdersClient from "@/components/fizz/orders/OrdersClient";
 import type { OrderRow } from "@/components/fizz/orders/types";
 
@@ -9,7 +10,11 @@ export const metadata: Metadata = { title: "Orders — Fizz" };
 export default async function OrdersPage() {
   const api = await trpc();
   await getCurrentUser();
-  const [store, all] = await Promise.all([api.store.get(), api.orders.list()]);
+  const [store, all, header] = await Promise.all([
+    api.store.get(),
+    api.orders.list(),
+    receiptStore(),
+  ]);
 
   // Serialise to a client-safe row shape.
   const orders: OrderRow[] = all.map((o) => ({
@@ -33,13 +38,7 @@ export default async function OrdersPage() {
     receipt:
       o.status === "paid"
         ? {
-            store: {
-              name: store.name,
-              addressLine1: store.addressLine1,
-              addressLine2: store.addressLine2,
-              phone: store.phone,
-              website: store.website,
-            },
+            store: header,
             currency: store.currency,
             orderNumber: o.number,
             createdAt: (o.paidAt ?? o.createdAt).toISOString(),

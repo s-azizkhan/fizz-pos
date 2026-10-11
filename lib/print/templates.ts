@@ -13,6 +13,8 @@ export type ReceiptData = {
     addressLine2?: string | null;
     phone?: string | null;
     website?: string | null;
+    instagram?: string | null;
+    delivery?: boolean;
   };
   currency: string;
   orderNumber: string;
@@ -73,7 +75,8 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   const p = escpos();
 
   p.align("center").bold(true).size(2).line(d.store.name).size(1).bold(false);
-  for (const l of [d.store.addressLine1, d.store.addressLine2, d.store.phone]) {
+  const site = d.store.website?.replace(/^https?:\/\/(www\.)?|\/$/g, "");
+  for (const l of [d.store.addressLine1, d.store.addressLine2, d.store.phone, site]) {
     if (l) p.line(l);
   }
 
@@ -105,7 +108,13 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   if (d.changeDue && Number(d.changeDue) > 0) row("Change", m(d.changeDue), cols).forEach((s) => p.line(s));
 
   p.line(rule).align("center").line("Thank you!");
-  if (d.store.website) p.line(d.store.website.replace(/^https?:\/\/(www\.)?|\/$/g, ""));
+  const tagline =
+    d.store.delivery
+      ? "Home delivery available"
+      : d.store.instagram
+        ? `Follow us on Insta @${d.store.instagram.replace(/^@/, "")}`
+        : "We look forward to serving you again";
+  wrap(tagline, cols, 0).forEach((s) => p.line(s));
   p.feed(3).cut();
   return p.bytes();
 }

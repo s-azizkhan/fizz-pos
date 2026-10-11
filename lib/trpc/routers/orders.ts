@@ -22,6 +22,7 @@ import {
   kotCounts,
 } from "@/lib/store/orders";
 import { nextOrderNumber, getStore } from "@/lib/store/data";
+import { receiptStore } from "@/lib/store/order-settings";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
 import { router, protectedProcedure } from "@/lib/trpc/init";
 
@@ -281,13 +282,7 @@ export const ordersRouter = router({
       // so the till can print without a second round trip.
       return {
         orderNumber: number,
-        store: {
-          name: store.name,
-          addressLine1: store.addressLine1,
-          addressLine2: store.addressLine2,
-          phone: store.phone,
-          website: store.website,
-        },
+        store: await receiptStore(),
         currency: store.currency,
         createdAt: new Date(),
         type,
