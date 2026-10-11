@@ -117,7 +117,6 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   p.size(1).bold(false);
 
   if (d.paymentMethod) row("Paid by", d.paymentMethod.toUpperCase(), cols).forEach((s) => p.line(s));
-  if (d.changeDue && Number(d.changeDue) > 0) row("Change", m(d.changeDue), cols).forEach((s) => p.line(s));
 
   p.line(rule).align("center").line("Thank you!");
   const tagline =
