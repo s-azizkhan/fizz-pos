@@ -42,9 +42,11 @@ export function formatMoney(amount: string | number, currency: string): string {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency,
-    }).format(n);
+    })
+      .format(n)
+      .replace(/\.00$/, ""); // whole amounts drop the cents: "₹89.00" → "₹89"
   } catch {
-    return n.toFixed(2);
+    return n.toFixed(2).replace(/\.00$/, "");
   }
 }
 
