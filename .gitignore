@@ -42,3 +42,5 @@ next-env.d.ts
 
 # auth seeder — do not commit
 /scripts/seed-admin.ts
+
+certificates
