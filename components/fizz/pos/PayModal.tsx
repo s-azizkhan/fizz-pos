@@ -137,179 +137,182 @@ export default function PayModal({
       aria-modal="true"
     >
       <div
-        className="w-full max-w-md rounded-fizz border border-ink-line bg-ink-soft p-6"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col rounded-fizz border border-ink-line bg-ink-soft p-6"
         onClick={(e) => e.stopPropagation()}
       >
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-          Take payment
-        </p>
-        <p className="mt-2 font-display text-4xl font-bold text-cream">
-          {money(total)}
-        </p>
-        {/* Breakdown: subtotal, discount, tax */}
-        <div className="mt-2 space-y-0.5 text-sm text-steam">
-          {(discount > 0 || taxAmount > 0 || feeSum > 0) && (
-            <p className="flex justify-between">
-              <span>Subtotal</span>
-              <span className="text-cream">{money(subtotal)}</span>
-            </p>
-          )}
-          {discount > 0 && (
-            <p className="flex justify-between">
-              <span>Discount</span>
-              <span className="text-cream">− {money(discount)}</span>
-            </p>
-          )}
-          {taxAmount > 0 && (
-            <p className="flex justify-between">
-              <span>
-                {tax.label} ({tax.rate}%{tax.inclusive ? " incl." : ""})
-              </span>
-              <span className="text-cream">{money(taxAmount)}</span>
-            </p>
-          )}
-          {FEE_FIELDS.filter((f) => fees[f.key] > 0).map((f) => (
-            <p key={f.key} className="flex justify-between">
-              <span>{f.label}</span>
-              <span className="text-cream">{money(fees[f.key])}</span>
-            </p>
-          ))}
-        </div>
-
-        {/* Method */}
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          {METHODS.map((m) => (
-            <button
-              key={m.value}
-              onClick={() => setMethod(m.value)}
-              className={`rounded-fizz border px-2 py-3 text-sm transition-colors ${
-                method === m.value
-                  ? "border-fizz bg-fizz text-ink"
-                  : "border-ink-line bg-ink text-cream hover:border-fizz"
-              }`}
-            >
-              {m.label}
-              <kbd className="ml-1 text-[10px] opacity-60">{m.key}</kbd>
-            </button>
-          ))}
-        </div>
-
-        {/* Discount */}
-        <label className="mt-4 block">
-          <span className="text-xs uppercase tracking-[0.18em] text-steam">
-            Discount
-          </span>
-          <input
-            inputMode="decimal"
-            value={discountStr}
-            onChange={(e) => setDiscountStr(e.target.value.replace(/[^0-9.]/g, ""))}
-            placeholder="0.00"
-            className="mt-1 w-full rounded-fizz border border-ink-line bg-ink px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
-          />
-        </label>
-
-        {/* Online / UPI */}
-        {method === "online" && (
-          upi ? (
-            <div className="mt-4 overflow-hidden rounded-fizz border border-fizz/40 bg-fizz/5">
-              <button
-                onClick={() => setQrCollapsed((v) => !v)}
-                aria-expanded={showQr}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-fizz/10"
-              >
-                <span>
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-                    Scan to pay
-                  </span>
-                  <span className="mt-0.5 block text-sm text-steam">
-                    {upi.name} · {upi.vpa}
-                  </span>
-                </span>
-                <span className="shrink-0 rounded-full border border-fizz/40 px-3 py-1 text-sm font-semibold text-fizz">
-                  {showQr ? "Hide" : "Show QR"}
-                  <kbd className="ml-1 text-[10px] opacity-60">Q</kbd>
-                </span>
-              </button>
-
-              {showQr && (
-                <div className="flex flex-col items-center gap-3 border-t border-fizz/20 px-4 py-5">
-                  <UpiQr value={upiLink} size={196} />
-                  <p className="font-display text-2xl font-bold text-fizz">
-                    {money(total)}
-                  </p>
-                  <p className="text-center text-sm text-steam">
-                    Amount is locked into the code — the customer just confirms.
-                  </p>
-                  <div className="flex w-full gap-2">
-                    <button
-                      onClick={copyVpa}
-                      className="flex-1 rounded-fizz border border-ink-line bg-ink px-3 py-2 text-sm text-cream transition-colors hover:border-fizz hover:text-fizz"
-                    >
-                      {copied ? "Copied ●" : "Copy UPI ID"}
-                    </button>
-                    <a
-                      href={upiLink}
-                      className="flex-1 rounded-fizz border border-ink-line bg-ink px-3 py-2 text-center text-sm text-cream transition-colors hover:border-fizz hover:text-fizz"
-                    >
-                      Open in UPI app
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <p className="mt-4 rounded-fizz border border-ink-line bg-ink px-4 py-3 text-sm text-steam">
-              Add a UPI ID in Store settings to show a scannable QR here.
-            </p>
-          )
-        )}
-
-        {/* Cash flow */}
-        {method === "cash" && (
-          <div className="mt-4">
-            <label className="block">
-              <span className="text-xs uppercase tracking-[0.18em] text-steam">
-                Cash tendered
-              </span>
-              <input
-                ref={tenderedRef}
-                inputMode="decimal"
-                value={tenderedStr}
-                onChange={(e) =>
-                  setTenderedStr(e.target.value.replace(/[^0-9.]/g, ""))
-                }
-                placeholder={total.toFixed(2)}
-                className="mt-1 w-full rounded-fizz border border-ink-line bg-ink px-4 py-3 font-display text-lg text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
-              />
-            </label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {quickCash.map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setTenderedStr(v.toFixed(2))}
-                  className="rounded-full border border-ink-line bg-ink px-3 py-1 text-sm text-cream transition-colors hover:border-fizz hover:text-fizz"
-                >
-                  {money(v)}
-                </button>
-              ))}
-            </div>
-            {tenderedStr !== "" && (
-              <p
-                className={`mt-3 font-display text-lg font-bold ${
-                  cashShort ? "text-[#E2655A]" : "text-bubble"
-                }`}
-              >
-                {cashShort
-                  ? `Short ${money(total - tendered)}`
-                  : `Change ${money(change)}`}
+        {/* Scrolls on short screens; the actions below stay pinned. */}
+        <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
+            Take payment
+          </p>
+          <p className="mt-2 font-display text-4xl font-bold text-cream">
+            {money(total)}
+          </p>
+          {/* Breakdown: subtotal, discount, tax */}
+          <div className="mt-2 space-y-0.5 text-sm text-steam">
+            {(discount > 0 || taxAmount > 0 || feeSum > 0) && (
+              <p className="flex justify-between">
+                <span>Subtotal</span>
+                <span className="text-cream">{money(subtotal)}</span>
               </p>
             )}
+            {discount > 0 && (
+              <p className="flex justify-between">
+                <span>Discount</span>
+                <span className="text-cream">− {money(discount)}</span>
+              </p>
+            )}
+            {taxAmount > 0 && (
+              <p className="flex justify-between">
+                <span>
+                  {tax.label} ({tax.rate}%{tax.inclusive ? " incl." : ""})
+                </span>
+                <span className="text-cream">{money(taxAmount)}</span>
+              </p>
+            )}
+            {FEE_FIELDS.filter((f) => fees[f.key] > 0).map((f) => (
+              <p key={f.key} className="flex justify-between">
+                <span>{f.label}</span>
+                <span className="text-cream">{money(fees[f.key])}</span>
+              </p>
+            ))}
           </div>
-        )}
 
-        {error && <p className="mt-3 text-sm text-[#E2655A]">{error}</p>}
+          {/* Method */}
+          <div className="mt-5 grid grid-cols-3 gap-2">
+            {METHODS.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => setMethod(m.value)}
+                className={`rounded-fizz border px-2 py-3 text-sm transition-colors ${
+                  method === m.value
+                    ? "border-fizz bg-fizz text-ink"
+                    : "border-ink-line bg-ink text-cream hover:border-fizz"
+                }`}
+              >
+                {m.label}
+                <kbd className="ml-1 text-[10px] opacity-60">{m.key}</kbd>
+              </button>
+            ))}
+          </div>
 
-        <div className="mt-6 flex gap-2">
+          {/* Discount */}
+          <label className="mt-4 block">
+            <span className="text-xs uppercase tracking-[0.18em] text-steam">
+              Discount
+            </span>
+            <input
+              inputMode="decimal"
+              value={discountStr}
+              onChange={(e) => setDiscountStr(e.target.value.replace(/[^0-9.]/g, ""))}
+              placeholder="0.00"
+              className="mt-1 w-full rounded-fizz border border-ink-line bg-ink px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+            />
+          </label>
+
+          {/* Online / UPI */}
+          {method === "online" && (
+            upi ? (
+              <div className="mt-4 overflow-hidden rounded-fizz border border-fizz/40 bg-fizz/5">
+                <button
+                  onClick={() => setQrCollapsed((v) => !v)}
+                  aria-expanded={showQr}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-fizz/10"
+                >
+                  <span>
+                    <span className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
+                      Scan to pay
+                    </span>
+                    <span className="mt-0.5 block text-sm text-steam">
+                      {upi.name} · {upi.vpa}
+                    </span>
+                  </span>
+                  <span className="shrink-0 rounded-full border border-fizz/40 px-3 py-1 text-sm font-semibold text-fizz">
+                    {showQr ? "Hide" : "Show QR"}
+                    <kbd className="ml-1 text-[10px] opacity-60">Q</kbd>
+                  </span>
+                </button>
+
+                {showQr && (
+                  <div className="flex flex-col items-center gap-3 border-t border-fizz/20 px-4 py-5">
+                    <UpiQr value={upiLink} size={196} />
+                    <p className="font-display text-2xl font-bold text-fizz">
+                      {money(total)}
+                    </p>
+                    <p className="text-center text-sm text-steam">
+                      Amount is locked into the code — the customer just confirms.
+                    </p>
+                    <div className="flex w-full gap-2">
+                      <button
+                        onClick={copyVpa}
+                        className="flex-1 rounded-fizz border border-ink-line bg-ink px-3 py-2 text-sm text-cream transition-colors hover:border-fizz hover:text-fizz"
+                      >
+                        {copied ? "Copied ●" : "Copy UPI ID"}
+                      </button>
+                      <a
+                        href={upiLink}
+                        className="flex-1 rounded-fizz border border-ink-line bg-ink px-3 py-2 text-center text-sm text-cream transition-colors hover:border-fizz hover:text-fizz"
+                      >
+                        Open in UPI app
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-fizz border border-ink-line bg-ink px-4 py-3 text-sm text-steam">
+                Add a UPI ID in Store settings to show a scannable QR here.
+              </p>
+            )
+          )}
+
+          {/* Cash flow */}
+          {method === "cash" && (
+            <div className="mt-4">
+              <label className="block">
+                <span className="text-xs uppercase tracking-[0.18em] text-steam">
+                  Cash tendered
+                </span>
+                <input
+                  ref={tenderedRef}
+                  inputMode="decimal"
+                  value={tenderedStr}
+                  onChange={(e) =>
+                    setTenderedStr(e.target.value.replace(/[^0-9.]/g, ""))
+                  }
+                  placeholder={total.toFixed(2)}
+                  className="mt-1 w-full rounded-fizz border border-ink-line bg-ink px-4 py-3 font-display text-lg text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+                />
+              </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {quickCash.map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setTenderedStr(v.toFixed(2))}
+                    className="rounded-full border border-ink-line bg-ink px-3 py-1 text-sm text-cream transition-colors hover:border-fizz hover:text-fizz"
+                  >
+                    {money(v)}
+                  </button>
+                ))}
+              </div>
+              {tenderedStr !== "" && (
+                <p
+                  className={`mt-3 font-display text-lg font-bold ${
+                    cashShort ? "text-[#E2655A]" : "text-bubble"
+                  }`}
+                >
+                  {cashShort
+                    ? `Short ${money(total - tendered)}`
+                    : `Change ${money(change)}`}
+                </p>
+              )}
+            </div>
+          )}
+
+          {error && <p className="mt-3 text-sm text-[#E2655A]">{error}</p>}
+        </div>
+
+        <div className="mt-6 flex shrink-0 gap-2">
           <button
             onClick={onClose}
             className="flex-1 rounded-fizz border border-ink-line bg-ink px-4 py-3 text-cream transition-colors hover:border-fizz"
