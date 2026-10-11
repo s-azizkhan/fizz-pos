@@ -4,9 +4,9 @@ import { currencySymbol, formatDateTime, formatMoney } from "@/lib/store/format"
 export type PaperWidth = 58 | 80;
 
 // Extra dots after each character (ESC SP). Font A is 12 dots wide, so this
-// eats into the line: 58mm (384 dots) fits 27 chars at 2, 80mm (576) fits 41.
+// eats into the line: 58mm (384 dots) fits 29 chars at 1, 80mm (576) fits 44.
 // ponytail: calibration knob — 0 restores the dense 32/48-column layout.
-const LETTER_GAP = 2;
+const LETTER_GAP = 1;
 const COLS: Record<PaperWidth, number> = {
   58: Math.floor(384 / (12 + LETTER_GAP)),
   80: Math.floor(576 / (12 + LETTER_GAP)),
