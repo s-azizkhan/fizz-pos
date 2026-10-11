@@ -138,7 +138,7 @@ export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
   const rule = "-".repeat(cols);
   const p = escpos().spacing(40);
 
-  p.align("center").bold(true).size(2).line(typeLabel(d.type));
+  p.align("center").bold(true).size(2).line(`KOT:${typeLabel(d.type)}`);
   if (d.reference) p.size(1, 2).line(d.reference);
   p.size(1);
   if (d.addOn) p.line("+ ADD-ON");

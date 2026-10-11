@@ -46,7 +46,7 @@ const ticket = new TextDecoder().decode(
 );
 assert.ok(ticket.includes("2 x Latte") && ticket.includes("TAKEAWAY"));
 assert.ok(!ticket.includes("INR"), "KOT has no prices");
-assert.ok(!ticket.includes("KOT"), "no KOT title");
+assert.ok(ticket.includes("KOT:TAKEAWAY"));
 assert.equal(kotTime("2026-10-09T23:09:00"), "11:09pm 9 oct 26");
 assert.equal(kotTime("2026-10-09T00:05:00"), "12:05am 9 oct 26");
 const long = new TextDecoder().decode(
