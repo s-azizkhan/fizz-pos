@@ -48,6 +48,15 @@ const CHUNK = 100;
 const SAFE_CHUNK = 20;
 const DELAY_MS = 10;
 
+// Keep-alive: a status query (DLE EOT 1) every HEARTBEAT_MS counts as traffic,
+// so most printers reset their idle power-off timer. It prints nothing.
+// ponytail: calibration knob. Lower it if the printer still naps between
+// rushes; check the vendor app for an auto-off "never" setting first.
+const HEARTBEAT_MS = 45_000;
+const HEARTBEAT = new Uint8Array([0x10, 0x04, 0x01]);
+// Seconds between auto-reconnect attempts; the last value repeats forever.
+const BACKOFF_S = [1, 2, 5, 10, 30];
+
 export type PrinterInfo = { id: string; name: string };
 
 export class NeedsPairingError extends Error {
@@ -60,6 +69,8 @@ let device: BTDevice | null = null;
 let char: BTChar | null = null;
 let chunk = CHUNK;
 let queue: Promise<unknown> = Promise.resolve();
+let keepId: string | null = null; // printer keepAlive() is holding open
+let retry: ReturnType<typeof setTimeout> | undefined;
 
 const bt = () => (navigator as unknown as { bluetooth: BT }).bluetooth;
 
@@ -79,7 +90,9 @@ function select(d: BTDevice) {
   char = null;
   chunk = CHUNK;
   d.addEventListener("gattserverdisconnected", () => {
-    if (device === d) char = null;
+    if (device !== d) return;
+    char = null;
+    reconnect();
   });
 }
 
@@ -157,9 +170,16 @@ async function write(c: BTChar, data: Uint8Array<ArrayBuffer>) {
   }
 }
 
-// Queue a job so two prints never interleave on the wire.
+// Serialise everything that touches the link, so a print, a heartbeat and a
+// reconnect never interleave on the wire.
+function enqueue<T>(fn: () => Promise<T>): Promise<T> {
+  const job = queue.then(fn);
+  queue = job.catch(() => {});
+  return job;
+}
+
 export function print(id: string, data: Uint8Array<ArrayBuffer>): Promise<void> {
-  const job = queue.then(async () => {
+  return enqueue(async () => {
     await find(id);
     try {
       await write(await connect(), data);
@@ -172,13 +192,57 @@ export function print(id: string, data: Uint8Array<ArrayBuffer>): Promise<void> 
       await write(await connect(), data);
     }
   });
-  queue = job.catch(() => {});
-  return job;
+}
+
+// Retry the link with backoff while keepAlive() holds this printer. A printer
+// that's switched off keeps getting a try every 30s until it's back.
+function reconnect(attempt = 0) {
+  clearTimeout(retry);
+  if (!keepId || device?.id !== keepId) return;
+  const wait = BACKOFF_S[Math.min(attempt, BACKOFF_S.length - 1)] * 1000;
+  retry = setTimeout(() => {
+    enqueue(connect).catch(() => reconnect(attempt + 1));
+  }, wait);
+}
+
+// Connect now to a remembered printer (no picker), then keep the link warm:
+// heartbeat while connected, auto-reconnect when it drops, and re-check when
+// the tab comes back to the foreground. Returns a stop function.
+export function keepAlive(id: string): () => void {
+  keepId = id;
+  const warm = () => {
+    if (isConnected(id)) return;
+    enqueue(async () => {
+      await find(id);
+      await connect();
+    }).catch(() => reconnect(1));
+  };
+  const beat = setInterval(() => {
+    if (!isConnected(id)) return;
+    enqueue(async () => {
+      if (char && device?.gatt?.connected) await write(char, HEARTBEAT);
+    }).catch(() => {}); // a dead link fires gattserverdisconnected → reconnect
+  }, HEARTBEAT_MS);
+  const onVisible = () => {
+    if (document.visibilityState === "visible") warm();
+  };
+  document.addEventListener("visibilitychange", onVisible);
+  warm();
+  return () => {
+    if (keepId === id) keepId = null;
+    clearTimeout(retry);
+    clearInterval(beat);
+    document.removeEventListener("visibilitychange", onVisible);
+  };
 }
 
 // Revoke the site's permission for this printer (where supported).
 export async function forget(id: string): Promise<void> {
   const d = await find(id).catch(() => null);
+  if (keepId === id) {
+    keepId = null;
+    clearTimeout(retry);
+  }
   if (device?.id === id) {
     device = null;
     char = null;

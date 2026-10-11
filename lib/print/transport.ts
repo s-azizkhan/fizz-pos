@@ -15,6 +15,8 @@ export const pairLike = (id: string) => via(id).pair();
 export const print = (id: string, data: Uint8Array<ArrayBuffer>) => via(id).print(id, data);
 export const isConnected = (id: string) => via(id).isConnected(id);
 export const forget = (id: string) => via(id).forget(id);
+// ponytail: Bluetooth only. A USB cable doesn't idle out.
+export const keepAlive = (id: string) => (usb.isUsbId(id) ? () => {} : bt.keepAlive(id));
 
 export function printingSupported(): boolean {
   return bt.bluetoothSupported() || usb.usbSupported();
