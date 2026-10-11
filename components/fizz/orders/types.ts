@@ -1,4 +1,5 @@
 import type { OrderStatus, OrderPaymentMethod, OrderType } from "@/lib/db/schema";
+import type { ReceiptData } from "@/lib/print/templates";
 
 export type OrderRowLine = {
   name: string;
@@ -20,6 +21,7 @@ export type OrderRow = {
   paidAt: string | null;
   itemCount: number;
   items: OrderRowLine[];
+  receipt: ReceiptData | null; // paid orders only, for reprints
 };
 
 export type StatusFilter = "open" | "paid" | "all";

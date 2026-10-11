@@ -29,6 +29,38 @@ export default async function OrdersPage() {
       quantity: it.quantity,
       lineTotal: it.lineTotal,
     })),
+    // Same shape checkout returns, rebuilt from the stored snapshot.
+    receipt:
+      o.status === "paid"
+        ? {
+            store: {
+              name: store.name,
+              addressLine1: store.addressLine1,
+              addressLine2: store.addressLine2,
+              phone: store.phone,
+              website: store.website,
+            },
+            currency: store.currency,
+            orderNumber: o.number,
+            createdAt: (o.paidAt ?? o.createdAt).toISOString(),
+            type: o.type,
+            reference: o.reference,
+            lines: o.items.map((it) => ({
+              name: it.name,
+              variantName: it.variantName,
+              quantity: it.quantity,
+              lineTotal: it.lineTotal,
+            })),
+            subtotal: o.subtotal,
+            discount: o.discount,
+            tax: o.tax,
+            taxLabel: store.taxLabel,
+            fees: { service: o.serviceFee, packaging: o.packagingFee, delivery: o.deliveryFee },
+            total: o.total,
+            paymentMethod: o.paymentMethod,
+            changeDue: o.changeDue,
+          }
+        : null,
   }));
 
   return <OrdersClient orders={orders} currency={store.currency} />;

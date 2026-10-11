@@ -7,6 +7,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc/client";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import { toast } from "@/lib/store/toast";
+import { printToDefault } from "@/lib/print/print-order";
+import { receipt as receiptTicket, type ReceiptData } from "@/lib/print/templates";
 import type { OrderRow, StatusFilter } from "./types";
 
 const TYPE_LABEL: Record<string, string> = {
@@ -74,6 +76,16 @@ export default function OrdersClient({
   function settle(id: string) {
     // Reuse the till's pay flow — opening the tab there gives the full sheet.
     router.push(`/dashboard/till?order=${id}`);
+  }
+
+  async function reprint(r: ReceiptData) {
+    try {
+      const sent = await printToDefault((paper) => receiptTicket(r, paper), { interactive: true });
+      if (sent) toast.success("Receipt sent to printer");
+      else toast.error("Pair a printer in Printers first.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Print fizzled");
+    }
   }
 
   function doVoid(id: string) {
@@ -251,6 +263,14 @@ export default function OrdersClient({
               >
                 🧾 {o.status === "open" ? "Print KOT" : "Reprint KOT"}
               </a>
+              {o.receipt && (
+                <button
+                  onClick={() => reprint(o.receipt!)}
+                  className="mt-2 block w-full rounded-fizz border border-ink-line px-3 py-2 text-center text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
+                >
+                  🧾 Reprint receipt
+                </button>
+              )}
             </article>
           ))}
         </div>
