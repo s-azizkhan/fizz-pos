@@ -113,7 +113,15 @@ async function find(id: string): Promise<BTDevice> {
 
 async function connect(): Promise<BTChar> {
   if (char && device?.gatt?.connected) return char;
-  const server = await device!.gatt!.connect();
+  const server = await device!.gatt!.connect().catch((e: unknown) => {
+    // Chrome's "Unsupported device." = no BLE GATT link: a classic-only
+    // printer, or one already paired in the OS Bluetooth settings.
+    throw e instanceof Error && /unsupported/i.test(e.message)
+      ? new Error(
+          "Printer refused a Bluetooth LE link. Unpair it in your phone/computer Bluetooth settings and try again. Classic-only printers can't print from a browser.",
+        )
+      : e;
+  });
   for (const svc of await server.getPrimaryServices()) {
     for (const c of await svc.getCharacteristics()) {
       if (c.properties.writeWithoutResponse || c.properties.write) {

@@ -55,6 +55,7 @@ export default function KotTicket({
     try {
       const sent = await printToDefault((paper) =>
         kot({ storeName, orderNumber, type, reference, createdAt, items }, paper),
+        { interactive: true },
       );
       if (sent) toast.success("KOT sent to printer");
       else window.print();

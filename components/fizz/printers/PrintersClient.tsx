@@ -11,19 +11,10 @@ import {
   rememberedPrinters,
   type PrinterInfo,
 } from "@/lib/print/bluetooth";
-import { receipt } from "@/lib/print/templates";
+import { testTicket } from "@/lib/print/templates";
 import { usePrinter } from "@/lib/store/printer";
 import { toast } from "@/lib/store/toast";
 import { Chip } from "@/components/fizz/ui/controls";
-
-type Store = {
-  name: string;
-  addressLine1: string | null;
-  addressLine2: string | null;
-  phone: string | null;
-  currency: string;
-  taxLabel: string;
-};
 
 const noop = () => () => {};
 
@@ -32,7 +23,7 @@ function cancelled(e: unknown) {
   return e instanceof DOMException && e.name === "NotFoundError";
 }
 
-export default function PrintersClient({ store }: { store: Store }) {
+export default function PrintersClient() {
   const { deviceId, deviceName, paper, autoReceipt, autoKot, setPrinter, setPaper, setAuto } =
     usePrinter();
   // Browser-only facts; the server render assumes "not yet known". Prefs
@@ -70,32 +61,7 @@ export default function PrintersClient({ store }: { store: Store }) {
     if (!deviceId) return;
     setBusy("test");
     try {
-      await print(
-        deviceId,
-        receipt(
-          {
-            store,
-            currency: store.currency,
-            orderNumber: "TEST",
-            createdAt: new Date(),
-            type: "dine_in",
-            reference: null,
-            lines: [
-              { name: "Flat white", quantity: 2, lineTotal: "8.00" },
-              { name: "Almond croissant", variantName: "Warm", quantity: 1, lineTotal: "4.50" },
-            ],
-            subtotal: "12.50",
-            discount: "0",
-            tax: "0",
-            taxLabel: store.taxLabel,
-            fees: { service: "0", packaging: "0", delivery: "0" },
-            total: "12.50",
-            paymentMethod: "cash",
-            changeDue: "7.50",
-          },
-          paper,
-        ),
-      );
+      await print(deviceId, testTicket());
       toast.success("Test ticket sent");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Print fizzled");

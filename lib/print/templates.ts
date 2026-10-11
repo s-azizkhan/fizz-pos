@@ -127,3 +127,28 @@ export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
   p.size(1).bold(false).line(rule).feed(3).cut();
   return p.bytes();
 }
+
+// The Fizz wordmark as 1-bit pixel art: FIZZ + the squared-off dot.
+const LOGO = [
+  "#####.#####.#####.#####.##",
+  "#.......#.......#.....#.##",
+  "#.......#......#.....#....",
+  "####....#.....#.....#.....",
+  "#.......#....#.....#......",
+  "#.......#...#.....#.......",
+  "#.....#####.#####.#####...",
+];
+
+// Test slip: logo + one line, as little paper as the tear bar allows.
+export function testTicket(): Uint8Array<ArrayBuffer> {
+  return escpos()
+    .align("center")
+    .image(LOGO, 6)
+    .feed(1)
+    .bold(true)
+    .line("TEST PRINT")
+    .bold(false)
+    .feed(3)
+    .cut()
+    .bytes();
+}

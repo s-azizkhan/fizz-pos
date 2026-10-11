@@ -367,7 +367,7 @@ export default function PosTerminal({
 
   // Manual reprint from the success modal.
   function printReceipt(r: NonNullable<typeof receipt>) {
-    printToDefault((paper) => receiptTicket(r, paper)).then(
+    printToDefault((paper) => receiptTicket(r, paper), { interactive: true }).then(
       () => toast.success("Receipt sent to printer"),
       (e) => toast.error(e instanceof Error ? e.message : "Print fizzled"),
     );

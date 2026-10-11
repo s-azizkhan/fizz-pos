@@ -145,3 +145,9 @@ checkBluetooth().then(
     process.exit(1);
   },
 );
+
+// Raster: GS v 0 header, then 1 byte per 8 dots. "#." at scale 4 = 0xF0.
+assert.deepEqual(
+  [...escpos().image(["#."], 4).bytes()].slice(2),
+  [0x1d, 0x76, 0x30, 0, 1, 0, 4, 0, 0xf0, 0xf0, 0xf0, 0xf0],
+);
