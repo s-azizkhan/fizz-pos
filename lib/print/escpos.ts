@@ -72,10 +72,10 @@ export function escpos() {
       out.push(ESC, 0x64, lines);
       return api;
     },
-    // Feed past the tear bar, then partial cut. Printers without a cutter
+    // Feed to the cutter (no extra margin), then partial cut. Printers without a cutter
     // ignore it.
     cut() {
-      out.push(GS, 0x56, 0x42, 0x03);
+      out.push(GS, 0x56, 0x42, 0x00);
       return api;
     },
     bytes(): Uint8Array<ArrayBuffer> {

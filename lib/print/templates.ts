@@ -142,7 +142,7 @@ export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
   if (d.reference) p.size(1, 2).line(d.reference);
   p.size(1);
   if (d.addOn) p.line("+ ADD-ON");
-  p.bold(false).line(`${d.orderNumber}  ${kotTime(d.createdAt)}`);
+  p.line(`${d.orderNumber}  ${kotTime(d.createdAt)}`).bold(false);
   p.align("left").line(rule);
 
   for (const i of d.items) {
@@ -152,7 +152,9 @@ export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
     p.bold(false).size(1);
     if (i.variantName) p.line(" ".repeat(qty.length) + i.variantName);
   }
-  p.line(rule).feed(3).cut();
+  // ponytail: 2 lines (~10mm) clears most tear bars; raise if the last item
+  // tears off.
+  p.line(rule).feed(2).cut();
   return p.bytes();
 }
 
