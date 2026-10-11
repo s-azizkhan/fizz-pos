@@ -68,6 +68,12 @@ export function escpos() {
       out.push(ESC, 0x33, dots);
       return api;
     },
+    // Double-strike (ESC G): each dot line printed twice for darker, crisper
+    // strokes. Independent of bold, so bold still stands out on top of it.
+    dark(on: boolean) {
+      out.push(ESC, 0x47, on ? 1 : 0);
+      return api;
+    },
     // Extra dots to the right of each character (ESC SP). Doubles with
     // double-width text.
     letterSpacing(dots: number) {

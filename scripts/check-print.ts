@@ -169,3 +169,4 @@ assert.deepEqual(
 // Letter spacing (ESC SP 1) shrinks 58mm lines to 29 columns.
 const spaced = [...receipt(base, 58)];
 assert.ok(spaced.some((b, i) => b === 0x1b && spaced[i + 1] === 0x20 && spaced[i + 2] === 1));
+assert.ok(spaced.some((b, i) => b === 0x1b && spaced[i + 1] === 0x47 && spaced[i + 2] === 1), "double-strike on");

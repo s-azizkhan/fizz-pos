@@ -82,7 +82,7 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   const cols = COLS[paper];
   const rule = "-".repeat(cols);
   const m = (v: string | number) => printMoney(v, d.currency);
-  const p = escpos().spacing(LINE_GAP).letterSpacing(LETTER_GAP);
+  const p = escpos().spacing(LINE_GAP).letterSpacing(LETTER_GAP).dark(true);
 
   p.align("center").bold(true).size(2).line(d.store.name).size(1).bold(false);
   const site = d.store.website?.replace(/^https?:\/\/(www\.)?|\/$/g, "");
@@ -165,7 +165,7 @@ function wrap(text: string, cols: number, indent: number): string[] {
 export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
   const cols = COLS[paper];
   const rule = "-".repeat(cols);
-  const p = escpos().spacing(LINE_GAP).letterSpacing(LETTER_GAP);
+  const p = escpos().spacing(LINE_GAP).letterSpacing(LETTER_GAP).dark(true);
 
   p.align("center").bold(true).size(2).line(`KOT:${typeLabel(d.type)}`);
   if (d.reference) p.size(1, 2).line(d.reference);
