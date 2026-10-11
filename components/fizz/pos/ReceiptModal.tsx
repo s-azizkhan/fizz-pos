@@ -15,6 +15,7 @@ export default function ReceiptModal({
   total,
   changeDue,
   onClose,
+  onPrint,
 }: {
   orderNumber: string;
   subtotal: string;
@@ -25,6 +26,8 @@ export default function ReceiptModal({
   total: string;
   changeDue: string | null;
   onClose: () => void;
+  // Set when this device has a Bluetooth printer; reprints the receipt.
+  onPrint?: () => void;
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -100,9 +103,18 @@ export default function ReceiptModal({
           </div>
         )}
 
+        {onPrint && (
+          <button
+            onClick={onPrint}
+            className="mt-6 w-full rounded-fizz border border-ink-line px-4 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+          >
+            Print receipt
+          </button>
+        )}
+
         <button
           onClick={onClose}
-          className="mt-6 w-full rounded-fizz bg-fizz px-4 py-3 font-display font-bold text-ink transition-transform hover:scale-[1.02]"
+          className={`${onPrint ? "mt-3" : "mt-6"} w-full rounded-fizz bg-fizz px-4 py-3 font-display font-bold text-ink transition-transform hover:scale-[1.02]`}
         >
           New order
           <kbd className="ml-2 rounded bg-ink/20 px-1.5 py-0.5 text-xs">↵</kbd>

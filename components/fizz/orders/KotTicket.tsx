@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import { printToDefault } from "@/lib/print/print-order";
+import { kot } from "@/lib/print/templates";
+import { toast } from "@/lib/store/toast";
 
 type KotItem = {
   name: string;
@@ -23,7 +26,8 @@ function fmtTime(iso: string): string {
 
 // Kitchen Order Ticket. Renders on a white slip (thermal-printer friendly),
 // big and high-contrast so cooks can read it across the pass. The "Print"
-// button calls window.print(); a print stylesheet hides the app chrome.
+// button sends it to this device's Bluetooth printer when one is paired,
+// otherwise window.print() with a print stylesheet that hides the app chrome.
 export default function KotTicket({
   storeName,
   orderNumber,
@@ -47,6 +51,18 @@ export default function KotTicket({
     return () => document.body.classList.remove("kot-print");
   }, []);
 
+  async function handlePrint() {
+    try {
+      const sent = await printToDefault((paper) =>
+        kot({ storeName, orderNumber, type, reference, createdAt, items }, paper),
+      );
+      if (sent) toast.success("KOT sent to printer");
+      else window.print();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Print fizzled");
+    }
+  }
+
   return (
     <div className="kot-root mx-auto max-w-sm p-4">
       {/* On-screen controls (hidden when printing) */}
@@ -58,7 +74,7 @@ export default function KotTicket({
           ← Orders
         </a>
         <button
-          onClick={() => window.print()}
+          onClick={handlePrint}
           className="rounded-fizz bg-fizz px-5 py-2 font-semibold text-ink transition-transform hover:scale-105"
         >
           Print KOT

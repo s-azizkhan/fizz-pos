@@ -277,8 +277,27 @@ export const ordersRouter = router({
       }
 
       bumpPaths();
+      // Everything a printed receipt needs (lib/print/templates ReceiptData),
+      // so the till can print without a second round trip.
       return {
         orderNumber: number,
+        store: {
+          name: store.name,
+          addressLine1: store.addressLine1,
+          addressLine2: store.addressLine2,
+          phone: store.phone,
+        },
+        currency: store.currency,
+        createdAt: new Date(),
+        type,
+        reference,
+        paymentMethod,
+        lines: totals.lines.map((l) => ({
+          name: l.name,
+          variantName: l.variantName ?? null,
+          quantity: l.quantity,
+          lineTotal: l.lineTotal.toFixed(2),
+        })),
         subtotal: totals.subtotal.toFixed(2),
         discount: totals.safeDiscount.toFixed(2),
         tax: totals.taxAmount.toFixed(2),

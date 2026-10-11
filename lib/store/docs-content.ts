@@ -293,6 +293,36 @@ export const DOC_SECTIONS: DocSection[] = [
     ],
   },
   {
+    id: "printers",
+    title: "Printers",
+    href: "/dashboard/printers",
+    roles: "Everyone",
+    intro: "Pair a Bluetooth receipt printer so receipts and kitchen tickets print straight from the till. Set up once per device.",
+    blocks: [
+      {
+        kind: "steps",
+        items: [
+          "Turn the printer on and open Printers on the till device.",
+          "Tap Pair printer and pick it from the list.",
+          "Tap Test print. If the ticket looks cramped or cut off, switch the paper width.",
+          "Choose what prints by itself: the receipt on payment, the KOT on save & pay.",
+        ],
+      },
+      {
+        kind: "list",
+        items: [
+          ["Works on", "Chrome or Edge on Android, Windows, Mac and Linux, over https."],
+          ["iPhone / iPad", "Safari and Chrome can't reach Bluetooth printers. Use the Bluefy browser, or print through the system dialog."],
+          ["Add-ons", "Adding to a saved tab prints only the new items, marked KOT ADD-ON."],
+        ],
+      },
+      {
+        kind: "tip",
+        text: "If a ticket didn't print, tap Print receipt on the payment screen or Print KOT from the order. Some browsers forget the printer when the tab closes — tap Connect at the start of the shift.",
+      },
+    ],
+  },
+  {
     id: "team",
     title: "Team",
     href: "/dashboard/team",

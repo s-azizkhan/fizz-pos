@@ -25,6 +25,9 @@ import VariantPicker from "./VariantPicker";
 import PayModal from "./PayModal";
 import FeesModal from "./FeesModal";
 import ReceiptModal from "./ReceiptModal";
+import { autoPrint, kotDelta, printToDefault } from "@/lib/print/print-order";
+import { kot as kotTicket, receipt as receiptTicket } from "@/lib/print/templates";
+import { usePrinter } from "@/lib/store/printer";
 import KeyboardHints from "./KeyboardHints";
 
 // The point-of-sale terminal. Keyboard-first: a global search captures typing,
@@ -33,12 +36,14 @@ import KeyboardHints from "./KeyboardHints";
 // terminal is editing an existing open tab (revisited from the orders page).
 export default function PosTerminal({
   categories,
+  storeName,
   currency,
   tax,
   upi,
   loaded,
 }: {
   categories: PosCategory[];
+  storeName: string;
   currency: string;
   tax: TaxConfig;
   upi: UpiConfig | null;
@@ -48,6 +53,7 @@ export default function PosTerminal({
   const trpc = useTRPC();
   const saveTab = useMutation(trpc.orders.save.mutationOptions());
   const settle = useMutation(trpc.orders.checkout.mutationOptions());
+  const hasPrinter = usePrinter((s) => !!s.deviceId);
   const cart = useCart(loaded?.lines ?? []);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string>(categories[0]?.id ?? "");
@@ -178,6 +184,8 @@ export default function PosTerminal({
   // dishes, save, settle later — and to add dishes mid-meal without a new order.
   async function handleSave() {
     if (cart.lines.length === 0 || saveTab.isPending) return;
+    // Only what the kitchen hasn't seen: the cart minus the tab as loaded.
+    const fresh = kotDelta(cart.lines, loaded?.lines ?? []);
     try {
       const res = await saveTab.mutateAsync({
         orderId: editingId ?? undefined,
@@ -190,6 +198,22 @@ export default function PosTerminal({
       // Tab is saved — clear the terminal so the next order can be rung right
       // away. Revisit/settle the saved tab from the orders page.
       toast.success(`Saved tab ${res.orderNumber} — ready for the next order`);
+      if (usePrinter.getState().autoKot && fresh.length > 0) {
+        autoPrint("KOT", (paper) =>
+          kotTicket(
+            {
+              storeName,
+              orderNumber: res.orderNumber,
+              type: orderType,
+              reference: reference || null,
+              createdAt: new Date(),
+              addOn: !!loaded,
+              items: fresh,
+            },
+            paper,
+          ),
+        );
+      }
       resetTerminal();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Couldn't save the tab");
@@ -300,6 +324,7 @@ export default function PosTerminal({
     // numbers, and deducts stock twice. handleSave has always had this; this
     // path never did.
     if (cart.lines.length === 0 || settle.isPending) return;
+    const fresh = kotDelta(cart.lines, loaded?.lines ?? []);
     try {
       const res = await settle.mutateAsync({
         orderId: editingId ?? undefined,
@@ -314,11 +339,38 @@ export default function PosTerminal({
       setPayOpen(false);
       setReceipt(res);
       toast.success("Order settled");
+      // Receipt first (the customer is waiting), then the kitchen's lines.
+      const { autoReceipt, autoKot } = usePrinter.getState();
+      if (autoReceipt) autoPrint("Receipt", (paper) => receiptTicket(res, paper));
+      if (autoKot && fresh.length > 0) {
+        autoPrint("KOT", (paper) =>
+          kotTicket(
+            {
+              storeName: res.store.name,
+              orderNumber: res.orderNumber,
+              type: res.type,
+              reference: res.reference,
+              createdAt: res.createdAt,
+              addOn: !!loaded,
+              items: fresh,
+            },
+            paper,
+          ),
+        );
+      }
       resetTerminal();
     } catch (e) {
       // Surface the error inside the pay modal.
       return e instanceof Error ? e.message : "Something fizzled at the till.";
     }
+  }
+
+  // Manual reprint from the success modal.
+  function printReceipt(r: NonNullable<typeof receipt>) {
+    printToDefault((paper) => receiptTicket(r, paper)).then(
+      () => toast.success("Receipt sent to printer"),
+      (e) => toast.error(e instanceof Error ? e.message : "Print fizzled"),
+    );
   }
 
   return (
@@ -494,6 +546,7 @@ export default function PosTerminal({
           total={money(receipt.total)}
           changeDue={receipt.changeDue ? money(receipt.changeDue) : null}
           onClose={() => setReceipt(null)}
+          onPrint={hasPrinter ? () => printReceipt(receipt) : undefined}
         />
       )}
 
