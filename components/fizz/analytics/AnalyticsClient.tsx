@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatMoney } from "@/lib/store/format";
-import { PRESET_LABELS, PRESET_ORDER, type RangePreset } from "@/lib/store/date-range";
+import { PRESET_LABELS, PRESET_ORDER, toDateInput, type RangePreset } from "@/lib/store/date-range";
+import { DatePicker } from "@/components/fizz/ui/DatePicker";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import type { Analytics, Metric, SeriesPoint, Slice } from "@/lib/store/analytics";
 
@@ -42,6 +43,7 @@ export default function AnalyticsClient({
   const money = (x: number) => formatMoney(x, currency);
   const [customFrom, setCustomFrom] = useState(from);
   const [customTo, setCustomTo] = useState(to);
+  const today = toDateInput(new Date());
   const [showCustom, setShowCustom] = useState(preset === "custom");
   const [chartType, setChartType] = useState<ChartType>("candles");
 
@@ -93,22 +95,21 @@ export default function AnalyticsClient({
         <div className="mt-3 flex flex-wrap items-end gap-3 rounded-fizz border border-ink-line bg-ink-soft p-4">
           <label className="flex flex-col gap-1">
             <span className="text-xs uppercase tracking-[0.18em] text-steam">From</span>
-            <input
-              type="date"
+            <DatePicker
               value={customFrom}
-              max={customTo || undefined}
-              onChange={(e) => setCustomFrom(e.target.value)}
-              className="rounded-fizz border border-ink-line bg-ink px-3 py-2 text-cream outline-none focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+              max={customTo || today}
+              onChange={setCustomFrom}
+              className="flex min-w-[12rem] items-center justify-between gap-3 rounded-fizz border border-ink-line bg-ink px-3 py-2 text-left text-cream outline-none transition-colors hover:border-fizz/50 focus-visible:border-fizz focus-visible:ring-2 focus-visible:ring-fizz/40"
             />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs uppercase tracking-[0.18em] text-steam">To</span>
-            <input
-              type="date"
+            <DatePicker
               value={customTo}
               min={customFrom || undefined}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="rounded-fizz border border-ink-line bg-ink px-3 py-2 text-cream outline-none focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+              max={today}
+              onChange={setCustomTo}
+              className="flex min-w-[12rem] items-center justify-between gap-3 rounded-fizz border border-ink-line bg-ink px-3 py-2 text-left text-cream outline-none transition-colors hover:border-fizz/50 focus-visible:border-fizz focus-visible:ring-2 focus-visible:ring-fizz/40"
             />
           </label>
           <button

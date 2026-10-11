@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { EXPENSE_CATEGORIES, expenseMethod } from "@/lib/db/schema";
 import { currencySymbol, formatMoney } from "@/lib/store/format";
+import { DatePicker } from "@/components/fizz/ui/DatePicker";
 import NumberInput from "@/components/fizz/ui/NumberInput";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
@@ -68,13 +69,10 @@ export default function ExpenseForm({
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Expense date</span>
-          <input
+          <DatePicker
             name="expenseDate"
-            type="date"
-            required
             defaultValue={todayLocal()}
             max={todayLocal()}
-            className={inputCls}
           />
         </label>
         <label className="flex flex-col gap-2">

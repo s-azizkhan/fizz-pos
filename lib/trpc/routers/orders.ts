@@ -93,8 +93,13 @@ function bumpPaths() {
 
 export const ordersRouter = router({
   list: protectedProcedure
-    .input(z.enum(orderStatus.enumValues).optional())
-    .query(({ input }) => listOrders(input)),
+    .input(
+      z.object({
+        month: z.string().regex(/^\d{4}-\d{2}$/),
+        status: z.enum(orderStatus.enumValues).optional(),
+      }),
+    )
+    .query(({ input }) => listOrders(input.month, input.status)),
 
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getOrder(input)),
 

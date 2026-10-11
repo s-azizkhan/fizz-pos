@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, getTableColumns, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   orderItems,
@@ -10,6 +10,7 @@ import {
   type OrderStatus,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
+import { fromDateInput, monthBounds } from "@/lib/store/date-range";
 
 export type OrderWithItems = Order & { items: OrderItem[] };
 
@@ -19,14 +20,20 @@ export type OrderWithItems = Order & { items: OrderItem[] };
 // been waiting", that is the one number that must not drift.
 export type KotTicket = OrderWithItems & { ageSeconds: number };
 
-// List orders for the store, newest first. Optional status filter (open/paid/
-// void). Items are attached so the orders page can preview lines.
+// List orders for the store created in a YYYY-MM month, newest first. Open
+// tabs always show regardless of month — they're still live. Optional status
+// filter (open/paid/void). Items are attached so the orders page can preview lines.
 export async function listOrders(
+  month: string,
   status?: OrderStatus,
 ): Promise<OrderWithItems[]> {
-  const where = status
-    ? and(eq(orders.storeId, STORE_ID), eq(orders.status, status))
-    : eq(orders.storeId, STORE_ID);
+  const [start, end] = monthBounds(month).map(fromDateInput);
+  const inMonth = and(gte(orders.createdAt, start), lt(orders.createdAt, end));
+  const where = and(
+    eq(orders.storeId, STORE_ID),
+    or(eq(orders.status, "open"), inMonth),
+    status ? eq(orders.status, status) : undefined,
+  );
 
   const rows = await db
     .select()

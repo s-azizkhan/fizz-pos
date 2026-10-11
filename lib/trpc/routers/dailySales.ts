@@ -14,7 +14,9 @@ const fizzled = new TRPCError({
 });
 
 export const dailySalesRouter = router({
-  list: protectedProcedure.query(() => listDailySales()),
+  list: protectedProcedure
+    .input(z.string().regex(/^\d{4}-\d{2}$/))
+    .query(({ input }) => listDailySales(input)),
 
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getDailySale(input)),
 

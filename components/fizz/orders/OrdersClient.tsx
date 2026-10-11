@@ -11,6 +11,7 @@ import { printToDefault } from "@/lib/print/print-order";
 import { receipt as receiptTicket, type ReceiptData } from "@/lib/print/templates";
 import type { OrderRow, StatusFilter } from "./types";
 import KotTicket from "./KotTicket";
+import MonthFilter from "@/components/fizz/MonthFilter";
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine in",
@@ -39,10 +40,12 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 // till, settle it, or void it. Paid orders are read-only receipts.
 export default function OrdersClient({
   orders,
+  month,
   currency,
   storeName,
 }: {
   orders: OrderRow[];
+  month: string;
   currency: string;
   storeName: string;
 }) {
@@ -148,22 +151,25 @@ export default function OrdersClient({
       )}
 
       {/* Filters */}
-      <ChipBar className="mt-6">
-        {FILTERS.map((f) => (
-          <Chip
-            key={f.value}
-            active={filter === f.value}
-            onClick={() => setFilter(f.value)}
-          >
-            {f.label}
-            {f.value === "open" && counts.open > 0 && (
-              <span className="rounded-full bg-fizz/15 px-1.5 text-xs">
-                {counts.open}
-              </span>
-            )}
-          </Chip>
-        ))}
-      </ChipBar>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <ChipBar>
+          {FILTERS.map((f) => (
+            <Chip
+              key={f.value}
+              active={filter === f.value}
+              onClick={() => setFilter(f.value)}
+            >
+              {f.label}
+              {f.value === "open" && counts.open > 0 && (
+                <span className="rounded-full bg-fizz/15 px-1.5 text-xs">
+                  {counts.open}
+                </span>
+              )}
+            </Chip>
+          ))}
+        </ChipBar>
+        <MonthFilter month={month} />
+      </div>
 
       {/* Order cards */}
       {shown.length === 0 ? (

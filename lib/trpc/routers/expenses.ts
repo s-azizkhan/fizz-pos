@@ -9,7 +9,9 @@ import { listExpenses, getExpense } from "@/lib/store/expenses";
 import { router, protectedProcedure } from "@/lib/trpc/init";
 
 export const expensesRouter = router({
-  list: protectedProcedure.query(() => listExpenses()),
+  list: protectedProcedure
+    .input(z.string().regex(/^\d{4}-\d{2}$/))
+    .query(({ input }) => listExpenses(input)),
 
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getExpense(input)),
 

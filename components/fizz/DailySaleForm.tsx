@@ -7,10 +7,9 @@ import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import { currencySymbol, formatMoney } from "@/lib/store/format";
+import { DatePicker } from "@/components/fizz/ui/DatePicker";
 import NumberInput from "@/components/fizz/ui/NumberInput";
 
-const inputCls =
-  "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
 const labelCls = "text-xs font-semibold uppercase tracking-[0.18em] text-fizz";
 
 function todayLocal(): string {
@@ -65,13 +64,10 @@ export default function DailySaleForm({
       <div className="mt-6 grid gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Sale date</span>
-          <input
+          <DatePicker
             name="saleDate"
-            type="date"
-            required
             defaultValue={todayLocal()}
             max={todayLocal()}
-            className={inputCls}
           />
         </label>
         {(

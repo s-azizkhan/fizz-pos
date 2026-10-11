@@ -120,3 +120,14 @@ export function rangeDays(range: DateRange): number {
     Math.round((range.end.getTime() - range.start.getTime()) / 86_400_000),
   );
 }
+
+// Current month as YYYY-MM (for <input type=month>), local time.
+export function currentMonth(now = new Date()): string {
+  return toDateInput(now).slice(0, 7);
+}
+
+// [first day, first day of next month) as YYYY-MM-DD for a YYYY-MM month.
+export function monthBounds(month: string): [string, string] {
+  const [y, m] = month.split("-").map(Number);
+  return [`${month}-01`, toDateInput(new Date(y, m, 1))];
+}

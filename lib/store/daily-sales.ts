@@ -1,17 +1,19 @@
 import "server-only";
-import { desc, eq, isNull, and } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { dailySales, users, type DailySale } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
+import { monthBounds } from "@/lib/store/date-range";
 
 export type DailySaleRow = DailySale & {
   enteredByName: string | null;
   total: string;
 };
 
-// List active (not soft-deleted) entries, newest sale date first, with the
-// name of whoever keyed each one.
-export async function listDailySales(): Promise<DailySaleRow[]> {
+// List active (not soft-deleted) entries in a YYYY-MM month, newest sale date
+// first, with the name of whoever keyed each one.
+export async function listDailySales(month: string): Promise<DailySaleRow[]> {
+  const [start, end] = monthBounds(month);
   const rows = await db
     .select({
       sale: dailySales,
@@ -19,7 +21,14 @@ export async function listDailySales(): Promise<DailySaleRow[]> {
     })
     .from(dailySales)
     .leftJoin(users, eq(dailySales.enteredBy, users.id))
-    .where(and(eq(dailySales.storeId, STORE_ID), isNull(dailySales.deletedAt)))
+    .where(
+      and(
+        eq(dailySales.storeId, STORE_ID),
+        isNull(dailySales.deletedAt),
+        gte(dailySales.saleDate, start),
+        lt(dailySales.saleDate, end),
+      ),
+    )
     .orderBy(desc(dailySales.saleDate), desc(dailySales.id));
 
   return rows.map(({ sale, enteredByName }) => ({

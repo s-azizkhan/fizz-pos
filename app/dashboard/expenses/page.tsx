@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
+import { currentMonth } from "@/lib/store/date-range";
+import MonthFilter from "@/components/fizz/MonthFilter";
 import ExpensesTable from "@/components/fizz/ExpensesTable";
 import RecordExpenseModal from "@/components/fizz/RecordExpenseModal";
 
@@ -9,10 +11,16 @@ export const metadata: Metadata = {
   title: "Expenses — Fizz",
 };
 
-export default async function ExpensesPage() {
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string }>;
+}) {
+  const { month: monthParam } = await searchParams;
+  const month = /^\d{4}-\d{2}$/.test(monthParam ?? "") ? monthParam! : currentMonth();
   const api = await trpc();
   const user = await getCurrentUser();
-  const [store, rows] = await Promise.all([api.store.get(), api.expenses.list()]);
+  const [store, rows] = await Promise.all([api.store.get(), api.expenses.list(month)]);
   const canDelete = user.role === "admin" || user.role === "manager";
 
   const grandTotal = rows.reduce((sum, r) => sum + Number(r.amount), 0).toFixed(2);
@@ -34,7 +42,10 @@ export default async function ExpensesPage() {
       </div>
 
       <div className="mt-12 flex items-end justify-between gap-4">
-        <h2 className="font-display text-xl font-bold tracking-tight">History</h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="font-display text-xl font-bold tracking-tight">History</h2>
+          <MonthFilter month={month} />
+        </div>
         {rows.length > 0 && (
           <p className="text-sm text-steam">
             {rows.length} {rows.length === 1 ? "entry" : "entries"} ·{" "}
