@@ -1,5 +1,5 @@
 import { escpos } from "./escpos";
-import { currencySymbol, formatDateTime, formatMoney } from "@/lib/store/format";
+import { currencySymbol, formatMoney } from "@/lib/store/format";
 
 export type PaperWidth = 58 | 80;
 
@@ -59,11 +59,12 @@ export type KotData = {
   items: { name: string; variantName?: string | null; quantity: number }[];
 };
 
-// Store-currency money with an ASCII symbol: "₹120.00" → "INR 120.00".
+// Store-currency money the printer can draw: ASCII symbols and ₹ (a custom
+// glyph) as-is, anything else as the code: "€4.50" → "EUR 4.50".
 export function printMoney(amount: string | number, currency: string): string {
   const s = formatMoney(amount, currency);
   const sym = currencySymbol(currency);
-  return /[^\x20-\x7e]/.test(sym) ? s.replace(sym, `${currency} `) : s;
+  return sym !== "₹" && /[^\x20-\x7e]/.test(sym) ? s.replace(sym, `${currency} `) : s;
 }
 
 const typeLabel = (t: string) => t.replace(/_/g, " ").toUpperCase();
@@ -94,7 +95,7 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
 
   p.align("left").line(rule);
   p.line(`Order ${d.orderNumber}`);
-  p.line(formatDateTime(d.createdAt));
+  p.line(shortTime(d.createdAt));
   p.line(typeLabel(d.type) + (d.reference ? ` - ${d.reference}` : ""));
   p.line(rule);
 
@@ -130,8 +131,8 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   return p.bytes();
 }
 
-// "11:09pm 9 oct 26" — short and 12h for the pass.
-export function kotTime(d: string | Date): string {
+// "11:09pm 9 oct 26" — short and 12h, for KOTs and receipts.
+export function shortTime(d: string | Date): string {
   const t = new Date(d);
   const h = t.getHours();
   const mm = String(t.getMinutes()).padStart(2, "0");
@@ -172,7 +173,7 @@ export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
   if (d.reference) p.size(1, 2).line(d.reference);
   p.size(1);
   if (d.addOn) p.line("+ ADD-ON");
-  p.line(`#${kotSeq(d.orderNumber)}  ${kotTime(d.createdAt)}`).bold(false);
+  p.line(`#${kotSeq(d.orderNumber)}  ${shortTime(d.createdAt)}`).bold(false);
   p.align("left").line(rule);
 
   for (const i of d.items) {

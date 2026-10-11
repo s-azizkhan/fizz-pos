@@ -1,25 +1,76 @@
 // Minimal ESC/POS byte builder for 58/80mm thermal printers. Covers what a
 // receipt or KOT needs: text, alignment, bold, double size, feed, cut.
 // ponytail: ASCII only. Thermal codepages can't print ₹ or most non-Latin
-// glyphs, so text goes through `ascii()`. Images are 1-bit pixel art only.
+// glyphs, so text goes through `ascii()`. ₹ is the exception: it's downloaded
+// as a user-defined glyph over "~" (ESC &). Images are 1-bit pixel art only.
 
 const ESC = 0x1b;
 const GS = 0x1d;
 const LF = 0x0a;
 
+// ₹ rides on the "~" slot, so a real "~" prints as "-".
+export const RUPEE = "~";
+
 // Strip accents ("café" → "cafe"), then swap anything still outside
 // printable ASCII for "?" so the printer never renders codepage garbage.
 export function ascii(s: string): string {
   return s
+    .replace(/~/g, "-")
+    .replace(/₹/g, RUPEE)
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .replace(/[^\x20-\x7e\n]/g, "?");
 }
 
+// ₹ as a 12x24 Font A glyph ("#" = black). ponytail: hand-drawn; printers
+// without ESC & support print a plain "~" instead.
+const RUPEE_GLYPH = [
+  "............",
+  "............",
+  "............",
+  ".##########.",
+  ".##########.",
+  ".......##...",
+  "........##..",
+  "........##..",
+  ".##########.",
+  ".##########.",
+  "........##..",
+  ".......##...",
+  ".######.....",
+  ".#####......",
+  "...##.......",
+  "....##......",
+  ".....##.....",
+  "......##....",
+  ".......##...",
+  "........##..",
+  ".........##.",
+  "............",
+  "............",
+  "............",
+];
+
+// ESC & 3 c c 12 <36 bytes>: column-major, 3 bytes per column, MSB on top.
+function defineRupee(): number[] {
+  const out = [ESC, 0x26, 3, RUPEE.charCodeAt(0), RUPEE.charCodeAt(0), 12];
+  for (let x = 0; x < 12; x++) {
+    for (let b = 0; b < 3; b++) {
+      let byte = 0;
+      for (let bit = 0; bit < 8; bit++) {
+        if (RUPEE_GLYPH[b * 8 + bit][x] === "#") byte |= 0x80 >> bit;
+      }
+      out.push(byte);
+    }
+  }
+  return out;
+}
+
 export type Align = "left" | "center" | "right";
 
 export function escpos() {
-  const out: number[] = [ESC, 0x40]; // ESC @ = reset
+  // ESC @ = reset, then download ₹ and switch the user-defined set on (ESC %).
+  const out: number[] = [ESC, 0x40, ...defineRupee(), ESC, 0x25, 1];
   const api = {
     text(s: string) {
       for (const ch of ascii(s)) out.push(ch.charCodeAt(0));
