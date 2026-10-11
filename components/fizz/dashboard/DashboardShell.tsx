@@ -4,6 +4,7 @@ import { ViewTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BottomNav from "./BottomNav";
+import Clock from "./Clock";
 import { NAV_ITEMS } from "./nav-items";
 import type { UserRole } from "@/lib/db/schema";
 
@@ -53,6 +54,7 @@ export default function DashboardShell({
               <span className="align-super text-xs text-bubble">●</span>
             </span>
           )}
+          <Clock />
         </header>
 
         {/* Bottom padding clears the floating tab bar (+ iOS home indicator). */}
