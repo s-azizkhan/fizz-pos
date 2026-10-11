@@ -37,7 +37,7 @@ const base = {
 const text = new TextDecoder().decode(receipt(base, 58));
 assert.ok(text.includes("Fizz Cafe"));
 assert.ok(text.includes("fizz.cafe\n"), "website, no scheme");
-assert.ok(text.includes("We look forward to serving\nyou again\n"), "default footer, word-wrapped on 58mm");
+assert.ok(text.includes("We look forward to serving you\nagain\n"), "default footer, word-wrapped on 58mm");
 const footer = (store: object) => new TextDecoder().decode(receipt({ ...base, store: { name: "X", ...store } }, 58));
 assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));
 assert.ok(footer({ instagram: "@fizz" }).includes("Insta @fizz\n"));
@@ -166,7 +166,11 @@ assert.deepEqual(
   [0x1d, 0x76, 0x30, 0, 1, 0, 4, 0, 0xf0, 0xf0, 0xf0, 0xf0],
 );
 
-// Letter spacing (ESC SP 1) shrinks 58mm lines to 29 columns.
-const spaced = [...receipt(base, 58)];
-assert.ok(spaced.some((b, i) => b === 0x1b && spaced[i + 1] === 0x20 && spaced[i + 2] === 1));
-assert.ok(spaced.some((b, i) => b === 0x1b && spaced[i + 1] === 0x47 && spaced[i + 2] === 1), "double-strike on");
+// Receipt keeps default spacing; KOT gets letter spacing (ESC SP 1).
+const has = (bytes: Uint8Array, ...seq: number[]) =>
+  [...bytes].some((_, i) => seq.every((b, j) => bytes[i + j] === b));
+const spaced = receipt(base, 58);
+assert.ok(!has(spaced, 0x1b, 0x20), "receipt: no letter spacing");
+assert.ok(!has(spaced, 0x1b, 0x33), "receipt: default line height");
+assert.ok(has(kot({ storeName: "", orderNumber: "1", type: "takeaway", reference: null, createdAt: new Date(), items: [] }, 58), 0x1b, 0x20, 1));
+assert.ok(has(spaced, 0x1b, 0x47, 1), "double-strike on");

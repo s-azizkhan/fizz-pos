@@ -3,17 +3,19 @@ import { currencySymbol, formatDateTime, formatMoney } from "@/lib/store/format"
 
 export type PaperWidth = 58 | 80;
 
-// Extra dots after each character (ESC SP). Font A is 12 dots wide, so this
-// eats into the line: 58mm (384 dots) fits 29 chars at 1, 80mm (576) fits 44.
-// ponytail: calibration knob — 0 restores the dense 32/48-column layout.
+// Characters per line in Font A at default spacing: 32 on 58mm, 48 on 80mm.
+// Receipts use this dense layout.
+const COLS: Record<PaperWidth, number> = { 58: 32, 80: 48 };
+
+// KOT only: extra dots after each character (ESC SP). Font A is 12 dots wide,
+// so this eats into the line: 58mm (384 dots) fits 29 chars at 1, 80mm (576)
+// fits 44. ponytail: calibration knobs — LETTER_GAP 0 = dense layout.
 const LETTER_GAP = 1;
-const COLS: Record<PaperWidth, number> = {
+const KOT_COLS: Record<PaperWidth, number> = {
   58: Math.floor(384 / (12 + LETTER_GAP)),
   80: Math.floor(576 / (12 + LETTER_GAP)),
 };
-
-// Line height in dots for every ticket (printer default ~30 reads cramped).
-// ponytail: calibration knob — raise for airier tickets, lower to save paper.
+// KOT line height in dots (printer default ~30).
 const LINE_GAP = 50;
 
 export type ReceiptData = {
@@ -82,7 +84,7 @@ export function receipt(d: ReceiptData, paper: PaperWidth): Uint8Array<ArrayBuff
   const cols = COLS[paper];
   const rule = "-".repeat(cols);
   const m = (v: string | number) => printMoney(v, d.currency);
-  const p = escpos().spacing(LINE_GAP).letterSpacing(LETTER_GAP).dark(true);
+  const p = escpos().dark(true);
 
   p.align("center").bold(true).size(2).line(d.store.name).size(1).bold(false);
   const site = d.store.website?.replace(/^https?:\/\/(www\.)?|\/$/g, "");
@@ -163,7 +165,7 @@ function wrap(text: string, cols: number, indent: number): string[] {
 
 // Kitchen ticket: no prices, big type, quantities first, minimal paper.
 export function kot(d: KotData, paper: PaperWidth): Uint8Array<ArrayBuffer> {
-  const cols = COLS[paper];
+  const cols = KOT_COLS[paper];
   const rule = "-".repeat(cols);
   const p = escpos().spacing(LINE_GAP).letterSpacing(LETTER_GAP).dark(true);
 
