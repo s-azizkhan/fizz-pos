@@ -62,7 +62,10 @@ export default function MenuGrid({
               {s.items.map((it, i) => {
                 const fromPrice =
                   it.variants.length > 0
-                    ? Math.min(...it.variants.map((v) => v.price))
+                    ? Math.min(
+                        ...it.variants.map((v) => v.price),
+                        ...(it.price > 0 ? [it.price] : []),
+                      )
                     : it.price;
                 const hint = (!s.name || s.id === activeId) && i < 9;
                 return (

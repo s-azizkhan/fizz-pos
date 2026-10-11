@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import type { PosItem, PosVariant } from "./types";
 
 // Quick variant chooser shown when an item has sizes/options. Number keys 1-9
-// pick a variant; Escape closes. Keeps the rush moving without a mouse.
+// pick an option; Escape closes. Keeps the rush moving without a mouse.
+// The base item (variant = null) is offered first when it has its own price.
 export default function VariantPicker({
   item,
   money,
@@ -13,22 +14,25 @@ export default function VariantPicker({
 }: {
   item: PosItem;
   money: (n: number) => string;
-  onPick: (variant: PosVariant) => void;
+  onPick: (variant: PosVariant | null) => void;
   onClose: () => void;
 }) {
+  const options: (PosVariant | null)[] =
+    item.price > 0 ? [null, ...item.variants] : item.variants;
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (/^[1-9]$/.test(e.key)) {
-        const v = item.variants[Number(e.key) - 1];
-        if (v) {
+        const i = Number(e.key) - 1;
+        if (i < options.length) {
           e.preventDefault();
-          onPick(v);
+          onPick(options[i]);
         }
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [item, onPick]);
+  }, [options, onPick]);
 
   return (
     <div
@@ -46,9 +50,9 @@ export default function VariantPicker({
         </p>
         <h2 className="mt-1 font-display text-2xl font-bold">{item.name}</h2>
         <div className="mt-5 grid gap-2">
-          {item.variants.map((v, i) => (
+          {options.map((v, i) => (
             <button
-              key={v.id}
+              key={v?.id ?? "base"}
               onClick={() => onPick(v)}
               className="flex items-center justify-between rounded-fizz border border-ink-line bg-ink px-4 py-3 text-left transition-colors hover:border-fizz focus:border-fizz focus:outline-none focus:ring-2 focus:ring-fizz/40"
             >
@@ -58,10 +62,10 @@ export default function VariantPicker({
                     {i + 1}
                   </kbd>
                 )}
-                <span className="font-medium text-cream">{v.name}</span>
+                <span className="font-medium text-cream">{v?.name ?? "Regular"}</span>
               </span>
               <span className="font-display font-bold text-fizz">
-                {money(v.price)}
+                {money(v?.price ?? item.price)}
               </span>
             </button>
           ))}
