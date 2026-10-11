@@ -374,7 +374,7 @@ export default function PosTerminal({
   }
 
   return (
-    <div className="flex h-[calc(100dvh-64px)] min-h-0 flex-col lg:h-screen">
+    <div className="flex h-[calc(100dvh-64px)] min-h-0 flex-col">
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_380px]">
         {/* Menu side */}
         <div className="flex min-h-0 flex-col border-ink-line lg:border-r">
