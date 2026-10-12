@@ -37,7 +37,10 @@ export default function Provider({ children }: { children: React.ReactNode }) {
           // the transaction, so every checkout call burns an order number — a
           // retry on a timeout where the write landed would create a second
           // order and deduct stock twice. Never override this per-mutation.
-          mutations: { retry: 0 },
+          // networkMode "always": the default ("online") PAUSES mutations while
+          // the browser is offline — mutateAsync never settles and the button
+          // spins forever. Offline must fail fast so the POS can queue the sale.
+          mutations: { retry: 0, networkMode: "always" },
           queries: { retry: false },
         },
         // Configured once here instead of in all ~21 call sites.
@@ -91,7 +94,8 @@ export default function Provider({ children }: { children: React.ReactNode }) {
         for (const sale of outbox.all()) {
           if (sale.failed) continue;
           try {
-            await trpcClient.orders.checkout.mutate(sale.input);
+            if (sale.kind === "save") await trpcClient.orders.save.mutate(sale.input);
+            else await trpcClient.orders.checkout.mutate(sale.input);
             outbox.remove(sale.input.clientId);
             synced++;
           } catch (e) {
@@ -99,14 +103,14 @@ export default function Provider({ children }: { children: React.ReactNode }) {
             if (isNetworkError(e) || codeOf(e) === "UNAUTHORIZED") break;
             const msg = e instanceof Error ? e.message : "Rejected";
             outbox.fail(sale.input.clientId, msg);
-            toast.error(`An offline sale couldn't sync: ${msg}`);
+            toast.error(`An offline order couldn't sync: ${msg}`);
           }
         }
       } finally {
         busy = false;
       }
       if (synced) {
-        toast.success(`Synced ${synced} offline sale${synced > 1 ? "s" : ""}`);
+        toast.success(`Synced ${synced} offline order${synced > 1 ? "s" : ""}`);
         router.refresh();
       }
     }

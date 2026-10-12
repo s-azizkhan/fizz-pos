@@ -83,7 +83,7 @@ async function requireOpen(orderId: string) {
 async function byClientId(clientId: string | undefined) {
   if (!clientId) return undefined;
   const [row] = await db
-    .select({ number: orders.number, paidAt: orders.paidAt })
+    .select({ id: orders.id, number: orders.number, paidAt: orders.paidAt })
     .from(orders)
     .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, clientId)))
     .limit(1);
@@ -93,6 +93,12 @@ async function byClientId(clientId: string | undefined) {
 // Backdating window for a replayed offline sale. Anything outside it (a bad
 // device clock, a tampered payload) books at server time instead.
 const MAX_OFFLINE_MS = 7 * 24 * 60 * 60 * 1000;
+function saleTime(soldAt: Date | undefined) {
+  const now = Date.now();
+  return soldAt && soldAt.getTime() <= now && now - soldAt.getTime() < MAX_OFFLINE_MS
+    ? soldAt
+    : new Date(now);
+}
 
 function fizzled(message: string) {
   return new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
@@ -165,7 +171,8 @@ export const ordersRouter = router({
   save: protectedProcedure
     .input(saveOrderSchema)
     .mutation(async ({ ctx, input }) => {
-      const { orderId, type, reference, discount, fees, items } = input;
+      const { orderId, type, reference, discount, fees, items, clientId, soldAt } =
+        input;
       const store = await getStore();
       const totals = computeTotals(
         items,
@@ -198,6 +205,10 @@ export const ordersRouter = router({
         return { orderId, orderNumber: existing.number };
       }
 
+      // Replay of a tab already saved from the offline queue.
+      const dup = await byClientId(clientId);
+      if (dup) return { orderId: dup.id, orderNumber: dup.number };
+
       const number = await nextOrderNumber();
       try {
         const newId = await db.transaction(async (tx) => {
@@ -206,6 +217,8 @@ export const ordersRouter = router({
             .values({
               storeId: STORE_ID,
               number,
+              clientId,
+              createdAt: saleTime(soldAt),
               status: "open",
               type,
               reference,
@@ -219,6 +232,9 @@ export const ordersRouter = router({
         bumpPaths();
         return { orderId: newId, orderNumber: number };
       } catch {
+        // Lost a race with another delivery of the same queued tab.
+        const won = await byClientId(clientId);
+        if (won) return { orderId: won.id, orderNumber: won.number };
         throw fizzled("Something fizzled saving the tab. Try again.");
       }
     }),
@@ -260,11 +276,7 @@ export const ordersRouter = router({
           ? r2(tendered - totals.total)
           : null;
 
-      const now = Date.now();
-      const at =
-        soldAt && soldAt.getTime() <= now && now - soldAt.getTime() < MAX_OFFLINE_MS
-          ? soldAt
-          : new Date(now);
+      const at = saleTime(soldAt);
 
       // Replay of a sale that already landed: answer with the same receipt and
       // touch nothing — no new number, no second stock deduction.

@@ -142,6 +142,13 @@ const feesSchema = z
   .default({ service: 0, packaging: 0, delivery: 0 });
 export type OrderFees = z.infer<typeof feesSchema>;
 
+// Offline replay: the POS's idempotency key and when the order actually
+// happened (it may sync hours later). Server clamps soldAt to a sane window.
+const offlineFields = {
+  clientId: z.uuid().optional(),
+  soldAt: z.coerce.date().optional(),
+};
+
 export const checkoutSchema = z.object({
   // When set, settle this existing open tab instead of creating a new order.
   orderId: z.uuid().optional(),
@@ -158,10 +165,7 @@ export const checkoutSchema = z.object({
   fees: feesSchema,
   tendered: money.optional(),
   items: z.array(lineSchema).min(1, "Add at least one item"),
-  // Offline replay: the POS's idempotency key and when the sale actually
-  // happened (it may sync hours later). Server clamps soldAt to a sane window.
-  clientId: z.uuid().optional(),
-  soldAt: z.coerce.date().optional(),
+  ...offlineFields,
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
@@ -180,6 +184,7 @@ export const saveOrderSchema = z.object({
   discount: money.default(0),
   fees: feesSchema,
   items: z.array(lineSchema).min(1, "Add at least one item"),
+  ...offlineFields,
 });
 export type SaveOrderInput = z.infer<typeof saveOrderSchema>;
 

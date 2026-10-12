@@ -5,8 +5,13 @@ import { TRPCClientError } from "@trpc/client";
 import type { inferRouterInputs } from "@trpc/server";
 import type { AppRouter } from "@/lib/trpc/root";
 
-export type QueuedSale = {
-  input: inferRouterInputs<AppRouter>["orders"]["checkout"] & { clientId: string };
+type Inputs = inferRouterInputs<AppRouter>["orders"];
+// A paid sale, or an open tab saved for later. Entries queued before `kind`
+// existed are checkouts.
+export type QueuedSale = (
+  | { kind?: "checkout"; input: Inputs["checkout"] & { clientId: string } }
+  | { kind: "save"; input: Inputs["save"] & { clientId: string } }
+) & {
   // Set when the server rejected the sale outright (not a network blip). Kept,
   // never dropped — it's money — and skipped by the flush until someone looks.
   failed?: string;
@@ -36,7 +41,7 @@ function write(list: QueuedSale[]) {
 // Sales rung while the network was down, waiting to be replayed in order.
 export const outbox = {
   all: read,
-  add: (input: QueuedSale["input"]) => write([...read(), { input }]),
+  add: (sale: QueuedSale) => write([...read(), sale]),
   remove: (clientId: string) =>
     write(read().filter((s) => s.input.clientId !== clientId)),
   fail: (clientId: string, message: string) =>

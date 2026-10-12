@@ -47,4 +47,13 @@ const [c, d] = await Promise.all([
 assert.ok(c.ok && d.ok, `racing deliveries failed: ${c.error?.json?.message ?? d.error?.json?.message}`);
 assert.equal(c.data.orderNumber, d.data.orderNumber, "racing replays must collapse to one order");
 
+// Open-tab save replays the same way.
+const tab = { type: "dine_in", items: [{ name: "Offline Check Tab", unitPrice: 50, quantity: 1 }], clientId: randomUUID() };
+const e = await call("orders.save", tab, admin);
+assert.ok(e.ok, `tab save failed: ${e.error?.json?.message}`);
+const f = await call("orders.save", tab, admin);
+assert.ok(f.ok, `tab replay failed: ${f.error?.json?.message}`);
+assert.equal(f.data.orderId, e.data.orderId, "tab replay must reuse the order");
+await call("orders.void", e.data.orderId, admin);
+
 console.log(`ok — replays collapsed to ${a.data.orderNumber} and ${c.data.orderNumber}`);

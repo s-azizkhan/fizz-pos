@@ -45,13 +45,13 @@ export default function NetworkStatus() {
 
   const offline = !online || failed > 0;
   const label = failed
-    ? `${failed} offline sale${failed > 1 ? "s" : ""} couldn't sync — tell a manager`
+    ? `${failed} offline order${failed > 1 ? "s" : ""} couldn't sync — tell a manager`
     : !online
       ? pending
-        ? `Offline — ${pending} sale${pending > 1 ? "s" : ""} saved on this device`
-        : "Offline — new sales save on this device"
+        ? `Offline — ${pending} order${pending > 1 ? "s" : ""} saved on this device`
+        : "Offline — new orders save on this device"
       : pending
-        ? `Syncing ${pending} offline sale${pending > 1 ? "s" : ""}…`
+        ? `Syncing ${pending} offline order${pending > 1 ? "s" : ""}…`
         : "Back online";
 
   return (

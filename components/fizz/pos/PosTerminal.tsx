@@ -52,7 +52,10 @@ export default function PosTerminal({
 }) {
   const router = useRouter();
   const trpc = useTRPC();
-  const saveTab = useMutation(trpc.orders.save.mutationOptions());
+  // handleSave toasts its own outcome (or queues offline); no global toast.
+  const saveTab = useMutation(
+    trpc.orders.save.mutationOptions({ meta: { silentError: true } }),
+  );
   // The error renders in the pay modal, or the sale queues offline; either way
   // no global toast.
   const settle = useMutation(
@@ -185,21 +188,54 @@ export default function PosTerminal({
     cart.add(item, null);
   }
 
+  // Network down on a brand-new order: bank it on the device, still fire the
+  // kitchen ticket, and keep ringing. Edits to an existing tab stay online-only
+  // — the tab lives on the server and may have changed under us.
+  function queueOffline(
+    sale: Parameters<typeof outbox.add>[0],
+    fresh: ReturnType<typeof kotDelta>,
+  ) {
+    outbox.add(sale);
+    setPayOpen(false);
+    toast.info("Offline — saved on this device, syncs when you're back");
+    // The real number arrives on sync; the kitchen just needs the lines.
+    if (usePrinter.getState().autoKot && fresh.length > 0) {
+      autoPrint("KOT", (cfg) =>
+        kotTicket(
+          {
+            storeName,
+            orderNumber: `OFF-${sale.input.clientId.slice(0, 4).toUpperCase()}`,
+            type: orderType,
+            reference: reference || null,
+            createdAt: new Date(),
+            addOn: false,
+            items: fresh,
+          },
+          cfg,
+        ),
+      );
+    }
+    resetTerminal();
+  }
+
   // Save the current cart as an OPEN tab (no payment). Used for dine-in: ring
   // dishes, save, settle later — and to add dishes mid-meal without a new order.
   async function handleSave() {
     if (cart.lines.length === 0 || saveTab.isPending) return;
     // Only what the kitchen hasn't seen: the cart minus the tab as loaded.
     const fresh = kotDelta(cart.lines, loaded?.lines ?? []);
+    const tab = {
+      orderId: editingId ?? undefined,
+      type: orderType,
+      reference,
+      discount: loaded?.discount ?? 0,
+      fees,
+      items: linePayload(),
+      clientId: crypto.randomUUID(),
+      soldAt: new Date(),
+    };
     try {
-      const res = await saveTab.mutateAsync({
-        orderId: editingId ?? undefined,
-        type: orderType,
-        reference,
-        discount: loaded?.discount ?? 0,
-        fees,
-        items: linePayload(),
-      });
+      const res = await saveTab.mutateAsync(tab);
       // Tab is saved — clear the terminal so the next order can be rung right
       // away. Revisit/settle the saved tab from the orders page.
       toast.success(`Saved tab ${res.orderNumber} — ready for the next order`);
@@ -221,6 +257,7 @@ export default function PosTerminal({
       }
       resetTerminal();
     } catch (e) {
+      if (!editingId && isNetworkError(e)) return queueOffline({ kind: "save", input: tab }, fresh);
       toast.error(e instanceof Error ? e.message : "Couldn't save the tab");
     }
   }
@@ -369,31 +406,8 @@ export default function PosTerminal({
       }
       resetTerminal();
     } catch (e) {
-      // Network down on a brand-new sale: bank it on the device and keep
-      // ringing. Settling an existing tab stays online-only — the tab lives on
-      // the server and may have changed under us.
       if (!editingId && isNetworkError(e)) {
-        outbox.add(sale);
-        setPayOpen(false);
-        toast.info("Offline — sale saved on this device, syncs when you're back");
-        // The kitchen still needs the ticket; the real number arrives on sync.
-        if (usePrinter.getState().autoKot && fresh.length > 0) {
-          autoPrint("KOT", (cfg) =>
-            kotTicket(
-              {
-                storeName,
-                orderNumber: `OFF-${sale.clientId.slice(0, 4).toUpperCase()}`,
-                type: orderType,
-                reference: reference || null,
-                createdAt: sale.soldAt,
-                addOn: false,
-                items: fresh,
-              },
-              cfg,
-            ),
-          );
-        }
-        resetTerminal();
+        queueOffline({ kind: "checkout", input: sale }, fresh);
         return;
       }
       // Surface the error inside the pay modal.
