@@ -395,3 +395,70 @@ export function WhatsAppIcon({ className }: P) {
     </Svg>
   );
 }
+
+export function QrIcon({ className }: P) {
+  return (
+    <Svg name="qr" className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
+    </Svg>
+  );
+}
+
+export function GlobeIcon({ className }: P) {
+  return (
+    <Svg name="globe" className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
+    </Svg>
+  );
+}
+
+export function LayersIcon({ className }: P) {
+  return (
+    <Svg name="layers" className={className}>
+      <path d="M12 3 2 8l10 5 10-5-10-5Z" />
+      <path className="fz-bob-down" d="m2 13 10 5 10-5" />
+    </Svg>
+  );
+}
+
+export function DiceIcon({ className }: P) {
+  return (
+    <Svg name="dice" className={className}>
+      <g className="fz-twist">
+        <rect x="4" y="4" width="16" height="16" rx="3" />
+        <path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01" strokeWidth={2.4} />
+      </g>
+    </Svg>
+  );
+}
+
+export function DownloadIcon({ className }: P) {
+  return (
+    <Svg name="download" className={className}>
+      <path className="fz-bob-down" d="M12 4v11M7 10l5 5 5-5" />
+      <path d="M4 20h16" />
+    </Svg>
+  );
+}
+
+export function ExternalIcon({ className }: P) {
+  return (
+    <Svg name="external" className={className}>
+      <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
+      <path className="fz-nudge-r" d="M14 4h6v6M20 4l-9 9" />
+    </Svg>
+  );
+}
+
+export function LinkIcon({ className }: P) {
+  return (
+    <Svg name="link" className={className}>
+      <path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1" />
+      <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1" />
+    </Svg>
+  );
+}

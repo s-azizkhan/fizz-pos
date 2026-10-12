@@ -8,14 +8,15 @@ import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { MenuItemWithVariants } from "@/lib/store/menu";
 import type { RecipeComponent } from "@/lib/db/schema";
 import NumberInput from "@/components/fizz/ui/NumberInput";
+import { CheckIcon, CloseIcon, PlusIcon } from "@/components/fizz/dashboard/icons";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
 const labelCls = "text-xs font-semibold uppercase tracking-[0.18em] text-fizz";
 const btnPrimary =
-  "rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
 const btnGhost =
-  "rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz";
+  "inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz";
 
 type Draft = { inventoryItemId: string; quantity: string };
 
@@ -91,6 +92,7 @@ export default function RecipeEditor({
           then map them here so each sale burns the right ingredients.
         </p>
         <button type="button" onClick={onDone} className={`${btnGhost} mt-4`}>
+          <CloseIcon className="h-4 w-4 shrink-0" />
           Close
         </button>
       </div>
@@ -98,7 +100,7 @@ export default function RecipeEditor({
   }
 
   return (
-    <div className="rounded-fizz border border-fizz/40 bg-fizz/5 p-5">
+    <div className="rounded-fizz border border-fizz/40 bg-fizz/5 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className={labelCls}>Recipe — {item.name}</span>
         {item.variants.length > 0 && (
@@ -127,13 +129,13 @@ export default function RecipeEditor({
 
       <div className="mt-4 flex flex-col gap-2">
         {rows.map((row, i) => (
-          <div key={i} className="flex gap-2">
+          <div key={i} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex">
             <select
               value={row.inventoryItemId}
               onChange={(e) =>
                 setRows(rows.map((x, j) => (j === i ? { ...x, inventoryItemId: e.target.value } : x)))
               }
-              className={inputCls}
+              className={`${inputCls} col-span-2`}
             >
               <option value="">Pick ingredient…</option>
               {ingredients.map((ing) => (
@@ -142,7 +144,7 @@ export default function RecipeEditor({
                 </option>
               ))}
             </select>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <NumberInput
                 value={row.quantity}
                 decimals={3}
@@ -151,16 +153,17 @@ export default function RecipeEditor({
                 onChange={(v) =>
                   setRows(rows.map((x, j) => (j === i ? { ...x, quantity: v } : x)))
                 }
-                className="max-w-[110px]"
+                className="sm:max-w-[110px]"
               />
-              <span className="w-10 text-sm text-steam">{unitOf(row.inventoryItemId)}</span>
+              <span className="w-10 shrink-0 text-sm text-steam">{unitOf(row.inventoryItemId)}</span>
             </div>
             <button
               type="button"
               onClick={() => setRows(rows.filter((_, j) => j !== i))}
-              className="rounded-fizz border border-ink-line px-3 text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
+              className="inline-flex items-center justify-center rounded-fizz border border-ink-line px-3 text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
+              aria-label="Remove ingredient"
             >
-              ✕
+              <CloseIcon className="h-4 w-4 shrink-0" />
             </button>
           </div>
         ))}
@@ -169,15 +172,18 @@ export default function RecipeEditor({
           onClick={() => setRows([...rows, { inventoryItemId: "", quantity: "" }])}
           className={`${btnGhost} self-start`}
         >
-          + Add ingredient
+          <PlusIcon className="h-4 w-4 shrink-0" />
+          Add ingredient
         </button>
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-4 flex flex-wrap items-center gap-3">
         <button type="button" onClick={submit} disabled={save.isPending} className={btnPrimary}>
+          <CheckIcon className="h-4 w-4 shrink-0" />
           {save.isPending ? "Saving…" : "Save recipe"}
         </button>
         <button type="button" onClick={onDone} className={btnGhost}>
+          <CheckIcon className="h-4 w-4 shrink-0" />
           Done
         </button>
         {error && <span className="text-sm text-[#E2655A]">{error}</span>}

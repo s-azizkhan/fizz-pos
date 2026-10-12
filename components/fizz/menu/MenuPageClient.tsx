@@ -10,6 +10,7 @@ import MenuQrModal from "@/components/fizz/menu/MenuQrModal";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { OrderSettings, RecipeComponent, Store } from "@/lib/db/schema";
+import { GlobeIcon, LayersIcon, PlusIcon, PrinterIcon, QrIcon } from "@/components/fizz/dashboard/icons";
 
 export default function MenuPageClient({
   store,
@@ -44,45 +45,51 @@ export default function MenuPageClient({
       <h1 className="mt-3 font-display text-[clamp(28px,5vw,44px)] font-bold tracking-tight">
         Menu
       </h1>
-      <p className="mt-3 max-w-[60ch] text-lg text-steam">
+      <p className="mt-3 max-w-[60ch] text-base text-steam sm:text-lg">
         Build your categories and items, reorder them, and publish a shareable
         public menu.
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-3">
+      <div className="mt-6 grid grid-cols-2 gap-2 text-sm sm:mt-8 sm:flex sm:flex-wrap sm:gap-3 sm:text-base">
         <button
           onClick={() => setIsNewCategoryOpen(true)}
-          className="rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105"
+          className="inline-flex items-center justify-center gap-2 col-span-2 rounded-fizz bg-fizz px-5 py-3 font-semibold text-ink transition-transform hover:scale-105 sm:py-2.5"
         >
-          + New category
+          <PlusIcon className="h-4 w-4 shrink-0" />
+          New category
         </button>
         <button
           onClick={() => setIsPublicMenuOpen(true)}
-          className="rounded-fizz border border-fizz bg-fizz/10 px-5 py-2.5 font-semibold text-fizz transition-colors hover:bg-fizz/20"
+          className="inline-flex items-center justify-center gap-2 rounded-fizz border border-fizz bg-fizz/10 px-3 py-3 font-semibold text-fizz transition-colors hover:bg-fizz/20 sm:px-5 sm:py-2.5"
         >
-          Public Menu Settings
+          <GlobeIcon className="h-4 w-4 shrink-0" />
+          <span className="sm:hidden">Public menu</span>
+          <span className="hidden sm:inline">Public Menu Settings</span>
         </button>
         <button
           onClick={() => setIsPublicSectionsOpen(true)}
-          className="rounded-fizz border border-fizz/50 px-5 py-2.5 font-semibold text-fizz transition-colors hover:border-fizz hover:bg-fizz/10"
+          className="inline-flex items-center justify-center gap-2 rounded-fizz border border-fizz/50 px-3 py-3 font-semibold text-fizz transition-colors hover:border-fizz hover:bg-fizz/10 sm:px-5 sm:py-2.5"
         >
+          <LayersIcon className="h-4 w-4 shrink-0" />
           Menu Sections
         </button>
         <button
           onClick={() => setIsQrOpen(true)}
-          className="rounded-fizz border border-ink-line px-5 py-2.5 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+          className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz sm:px-5 sm:py-2.5"
         >
+          <QrIcon className="h-4 w-4 shrink-0" />
           Menu QR code
         </button>
         <button
           onClick={() => setIsExportPdfOpen(true)}
-          className="rounded-fizz border border-ink-line px-5 py-2.5 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+          className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz sm:px-5 sm:py-2.5"
         >
+          <PrinterIcon className="h-4 w-4 shrink-0" />
           Printable PDF
         </button>
       </div>
 
-      <div className="mt-10">
+      <div className="mt-6 sm:mt-10">
         <MenuManager
           key={shapeKey}
           categories={categories}

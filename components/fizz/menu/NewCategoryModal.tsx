@@ -5,12 +5,13 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import IconPicker from "./IconPicker";
+import { CloseIcon, PlusIcon } from "@/components/fizz/dashboard/icons";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
 const labelCls = "text-xs font-semibold uppercase tracking-[0.18em] text-fizz";
 const btnPrimary =
-  "rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
 
 export default function NewCategoryModal({
   isOpen,
@@ -41,9 +42,9 @@ export default function NewCategoryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-fizz bg-ink p-8 shadow-lg">
-        <div className="flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:p-4">
+      <div className="h-dvh w-full max-w-2xl overflow-y-auto bg-ink p-5 sm:h-auto sm:max-h-[90vh] sm:rounded-fizz sm:p-8 sm:shadow-lg">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-2xl font-bold tracking-tight">New category</h2>
             <p className="mt-1 text-sm text-steam">
@@ -52,10 +53,10 @@ export default function NewCategoryModal({
           </div>
           <button
             onClick={onClose}
-            className="text-2xl text-steam hover:text-fizz"
+            className="shrink-0 rounded-full p-1 text-steam hover:text-fizz"
             aria-label="Close modal"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -77,12 +78,13 @@ export default function NewCategoryModal({
           {error && <p className="text-sm text-[#E2655A]">{error}</p>}
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-4 border-t border-ink-line pt-6">
+        <div className="mt-6 flex items-center justify-end gap-3 border-t border-ink-line pt-5 sm:gap-4 sm:pt-6">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
+            <CloseIcon className="h-4 w-4 shrink-0" />
             Cancel
           </button>
           <button
@@ -91,6 +93,7 @@ export default function NewCategoryModal({
             disabled={create.isPending || !newName.trim()}
             className={btnPrimary}
           >
+            <PlusIcon className="h-4 w-4 shrink-0" />
             {create.isPending ? "Adding…" : "Add category"}
           </button>
         </div>

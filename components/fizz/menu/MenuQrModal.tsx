@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Chip, ControlSection, ValueSlider } from "@/components/fizz/ui/controls";
 import QRCode from "qrcode";
 import { toPng } from "html-to-image";
+import { CheckIcon, CloseIcon, DownloadIcon, LinkIcon } from "@/components/fizz/dashboard/icons";
 
 // Print frames. Colors are literal because this leaves the app as a PNG the
 // café prints — brand tokens don't exist on paper, and scanners need the QR
@@ -423,9 +424,9 @@ export default function MenuQrModal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 rounded-full border border-ink-line px-3 py-1 text-sm text-steam transition-colors hover:border-fizz hover:text-fizz"
+            className="shrink-0 rounded-full border border-ink-line p-2 text-sm text-steam transition-colors hover:border-fizz hover:text-fizz"
           >
-            ✕
+            <CloseIcon className="h-4 w-4 shrink-0" />
           </button>
         </div>
 
@@ -604,23 +605,26 @@ export default function MenuQrModal({
             type="button"
             onClick={download}
             disabled={busy || !qr}
-            className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
           >
+            <DownloadIcon className="h-4 w-4 shrink-0" />
             {busy ? "Rendering…" : "Download PNG"}
           </button>
           <button
             type="button"
             onClick={copyLink}
-            className="rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
+            {copied ? <CheckIcon className="h-4 w-4 shrink-0" /> : <LinkIcon className="h-4 w-4 shrink-0" />}
             {copied ? "Copied ●" : "Copy link"}
           </button>
           <p className="hidden text-sm text-steam lg:block">1440 × 1920px — prints clean to A5.</p>
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="inline-flex items-center justify-center gap-2 ml-auto rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
+            <CloseIcon className="h-4 w-4 shrink-0" />
             Close
           </button>
         </div>

@@ -15,14 +15,15 @@ import type {
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { RecipeComponent } from "@/lib/db/schema";
 import NumberInput from "@/components/fizz/ui/NumberInput";
+import { ArrowDownIcon, ArrowUpIcon, BoxIcon, CheckIcon, CloseIcon, EyeIcon, EyeOffIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
 const labelCls = "text-xs font-semibold uppercase tracking-[0.18em] text-fizz";
 const btnPrimary =
-  "rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
 const btnGhost =
-  "rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz";
+  "inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz";
 
 type VariantDraft = { name: string; price: string; cost: string };
 
@@ -37,14 +38,14 @@ function VariantEditor({
     <div className="flex flex-col gap-2">
       <span className={labelCls}>Variants</span>
       {variants.map((v, i) => (
-        <div key={i} className="flex gap-2">
+        <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 sm:flex">
           <input
             value={v.name}
             placeholder="e.g. Large"
             onChange={(e) =>
               setVariants(variants.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))
             }
-            className={inputCls}
+            className={`${inputCls} col-span-3`}
           />
           <NumberInput
             value={v.price}
@@ -53,7 +54,7 @@ function VariantEditor({
             onChange={(price) =>
               setVariants(variants.map((x, j) => (j === i ? { ...x, price } : x)))
             }
-            className="max-w-[110px]"
+            className="sm:max-w-[110px]"
           />
           <NumberInput
             value={v.cost}
@@ -62,14 +63,15 @@ function VariantEditor({
             onChange={(cost) =>
               setVariants(variants.map((x, j) => (j === i ? { ...x, cost } : x)))
             }
-            className="max-w-[110px]"
+            className="sm:max-w-[110px]"
           />
           <button
             type="button"
             onClick={() => setVariants(variants.filter((_, j) => j !== i))}
-            className="rounded-fizz border border-ink-line px-3 text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
+            className="inline-flex items-center justify-center rounded-fizz border border-ink-line px-3 text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
+            aria-label="Remove variant"
           >
-            ✕
+            <CloseIcon className="h-4 w-4 shrink-0" />
           </button>
         </div>
       ))}
@@ -78,7 +80,8 @@ function VariantEditor({
         onClick={() => setVariants([...variants, { name: "", price: "", cost: "" }])}
         className={`${btnGhost} self-start`}
       >
-        + Add variant
+        <PlusIcon className="h-4 w-4 shrink-0" />
+        Add variant
       </button>
     </div>
   );
@@ -146,8 +149,8 @@ function ItemForm({
   }
 
   return (
-    <div className="rounded-fizz border border-fizz/40 bg-fizz/5 p-5">
-      <div className="grid gap-4 sm:grid-cols-2">
+    <div className="rounded-fizz border border-fizz/40 bg-fizz/5 p-4 sm:p-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-2 sm:col-span-2">
           <span className={labelCls}>Item name</span>
           <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
@@ -189,11 +192,13 @@ function ItemForm({
           <VariantEditor variants={variants} setVariants={setVariants} />
         </div>
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button type="button" onClick={submit} disabled={save.isPending || !name.trim()} className={btnPrimary}>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button type="button" onClick={submit} disabled={save.isPending || !name.trim()} className={`${btnPrimary} flex-1 sm:flex-none`}>
+          <CheckIcon className="h-4 w-4 shrink-0" />
           {save.isPending ? "Saving…" : item ? "Save item" : "Add item"}
         </button>
         <button type="button" onClick={onDone} className={btnGhost}>
+          <CloseIcon className="h-4 w-4 shrink-0" />
           Cancel
         </button>
         {error && <span className="text-sm text-[#E2655A]">{error}</span>}
@@ -242,15 +247,16 @@ function ItemRow({
   }
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 rounded-fizz border border-ink-line bg-ink p-4">
-      <div className="min-w-0">
+    <div className="flex flex-col gap-3 rounded-fizz border border-ink-line bg-ink p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
+      <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-cream">{item.name}</span>
+          <span className="min-w-0 break-words font-semibold text-cream">{item.name}</span>
           {!item.available && (
             <span className="rounded-full border border-[#E2655A]/50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#E2655A]">
               Hidden
             </span>
           )}
+          <span className="ml-auto shrink-0 font-display font-semibold text-fizz sm:hidden">{formatMoney(item.price, currency)}</span>
         </div>
         {item.description && <p className="mt-1 text-sm text-steam">{item.description}</p>}
         {item.variants.length > 0 && (
@@ -259,37 +265,41 @@ function ItemRow({
           </p>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="font-display font-semibold text-fizz">{formatMoney(item.price, currency)}</span>
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center sm:gap-3">
+        <span className="hidden font-display font-semibold text-fizz sm:inline">{formatMoney(item.price, currency)}</span>
         <button
           type="button"
           onClick={() => toggle.mutate({ id: item.id })}
           disabled={toggle.isPending}
-          className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam hover:border-fizz hover:text-fizz"
+          className="inline-flex items-center justify-center gap-1 rounded-full border border-ink-line whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:py-1 font-semibold text-steam hover:border-fizz hover:text-fizz"
         >
+          {item.available ? <EyeOffIcon className="h-3.5 w-3.5 shrink-0" /> : <EyeIcon className="h-3.5 w-3.5 shrink-0" />}
           {item.available ? "Hide" : "Show"}
         </button>
         <button
           type="button"
           onClick={() => setRecipeOpen(true)}
-          className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+          className={`inline-flex items-center justify-center gap-1 rounded-full border whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:py-1 font-semibold transition-colors ${
             recipe.length > 0
               ? "border-fizz/50 text-fizz hover:border-fizz"
               : "border-ink-line text-steam hover:border-fizz hover:text-fizz"
           }`}
           title="Map this item to stock so sales auto-deduct"
         >
+          <BoxIcon className="h-3.5 w-3.5 shrink-0" />
           Recipe{recipe.length > 0 ? ` · ${recipe.length}` : ""}
         </button>
-        <button type="button" onClick={() => setEditing(true)} className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam hover:border-fizz hover:text-fizz">
+        <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center justify-center gap-1 rounded-full border border-ink-line whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:py-1 font-semibold text-steam hover:border-fizz hover:text-fizz">
+          <PencilIcon className="h-3.5 w-3.5 shrink-0" />
           Edit
         </button>
         <button
           type="button"
           onClick={() => del.mutate({ id: item.id })}
           disabled={del.isPending}
-          className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
+          className="inline-flex items-center justify-center gap-1 rounded-full border border-ink-line whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:py-1 font-semibold text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
         >
+          <TrashIcon className="h-3.5 w-3.5 shrink-0" />
           Delete
         </button>
       </div>
@@ -338,37 +348,39 @@ function CategoryCard({
   }
 
   return (
-    <div className="rounded-fizz border border-ink-line bg-ink-soft p-6">
+    <div className="rounded-fizz border border-ink-line bg-ink-soft p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col">
-            <button type="button" disabled={index === 0} onClick={() => onMove(-1)} className="text-steam hover:text-fizz disabled:opacity-30" aria-label="Move up">▲</button>
-            <button type="button" disabled={index === count - 1} onClick={() => onMove(1)} className="text-steam hover:text-fizz disabled:opacity-30" aria-label="Move down">▼</button>
+        <div className="flex min-w-[10rem] flex-1 items-center gap-3">
+          <div className="flex shrink-0 flex-col">
+            <button type="button" disabled={index === 0} onClick={() => onMove(-1)} className="px-2 py-1 leading-none text-steam hover:text-fizz disabled:opacity-30" aria-label="Move up"><ArrowUpIcon className="h-4 w-4 shrink-0" /></button>
+            <button type="button" disabled={index === count - 1} onClick={() => onMove(1)} className="px-2 py-1 leading-none text-steam hover:text-fizz disabled:opacity-30" aria-label="Move down"><ArrowDownIcon className="h-4 w-4 shrink-0" /></button>
           </div>
           <span className="text-2xl"><MenuCategoryIconGlyph name={category.icon} /></span>
           {editing ? (
-            <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} max-w-[220px]`} />
+            <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} min-w-0 sm:max-w-[220px]`} />
           ) : (
-            <h3 className="font-display text-xl font-bold tracking-tight">{category.name}</h3>
+            <h3 className="min-w-0 font-display text-lg font-bold tracking-tight sm:text-xl">{category.name}</h3>
           )}
-          <span className="text-sm text-steam">({category.items.length})</span>
+          <span className="shrink-0 text-sm text-steam">({category.items.length})</span>
         </div>
         <div className="flex items-center gap-3">
           {editing ? (
             <>
-              <button type="button" onClick={saveCategory} disabled={update.isPending} className={btnPrimary}>Save</button>
-              <button type="button" onClick={() => { setEditing(false); setName(category.name); setIcon(category.icon); }} className={btnGhost}>Cancel</button>
+              <button type="button" onClick={saveCategory} disabled={update.isPending} className={btnPrimary}><CheckIcon className="h-4 w-4 shrink-0" />Save</button>
+              <button type="button" onClick={() => { setEditing(false); setName(category.name); setIcon(category.icon); }} className={btnGhost}><CloseIcon className="h-4 w-4 shrink-0" />Cancel</button>
             </>
           ) : (
             <>
-              <button type="button" onClick={() => setEditing(true)} className={btnGhost}>Edit</button>
+              <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-1.5 text-sm font-semibold sm:px-4 sm:py-2 text-cream transition-colors hover:border-fizz hover:text-fizz" aria-label="Edit category"><PencilIcon className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Edit</span></button>
               <button
                 type="button"
                 onClick={() => del.mutate({ id: category.id })}
+                aria-label="Delete category"
                 disabled={del.isPending}
-                className="rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
+                className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-1.5 text-sm font-semibold sm:px-4 sm:py-2 text-steam hover:border-[#E2655A] hover:text-[#E2655A]"
               >
-                Delete
+                <TrashIcon className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Delete</span>
               </button>
             </>
           )}
@@ -382,7 +394,7 @@ function CategoryCard({
         </div>
       )}
 
-      <div className="mt-5 flex flex-col gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:mt-5">
         {category.items.map((it) => (
           <ItemRow
             key={it.id}
@@ -397,7 +409,8 @@ function CategoryCard({
           <ItemForm categoryId={category.id} currency={currency} onDone={() => setAdding(false)} />
         ) : (
           <button type="button" onClick={() => setAdding(true)} className={`${btnGhost} self-start`}>
-            + Add item
+            <PlusIcon className="h-4 w-4 shrink-0" />
+            Add item
           </button>
         )}
       </div>
@@ -454,7 +467,7 @@ export default function MenuManager({
   return (
     <div className="flex flex-col gap-6">
       {categories.length === 0 ? (
-        <div className="rounded-fizz border border-ink-line bg-ink-soft p-10 text-center text-steam">
+        <div className="rounded-fizz border border-ink-line bg-ink-soft p-6 text-center text-steam sm:p-10">
           No categories yet. Create one above to start building your menu.
         </div>
       ) : (

@@ -18,6 +18,7 @@ import {
   ControlSection,
   ValueSlider,
 } from "@/components/fizz/ui/controls";
+import { CloseIcon, DiceIcon, DownloadIcon, ExternalIcon, PrinterIcon } from "@/components/fizz/dashboard/icons";
 
 type Combo = {
   scheme: string;
@@ -108,12 +109,12 @@ export default function ExportMenuPdfModal({
     window.open(`/menu-pdf?${qs(op, fs)}`, "_blank", "noopener");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-fizz border border-ink-line bg-ink shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 sm:p-4">
+      <div className="flex h-dvh w-full max-w-5xl flex-col overflow-hidden bg-ink sm:h-auto sm:max-h-[92vh] sm:rounded-fizz sm:border sm:border-ink-line sm:shadow-lg">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-ink-line px-6 py-5">
+        <div className="flex items-center justify-between gap-4 border-b border-ink-line px-4 py-4 sm:px-6 sm:py-5">
           <div>
-            <h2 className="font-display text-2xl font-bold tracking-tight">
+            <h2 className="font-display text-xl font-bold tracking-tight sm:text-2xl">
               Printable menu
             </h2>
             <p className="mt-0.5 text-sm text-steam">
@@ -124,24 +125,25 @@ export default function ExportMenuPdfModal({
             <button
               type="button"
               onClick={shuffle}
-              className="rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+              className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
               title="Random combo"
             >
-              🎲 Shuffle
+              <DiceIcon className="h-4 w-4 shrink-0" />
+              Shuffle
             </button>
             <button
               onClick={onClose}
-              className="text-2xl leading-none text-steam hover:text-fizz"
+              className="shrink-0 rounded-full p-1 text-steam hover:text-fizz"
               aria-label="Close modal"
             >
-              ✕
+              <CloseIcon className="h-5 w-5" />
             </button>
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 sm:grid-cols-[300px_1fr]">
+        <div className="grid min-h-0 flex-1 overflow-y-auto sm:grid-cols-[300px_1fr] sm:overflow-hidden">
           {/* Controls */}
-          <div className="flex flex-col gap-5 overflow-y-auto border-b border-ink-line p-5 sm:border-b-0 sm:border-r">
+          <div className="flex flex-col gap-5 border-b border-ink-line p-4 sm:overflow-y-auto sm:border-b-0 sm:border-r sm:p-5">
             {/* Presets */}
             <ControlSection label="Presets">
               <div className="flex flex-wrap gap-2">
@@ -257,27 +259,30 @@ export default function ExportMenuPdfModal({
         </div>
 
         {/* Footer */}
-        <div className="flex flex-wrap items-center gap-3 border-t border-ink-line px-6 py-4">
+        <div className="flex flex-wrap items-center gap-2 border-t border-ink-line px-4 py-3 sm:gap-3 sm:px-6 sm:py-4">
           <button
             type="button"
             onClick={printNow}
-            className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105"
+            className="inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105"
           >
+            <PrinterIcon className="h-4 w-4 shrink-0" />
             Print / Save PDF
           </button>
           <button
             type="button"
             onClick={savePng}
-            className="rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
+            <DownloadIcon className="h-4 w-4 shrink-0" />
             Save PNG
           </button>
           <button
             type="button"
             onClick={openFull}
-            className="rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
-            Open full ↗
+            <ExternalIcon className="h-4 w-4 shrink-0" />
+            Open full
           </button>
           <p className="hidden text-sm text-steam sm:block">
             Print uses your browser’s “Save as PDF”.
@@ -285,8 +290,9 @@ export default function ExportMenuPdfModal({
           <button
             type="button"
             onClick={onClose}
-            className="ml-auto rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="inline-flex items-center justify-center gap-2 ml-auto rounded-fizz border border-ink-line px-5 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
+            <CloseIcon className="h-4 w-4 shrink-0" />
             Close
           </button>
         </div>

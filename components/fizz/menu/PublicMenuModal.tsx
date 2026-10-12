@@ -10,6 +10,7 @@ import { MENU_THEMES } from "@/lib/store/menu-themes";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { OrderSettings, Store } from "@/lib/db/schema";
 import NumberInput from "@/components/fizz/ui/NumberInput";
+import { CheckIcon, CloseIcon, ExternalIcon } from "@/components/fizz/dashboard/icons";
 
 
 const inputCls =
@@ -54,9 +55,9 @@ export default function PublicMenuModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-fizz bg-ink shadow-lg">
-        <div className="flex items-center justify-between p-8 pb-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:p-4">
+      <div className="flex h-dvh w-full max-w-2xl flex-col bg-ink sm:h-auto sm:max-h-[90vh] sm:rounded-fizz sm:shadow-lg">
+        <div className="flex items-start justify-between gap-4 p-5 pb-0 sm:p-8 sm:pb-0">
           <div>
             <h2 className="font-display text-2xl font-bold tracking-tight">Public menu</h2>
             <p className="mt-1 text-sm text-steam">
@@ -65,10 +66,10 @@ export default function PublicMenuModal({
           </div>
           <button
             onClick={onClose}
-            className="text-2xl text-steam hover:text-fizz"
+            className="shrink-0 rounded-full p-1 text-steam hover:text-fizz"
             aria-label="Close modal"
           >
-            ✕
+            <CloseIcon className="h-5 w-5" />
           </button>
         </div>
 
@@ -77,7 +78,7 @@ export default function PublicMenuModal({
           e.preventDefault();
           save.mutate(fields(e.currentTarget));
         }} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto p-8">
+          <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-8">
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="flex flex-col gap-2 sm:col-span-2">
               <span className={labelCls}>Menu link</span>
@@ -91,8 +92,9 @@ export default function PublicMenuModal({
                 />
               </div>
               {published && (
-                <a href={url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-bubble hover:underline">
-                  {url} ↗
+                <a href={url} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-1.5 text-sm font-semibold text-bubble hover:underline">
+                  <span className="truncate">{url}</span>
+                  <ExternalIcon className="h-3.5 w-3.5 shrink-0" />
                 </a>
               )}
             </label>
@@ -237,8 +239,9 @@ export default function PublicMenuModal({
           </div>
           </div>
 
-          <div className="flex items-center gap-4 border-t border-ink-line px-8 py-6">
-            <button type="submit" disabled={save.isPending} className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
+          <div className="flex flex-wrap items-center gap-3 border-t border-ink-line px-5 py-4 sm:gap-4 sm:px-8 sm:py-6">
+            <button type="submit" disabled={save.isPending} className="inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
+              <CheckIcon className="h-4 w-4 shrink-0" />
               {save.isPending ? "Saving…" : "Save menu settings"}
             </button>
             {saved && <span className="text-sm font-semibold text-fizz">Saved ●</span>}
@@ -246,8 +249,9 @@ export default function PublicMenuModal({
             <button
               type="button"
               onClick={onClose}
-              className="ml-auto rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+              className="inline-flex items-center justify-center gap-2 ml-auto rounded-fizz border border-ink-line px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
             >
+              <CloseIcon className="h-4 w-4 shrink-0" />
               Close
             </button>
           </div>
