@@ -23,7 +23,7 @@ Required env: `DB_URL` (postgres), `SESSION_SECRET` (JWT signing). Seeder reads 
 
 ## Architecture
 
-**Single-store café POS.** Public marketing/menu site + an authed `/dashboard` operating the till, inventory, menu, expenses, and analytics.
+**Single-store café POS.** Public marketing/menu site + an authed `/dashboard` operating the POS, inventory, menu, expenses, and analytics.
 
 ### Single-store model
 Every row links to one store identified by the fixed UUID `STORE_ID` in `lib/store/constants.ts`. `getStore()` (`lib/store/data.ts`) lazily creates that singleton row. The schema is multi-store-ready but the app is hardwired to one store — scope new queries by `STORE_ID`.

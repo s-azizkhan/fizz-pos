@@ -17,9 +17,9 @@ export default function DashboardShell({
 }) {
   const pathname = usePathname();
 
-  // The till sizes itself to the viewport and scrolls internally, so it takes
+  // The POS sizes itself to the viewport and scrolls internally, so it takes
   // no bottom padding — the floating tab bar still shows over it.
-  const fullBleed = pathname.startsWith("/dashboard/till");
+  const fullBleed = pathname.startsWith("/dashboard/pos");
 
   const current = NAV_ITEMS.filter((i) => i.href !== "/dashboard").find((i) =>
     pathname.startsWith(i.href),

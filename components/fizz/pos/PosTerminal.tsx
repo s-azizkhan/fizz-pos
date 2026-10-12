@@ -107,7 +107,7 @@ export default function PosTerminal({
     setEditingId(null);
     setEditingNumber(null);
     setCartOpen(false);
-    if (loaded) router.replace("/dashboard/till");
+    if (loaded) router.replace("/dashboard/pos");
   }
 
   // Search → one untitled section of matches; otherwise every category
@@ -157,7 +157,7 @@ export default function PosTerminal({
     );
     // ponytail: fallback for browsers without `scrollend` (older Safari).
     setTimeout(() => (jumpingRef.current = false), 800);
-    document.getElementById(`till-cat-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById(`pos-cat-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // Keep the active chip centred in the horizontal chip rail.
@@ -228,7 +228,7 @@ export default function PosTerminal({
     if (t !== "delivery") setFees((f) => ({ ...f, delivery: 0 }));
   }
 
-  // Global keyboard handling. Typing focuses search; shortcuts drive the till.
+  // Global keyboard handling. Typing focuses search; shortcuts drive the POS.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const anyModalOpen = payOpen || receipt || variantFor || feesOpen;
@@ -308,7 +308,7 @@ export default function PosTerminal({
   }, [payOpen, receipt, variantFor, feesOpen, query, cart.count, visibleItems]);
 
   // Focus search on mount for instant typing — but only where there's a real
-  // pointer (mouse/trackpad = a keyboard too). On a touch till, autofocus
+  // pointer (mouse/trackpad = a keyboard too). On a touch POS, autofocus
   // throws up the on-screen keyboard over the menu grid before anyone asks.
   useEffect(() => {
     if (window.matchMedia("(pointer: fine)").matches) searchRef.current?.focus();
@@ -361,7 +361,7 @@ export default function PosTerminal({
       resetTerminal();
     } catch (e) {
       // Surface the error inside the pay modal.
-      return e instanceof Error ? e.message : "Something fizzled at the till.";
+      return e instanceof Error ? e.message : "Something fizzled at the POS.";
     }
   }
 
@@ -381,7 +381,7 @@ export default function PosTerminal({
           <header className="shrink-0 border-b border-ink-line px-5 py-4">
             <div className="flex items-center gap-3">
               <span className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-                Till ●
+                POS ●
               </span>
               <div className="relative flex-1">
                 <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-steam">

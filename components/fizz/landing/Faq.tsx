@@ -16,7 +16,7 @@ const QA = [
   },
   {
     q: "My staff isn't tech-savvy.",
-    a: "If they can use WhatsApp, they can bill on Fizz. Big buttons, your menu, three taps per order. Staff get their own login — they see the till, not your profits.",
+    a: "If they can use WhatsApp, they can bill on Fizz. Big buttons, your menu, three taps per order. Staff get their own login — they see the POS, not your profits.",
   },
   {
     q: "Setting up recipes sounds like work.",

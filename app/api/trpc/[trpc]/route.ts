@@ -8,7 +8,7 @@ import { createContext } from "@/lib/trpc/init";
 // to an HTML login page).
 function handler(req: Request) {
   // Server Actions get Origin/Host validation from the framework. Route
-  // Handlers do not, and this is a cookie-authed POST endpoint for a till.
+  // Handlers do not, and this is a cookie-authed POST endpoint for a POS.
   if (req.method !== "GET") {
     const origin = req.headers.get("origin");
     const host = req.headers.get("host");

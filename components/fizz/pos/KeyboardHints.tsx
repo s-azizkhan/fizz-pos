@@ -11,7 +11,7 @@ const HINTS: [string, string][] = [
   ["esc", "back"],
 ];
 
-// A slim, dismissible cheat sheet of the till's keyboard shortcuts. Sits at the
+// A slim, dismissible cheat sheet of the POS's keyboard shortcuts. Sits at the
 // foot of the menu pane so new staff learn the fast path without a manual.
 export default function KeyboardHints() {
   const [open, setOpen] = useState(true);

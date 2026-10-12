@@ -81,7 +81,7 @@ export async function applyRecipeDeductions(
 
   // Batch both writes. This used to loop and await an insert + an update per
   // touched ingredient — 2 round trips each, serialized inside the checkout
-  // transaction, on the till's hottest path.
+  // transaction, on the POS's hottest path.
   const writes = current
     .map((item) => {
       const amount = used.get(item.id) ?? 0;

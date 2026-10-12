@@ -23,7 +23,7 @@ export const store = pgTable("store", {
   postalCode: text("postal_code"),
   country: text("country"),
   taxId: text("tax_id"),
-  // Sales tax applied at the till. Rate is a percentage (e.g. "5.00" = 5%).
+  // Sales tax applied at the POS. Rate is a percentage (e.g. "5.00" = 5%).
   // `taxLabel` names it on bills (GST, VAT, Sales Tax...). 0 = no tax.
   taxRate: numeric("tax_rate", { precision: 6, scale: 3 }).notNull().default("0"),
   taxLabel: text("tax_label").notNull().default("Tax"),
@@ -31,7 +31,7 @@ export const store = pgTable("store", {
   taxInclusive: boolean("tax_inclusive").notNull().default(false),
   timezone: text("timezone").notNull().default("UTC"),
   // Online payments. UPI VPA (e.g. cafe@okhdfcbank) + the payee name shown in
-  // the customer's UPI app. Both set = the till can render a pay-by-QR code.
+  // the customer's UPI app. Both set = the POS can render a pay-by-QR code.
   upiId: text("upi_id"),
   upiName: text("upi_name"),
   currency: text("currency").notNull().default("USD"),
@@ -52,7 +52,7 @@ export const store = pgTable("store", {
   nextOrderSeq: integer("next_order_seq").notNull().default(1),
   // Public menu page. `menuSlug` is the shareable URL token; null = not shared.
   menuSlug: text("menu_slug").unique(),
-  // Printed ticket layouts (Printers → Ticket design), shared by every till.
+  // Printed ticket layouts (Printers → Ticket design), shared by every POS.
   // A missing kind falls back to the built-in default layout.
   ticketLayouts: jsonb("ticket_layouts").$type<{ receipt?: Block[]; kot?: Block[] }>(),
   menuPublished: boolean("menu_published").notNull().default(false),

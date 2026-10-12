@@ -10,7 +10,7 @@ import { router, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
 export const storeRouter = router({
   get: protectedProcedure.query(() => getStore()),
 
-  // Every till refetches this on focus so a design change lands without a reload.
+  // Every POS refetches this on focus so a design change lands without a reload.
   ticketLayouts: protectedProcedure.query(async () => (await getStore()).ticketLayouts ?? {}),
 
   setTicketLayout: editorProcedure

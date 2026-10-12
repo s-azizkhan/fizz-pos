@@ -29,8 +29,8 @@ export type PendingInvite = {
 // eyes open instead of guessing from the word.
 const ROLES: { value: UserRole; label: string; blurb: string }[] = [
   { value: "admin", label: "Admin", blurb: "Everything — team, store settings, the books." },
-  { value: "manager", label: "Manager", blurb: "Runs the shift: till, menu, inventory, expenses." },
-  { value: "staff", label: "Staff", blurb: "Rings orders at the till." },
+  { value: "manager", label: "Manager", blurb: "Runs the shift: POS, menu, inventory, expenses." },
+  { value: "staff", label: "Staff", blurb: "Rings orders at the POS." },
 ];
 
 const ROLE_LABEL = Object.fromEntries(ROLES.map((r) => [r.value, r.label])) as Record<

@@ -37,7 +37,7 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 ];
 
 // Orders dashboard: filter by open/paid, revisit an open tab to edit in the
-// till, settle it, or void it. Paid orders are read-only receipts.
+// POS, settle it, or void it. Paid orders are read-only receipts.
 export default function OrdersClient({
   orders,
   month,
@@ -83,12 +83,12 @@ export default function OrdersClient({
   );
 
   function edit(id: string) {
-    router.push(`/dashboard/till?order=${id}`);
+    router.push(`/dashboard/pos?order=${id}`);
   }
 
   function settle(id: string) {
-    // Reuse the till's pay flow — opening the tab there gives the full sheet.
-    router.push(`/dashboard/till?order=${id}`);
+    // Reuse the POS's pay flow — opening the tab there gives the full sheet.
+    router.push(`/dashboard/pos?order=${id}`);
   }
 
   async function reprint(r: ReceiptData) {
@@ -132,7 +132,7 @@ export default function OrdersClient({
           </p>
         </div>
         <a
-          href="/dashboard/till"
+          href="/dashboard/pos"
           className="rounded-fizz bg-fizz px-5 py-3 font-semibold text-ink transition-transform hover:scale-105"
         >
           + New order

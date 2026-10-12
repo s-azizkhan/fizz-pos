@@ -4,7 +4,7 @@ import { useState } from "react";
 import Modal from "@/components/fizz/Modal";
 import type { OrderFees, OrderType } from "./types";
 
-// The fees a till can add on top of an order. Delivery is only offered on
+// The fees a POS can add on top of an order. Delivery is only offered on
 // delivery orders. Any combination can ride on a single order.
 export const FEE_FIELDS: {
   key: keyof OrderFees;

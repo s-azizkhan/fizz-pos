@@ -1,4 +1,4 @@
-// Money-path regression checks. The till is the one place a silent change
+// Money-path regression checks. The POS is the one place a silent change
 // costs real money, and there is no test runner in this repo — so this is a
 // plain assert script: `npx tsx scripts/check-checkout.mts`.
 //

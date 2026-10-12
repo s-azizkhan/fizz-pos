@@ -3,7 +3,7 @@ import PrintersClient from "@/components/fizz/printers/PrintersClient";
 
 export const metadata: Metadata = { title: "Printers — Fizz" };
 
-// Every role: printer pairing is per device, and staff run the till.
+// Every role: printer pairing is per device, and staff run the POS.
 export default function PrintersPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
@@ -14,7 +14,7 @@ export default function PrintersPage() {
         Printers
       </h1>
       <p className="mt-3 max-w-[60ch] text-lg text-steam">
-        Pair a Bluetooth or USB receipt printer — tickets print straight from the till,
+        Pair a Bluetooth or USB receipt printer — tickets print straight from the POS,
         no dialog.
       </p>
 

@@ -177,7 +177,7 @@ export default function PublicMenuModal({
               <span className="text-sm text-cream">
                 Accept orders from public menu
                 <span className="block text-xs text-steam">
-                  Adds a cart. Guests send their order to your WhatsApp — you key it in at the till.
+                  Adds a cart. Guests send their order to your WhatsApp — you key it in at the POS.
                 </span>
               </span>
             </label>

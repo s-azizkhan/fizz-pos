@@ -85,7 +85,7 @@ function fizzled(message: string) {
 
 function bumpPaths() {
   revalidatePath("/dashboard");
-  revalidatePath("/dashboard/till");
+  revalidatePath("/dashboard/pos");
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/inventory");
   revalidatePath("/dashboard/kot");
@@ -279,12 +279,12 @@ export const ordersRouter = router({
         });
       } catch (e) {
         if (e instanceof TRPCError) throw e;
-        throw fizzled("Something fizzled at the till. Try again.");
+        throw fizzled("Something fizzled at the POS. Try again.");
       }
 
       bumpPaths();
       // Everything a printed receipt needs (lib/print/templates ReceiptData),
-      // so the till can print without a second round trip.
+      // so the POS can print without a second round trip.
       return {
         orderNumber: number,
         store: await receiptStore(),

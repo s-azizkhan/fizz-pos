@@ -195,7 +195,7 @@ assert.ok(p2.forgotten);
 assert.ok(!(await t.rememberedPrinters()).some((r) => r.id === "usb:28e9:289:"));
 await assert.rejects(t.print("usb:28e9:289:", a), NeedsPairingError);
 
-// 14. printToDefault (the till's path) prints to a USB default, and when the
+// 14. printToDefault (the POS's path) prints to a USB default, and when the
 //     printer is missing on a tap, reopens the USB picker — not Bluetooth.
 const { usePrinter } = await import("../lib/store/printer");
 const { printToDefault } = await import("../lib/print/print-order");

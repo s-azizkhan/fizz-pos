@@ -36,7 +36,7 @@ export type OrderStatus = (typeof orderStatus.enumValues)[number];
 export const kitchenStatus = pgEnum("kitchen_status", ["new", "accepted", "ready"]);
 export type KitchenStatus = (typeof kitchenStatus.enumValues)[number];
 
-// A sale rung at the till. Starts `open` (a tab you can revisit and edit) and
+// A sale rung at the POS. Starts `open` (a tab you can revisit and edit) and
 // becomes `paid` when settled. Money stored as numeric(12,2) strings to avoid
 // float drift, matching the rest of the schema.
 export const orders = pgTable("orders", {
@@ -53,14 +53,14 @@ export const orders = pgTable("orders", {
   // when you want cook-time analytics.
   kitchenStatus: kitchenStatus("kitchen_status").notNull().default("new"),
   type: orderType("type").notNull().default("dine_in"),
-  // Optional table / tab label keyed at the till.
+  // Optional table / tab label keyed at the POS.
   reference: text("reference"),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 12, scale: 2 }).notNull().default("0"),
   // Tax charged on the (discounted) subtotal. `taxRate` snapshots the % used.
   tax: numeric("tax", { precision: 12, scale: 2 }).notNull().default("0"),
   taxRate: numeric("tax_rate", { precision: 6, scale: 3 }).notNull().default("0"),
-  // Flat add-ons keyed at the till. Charged after tax, never taxed themselves.
+  // Flat add-ons keyed at the POS. Charged after tax, never taxed themselves.
   serviceFee: numeric("service_fee", { precision: 12, scale: 2 }).notNull().default("0"),
   packagingFee: numeric("packaging_fee", { precision: 12, scale: 2 }).notNull().default("0"),
   deliveryFee: numeric("delivery_fee", { precision: 12, scale: 2 }).notNull().default("0"),

@@ -23,7 +23,7 @@ export const DOC_SECTIONS: DocSection[] = [
     id: "overview",
     title: "Overview",
     intro:
-      "Fizz is your café operating system: take orders at the till, manage your menu and stock, track money in and out, and see exactly what's selling. This guide explains every page and the common things you'll do.",
+      "Fizz is your café operating system: take orders at the POS, manage your menu and stock, track money in and out, and see exactly what's selling. This guide explains every page and the common things you'll do.",
     blocks: [
       {
         kind: "p",
@@ -34,7 +34,7 @@ export const DOC_SECTIONS: DocSection[] = [
         items: [
           ["Owner (admin)", "Full access to everything, including Team and Store settings."],
           ["Manager", "Everything except Team and Store settings."],
-          ["Barista (staff)", "Day-to-day floor work: Till, Orders, Daily sales, Expenses."],
+          ["Barista (staff)", "Day-to-day floor work: POS, Orders, Daily sales, Expenses."],
         ],
       },
     ],
@@ -57,9 +57,9 @@ export const DOC_SECTIONS: DocSection[] = [
     ],
   },
   {
-    id: "till",
-    title: "Till (point of sale)",
-    href: "/dashboard/till",
+    id: "pos",
+    title: "POS (point of sale)",
+    href: "/dashboard/pos",
     roles: "Everyone",
     intro:
       "Where you ring up orders and take payment. The menu is on the left, the running order (the ticket) is on the right. It's built to be fast with a keyboard.",
@@ -122,8 +122,8 @@ export const DOC_SECTIONS: DocSection[] = [
       {
         kind: "steps",
         items: [
-          "Edit — opens the tab back in the Till with all its items in the cart, so you can add more dishes without making a new order.",
-          "Settle — opens the tab in the Till ready to take payment.",
+          "Edit — opens the tab back in the POS with all its items in the cart, so you can add more dishes without making a new order.",
+          "Settle — opens the tab in the POS ready to take payment.",
           "Void (✕) — cancel an open tab that won't be paid.",
         ],
       },
@@ -157,14 +157,14 @@ export const DOC_SECTIONS: DocSection[] = [
           "Under a category, click Add item.",
           "Enter the name, an optional description, the Base price, and the Item cost (what it costs you to make — used for Margins).",
           "Add variants if the item comes in sizes (e.g. Small / Large), each with its own price and cost.",
-          "Toggle Available off to hide an item from the till without deleting it.",
+          "Toggle Available off to hide an item from the POS without deleting it.",
           "Save the item.",
         ],
       },
       {
         kind: "list",
         items: [
-          ["Hide / Show", "Quickly toggle whether an item appears on the till."],
+          ["Hide / Show", "Quickly toggle whether an item appears on the POS."],
           ["Public Menu Settings", "Turn on a shareable web menu, set its link (slug), tagline, font, and accent colour."],
           ["Menu Sections", "Choose which categories appear on the public menu."],
         ],
@@ -181,7 +181,7 @@ export const DOC_SECTIONS: DocSection[] = [
     href: "/dashboard/sales",
     roles: "Everyone",
     intro:
-      "Record the day's total takings split by payment type. Useful for a quick end-of-day cash-up even outside the till.",
+      "Record the day's total takings split by payment type. Useful for a quick end-of-day cash-up even outside the POS.",
     blocks: [
       {
         kind: "steps",
@@ -297,12 +297,12 @@ export const DOC_SECTIONS: DocSection[] = [
     title: "Printers",
     href: "/dashboard/printers",
     roles: "Everyone",
-    intro: "Pair a Bluetooth or USB receipt printer so receipts and kitchen tickets print straight from the till. Set up once per device.",
+    intro: "Pair a Bluetooth or USB receipt printer so receipts and kitchen tickets print straight from the POS. Set up once per device.",
     blocks: [
       {
         kind: "steps",
         items: [
-          "Turn the printer on (or plug it into the till by USB) and open Printers on the till device.",
+          "Turn the printer on (or plug it into the POS by USB) and open Printers on the POS device.",
           "Tap Pair Bluetooth or Pair USB and pick it from the list.",
           "Tap Test print. If the ticket looks cramped or cut off, switch the paper width.",
           "Choose what prints by itself: the receipt on payment, the KOT on save & pay.",
@@ -335,7 +335,7 @@ export const DOC_SECTIONS: DocSection[] = [
         items: [
           ["Owner (admin)", "Full access."],
           ["Manager", "Runs the floor and back office; no Team or Store settings."],
-          ["Barista (staff)", "Till, Orders, Daily sales, Expenses."],
+          ["Barista (staff)", "POS, Orders, Daily sales, Expenses."],
         ],
       },
     ],
@@ -352,7 +352,7 @@ export const DOC_SECTIONS: DocSection[] = [
         items: [
           ["Store profile", "Name, contact, address, tax ID, timezone, and currency."],
           ["Opening hours", "Store-local open and close times shown on the dashboard."],
-          ["Tax", "Name your tax (GST/VAT), set the rate %, and whether menu prices already include it. This is applied to every bill at the till."],
+          ["Tax", "Name your tax (GST/VAT), set the rate %, and whether menu prices already include it. This is applied to every bill at the POS."],
           ["Invoice & order numbering", "Prefixes, formats, and the next sequence numbers for receipts and orders."],
         ],
       },
@@ -364,9 +364,9 @@ export const DOC_SECTIONS: DocSection[] = [
 export const QUICK_RECIPES: { title: string; href: string; steps: string[] }[] = [
   {
     title: "Take a new order",
-    href: "/dashboard/till",
+    href: "/dashboard/pos",
     steps: [
-      "Open the Till.",
+      "Open the POS.",
       "Tap or search items to add them to the ticket.",
       "Pick the order type and press Charge (F2).",
       "Choose a payment method and confirm.",
@@ -374,9 +374,9 @@ export const QUICK_RECIPES: { title: string; href: string; steps: string[] }[] =
   },
   {
     title: "Save a dine-in tab",
-    href: "/dashboard/till",
+    href: "/dashboard/pos",
     steps: [
-      "Ring the dishes at the Till.",
+      "Ring the dishes at the POS.",
       "Type a table name and press Save tab (F4).",
       "Find it later under Orders → Open tabs to add more or settle.",
     ],

@@ -6,7 +6,7 @@ import type { PosItem } from "./types";
 export type MenuSection = { id: string; name: string; icon?: string; items: PosItem[] };
 
 // The tappable item grid. Every category stacks into one continuous scroll,
-// each under a dashed-rule title; the till's category chips scroll-spy it.
+// each under a dashed-rule title; the POS's category chips scroll-spy it.
 // Cards show name, price, and a quick-add hint (1-9 for the first nine of the
 // active section). Big hit targets for a touch counter, lime accent on hover.
 // A section with an empty `name` renders untitled (search results).
@@ -43,7 +43,7 @@ export default function MenuGrid({
       className="relative min-h-0 flex-1 overflow-y-auto p-4 pb-[calc(9.5rem+env(safe-area-inset-bottom))] lg:pb-4"
     >
       {sections.map((s) => (
-        <section key={s.id} id={`till-cat-${s.id}`} data-cat={s.id} className="scroll-mt-4 [&+&]:mt-7">
+        <section key={s.id} id={`pos-cat-${s.id}`} data-cat={s.id} className="scroll-mt-4 [&+&]:mt-7">
           {s.name && (
             <h2 className="mb-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-steam">
               <span className="w-4 border-t border-dashed border-ink-line" />

@@ -135,7 +135,7 @@ export default function DailyReportView({
         <section className="rounded-fizz border border-ink-line bg-ink-soft p-5">
           <h2 className="font-display text-lg font-bold">Cash up</h2>
           <p className="mt-1 text-sm text-steam">
-            What the till should hold from {day}&apos;s cash sales.
+            What the POS should hold from {day}&apos;s cash sales.
           </p>
           <dl className="mt-4 space-y-2 text-sm">
             <Row label="Cash sales" value={money(report.cashSales)} />

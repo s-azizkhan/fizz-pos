@@ -92,7 +92,7 @@ export default function DailySaleForm({
                 setCredit(t.creditSale);
                 toast.success("Filled from sales");
               } catch {
-                toast.error("Couldn't fetch till sales. Try again.");
+                toast.error("Couldn't fetch POS sales. Try again.");
               } finally {
                 setFetching(false);
               }

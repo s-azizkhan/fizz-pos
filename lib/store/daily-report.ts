@@ -166,7 +166,7 @@ export async function getDailyReport(
     insights.push({
       kind: "info",
       title: `${voided} order${voided === 1 ? "" : "s"} voided`,
-      detail: `Voids ${day}. Worth a quick check that nothing's being lost at the till.`,
+      detail: `Voids ${day}. Worth a quick check that nothing's being lost at the POS.`,
       href: "/dashboard/orders",
     });
 
@@ -182,9 +182,9 @@ export async function getDailyReport(
       kind: "info",
       title: isToday ? "Quiet so far" : "No sales",
       detail: isToday
-        ? "No sales recorded yet today. Ring your first order at the Till."
+        ? "No sales recorded yet today. Ring your first order at the POS."
         : "No sales recorded that day.",
-      href: isToday ? "/dashboard/till" : undefined,
+      href: isToday ? "/dashboard/pos" : undefined,
     });
 
   return {

@@ -11,8 +11,8 @@ export const metadata: Metadata = {
 
 const ROLE_BLURB: Record<string, string> = {
   admin: "Everything — team, store settings, the books.",
-  manager: "Runs the shift: till, menu, inventory, expenses.",
-  staff: "Rings orders at the till.",
+  manager: "Runs the shift: POS, menu, inventory, expenses.",
+  staff: "Rings orders at the POS.",
 };
 
 const Wordmark = ({ className }: { className?: string }) => (

@@ -42,20 +42,20 @@ export type OrderFees = {
 export type OrderType = "dine_in" | "takeaway" | "delivery";
 export type PaymentMethod = "cash" | "card" | "online";
 
-// Store tax configuration surfaced to the till.
+// Store tax configuration surfaced to the POS.
 export type TaxConfig = {
   rate: number; // percentage, e.g. 5 = 5%
   label: string; // GST / VAT / Sales Tax
   inclusive: boolean; // prices already include tax
 };
 
-// Store UPI configuration surfaced to the till. Null when unset in settings.
+// Store UPI configuration surfaced to the POS. Null when unset in settings.
 export type UpiConfig = {
   vpa: string;
   name: string;
 };
 
-// An existing order loaded into the till for editing (a revisited tab).
+// An existing order loaded into the POS for editing (a revisited tab).
 export type LoadedOrder = {
   id: string;
   number: string;

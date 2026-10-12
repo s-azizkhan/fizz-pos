@@ -4,7 +4,7 @@ import ProductMock from "./landing/ProductMock";
 import WhatsAppButton from "./landing/WhatsAppButton";
 
 const PILLS = [
-  "UPI QR at the till",
+  "UPI QR at the POS",
   "GST on every bill",
   "Recipe-level stock",
   "Runs on any phone or tablet",

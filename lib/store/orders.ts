@@ -127,7 +127,7 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
   return out;
 }
 
-// Count of currently-open tabs — used for the Till/orders badge.
+// Count of currently-open tabs — used for the POS/orders badge.
 export async function openOrderCount(): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)`.mapWith(Number) })

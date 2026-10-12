@@ -8,7 +8,7 @@ import { usePrinter } from "@/lib/store/printer";
 
 type Layouts = { receipt?: Block[]; kot?: Block[] };
 
-// Keeps this till's printer store on the shop-wide ticket design. Seeded from
+// Keeps this POS's printer store on the shop-wide ticket design. Seeded from
 // the server render, then refetched when the tab regains focus. No polling:
 // an interval would keep a serverless DB (Neon) from ever suspending.
 export default function TicketLayoutSync({ initial }: { initial: Layouts }) {

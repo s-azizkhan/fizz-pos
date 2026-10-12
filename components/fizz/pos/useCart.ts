@@ -7,7 +7,7 @@ function lineKey(itemId: string, variantId: string | null): string {
 }
 
 // Cart state + mutations. Repeat adds stack quantity on the matching line.
-// `initial` seeds the cart (e.g. a revisited tab loaded into the till).
+// `initial` seeds the cart (e.g. a revisited tab loaded into the POS).
 export function useCart(initial: CartLine[] = []) {
   const [lines, setLines] = useState<CartLine[]>(initial);
 

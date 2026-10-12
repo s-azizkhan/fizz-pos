@@ -21,7 +21,7 @@ export const dailySalesRouter = router({
 
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getDailySale(input)),
 
-  // Paid till orders for one day, split to match the form. Card counts as
+  // Paid POS orders for one day, split to match the form. Card counts as
   // credit — the order enum mirrors the daily-sales split (see order.ts).
   tillTotals: protectedProcedure
     .input(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))

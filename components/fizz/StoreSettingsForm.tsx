@@ -160,7 +160,7 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
 
       <Section
         title="Tax"
-        hint="Sales tax applied to every bill at the till (GST, VAT, etc.)."
+        hint="Sales tax applied to every bill at the POS (GST, VAT, etc.)."
       >
         <Field
           label="Tax name"
@@ -200,7 +200,7 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
           Online payments (UPI)
         </h2>
         <p className="mt-1 max-w-[60ch] text-sm text-steam">
-          Set your VPA and the till can throw a scannable QR — amount already
+          Set your VPA and the POS can throw a scannable QR — amount already
           filled — the moment a customer picks Online.
         </p>
 

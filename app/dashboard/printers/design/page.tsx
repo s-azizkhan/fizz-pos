@@ -17,7 +17,7 @@ export default async function TicketDesignPage() {
         ← Printers
       </Link>
       <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-        Every till
+        Every POS
       </p>
       <h1 className="mt-3 font-display text-[clamp(28px,5vw,44px)] font-bold tracking-tight">
         Ticket design

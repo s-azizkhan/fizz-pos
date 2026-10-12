@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Fizz — The Café Operating System",
     short_name: "Fizz",
     description:
-      "Run the till, track every ingredient, know your margins — one live loop.",
+      "Run the POS, track every ingredient, know your margins — one live loop.",
     // Staff open the app to work, not to read the marketing page.
     start_url: "/dashboard",
     scope: "/",
@@ -25,7 +25,7 @@ export default function manifest(): MetadataRoute.Manifest {
       },
     ],
     shortcuts: [
-      { name: "Open the till", short_name: "Till", url: "/dashboard/till" },
+      { name: "Open the POS", short_name: "POS", url: "/dashboard/pos" },
       { name: "Orders", short_name: "Orders", url: "/dashboard/orders" },
       { name: "Record an expense", short_name: "Expense", url: "/dashboard/expenses" },
     ],

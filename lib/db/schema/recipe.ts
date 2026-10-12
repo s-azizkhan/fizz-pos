@@ -5,7 +5,7 @@ import { inventoryItems } from "./inventory";
 
 // A recipe component: how much of one inventory item is consumed to make one
 // unit of a menu item (or a specific variant of it). The sum of components is
-// the bill of materials that the till deducts from stock on every paid sale.
+// the bill of materials that the POS deducts from stock on every paid sale.
 //
 // `variantId` null = the item's base recipe (used when no variant is sold, or
 // as the fallback when a sold variant has no recipe of its own). A non-null

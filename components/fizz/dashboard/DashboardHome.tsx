@@ -235,7 +235,7 @@ export default function DashboardHome({
         </div>
         {s.recent.length === 0 ? (
           <p className="mt-4 text-sm text-steam">
-            No orders yet. Head to the Till to ring your first.
+            No orders yet. Head to the POS to ring your first.
           </p>
         ) : (
           <ul className="mt-4 divide-y divide-ink-line">
@@ -253,13 +253,13 @@ export default function DashboardHome({
         </h2>
         <div className="mt-3 flex flex-wrap gap-2">
           <Link
-            href="/dashboard/till"
+            href="/dashboard/pos"
             className="rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105"
           >
             + New order
           </Link>
           {quickActions
-            .filter((a) => a.href !== "/dashboard/till")
+            .filter((a) => a.href !== "/dashboard/pos")
             .map((a) => (
               <Link
                 key={a.href}

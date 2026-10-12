@@ -8,11 +8,11 @@ import { usePrinter } from "@/lib/store/printer";
 type Sentinel = { release(): Promise<void> };
 type WakeLock = { request(type: "screen"): Promise<Sentinel> };
 
-// Holds this till's Bluetooth printer link open across the dashboard: connects
+// Holds this POS's Bluetooth printer link open across the dashboard: connects
 // on load, heartbeats, reconnects on drop. Also keeps the screen awake, since a
 // locked phone/tablet suspends the tab and the OS drops the link with it.
 // ponytail: wake lock runs on every dashboard page while a Bluetooth printer is
-// set, desktops included. Scope it to /dashboard/till if that's annoying.
+// set, desktops included. Scope it to /dashboard/pos if that's annoying.
 export default function PrinterKeepAlive() {
   const deviceId = usePrinter((s) => s.deviceId);
 

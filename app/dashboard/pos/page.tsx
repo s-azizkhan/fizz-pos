@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc/server";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
 
-export const metadata: Metadata = { title: "Till — Fizz" };
+export const metadata: Metadata = { title: "POS — Fizz" };
 
 export default async function TillPage({
   searchParams,

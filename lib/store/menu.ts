@@ -20,7 +20,7 @@ export type MenuCategoryWithItems = MenuCategory & {
   items: MenuItemWithVariants[];
 };
 
-// Menu render order, applied everywhere the tree is rendered (manager, till,
+// Menu render order, applied everywhere the tree is rendered (manager, POS,
 // public menu, printable PDF): veg first, then non-veg, then unspecified —
 // and within each diet group, cheapest first (Basic → … → Ultimate).
 const DIET_RANK: Record<string, number> = { veg: 0, nonveg: 1 };

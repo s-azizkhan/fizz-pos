@@ -72,7 +72,7 @@ export default function TicketDesigner({
   const [kind, setKind] = useState<Kind>("receipt");
   const [drag, setDrag] = useState<number | null>(null);
   const [resetArmed, setResetArmed] = useState(false);
-  // Local while editing; the server copy (and every till) follows debounced.
+  // Local while editing; the server copy (and every POS) follows debounced.
   const [layouts, setLayouts] = useState({
     receipt: initial.receipt ?? RECEIPT_LAYOUT,
     kot: initial.kot ?? KOT_LAYOUT,
@@ -185,7 +185,7 @@ export default function TicketDesigner({
           ))}
           {canEdit && (
             <span className="ml-auto">
-              {/* Every till prints this, so a stray tap asks twice. */}
+              {/* Every POS prints this, so a stray tap asks twice. */}
               <Chip
                 active={resetArmed}
                 tone="danger"
@@ -361,7 +361,7 @@ export default function TicketDesigner({
           <Chip active={false} onClick={() => add("rule")}>+ Divider</Chip>
           <Chip active={false} onClick={() => add("space")}>+ Blank line</Chip>
           <span className="ml-auto text-xs text-steam">
-            {persist.isPending ? "Saving…" : persist.isError ? "Not saved" : "Saved for every till"}
+            {persist.isPending ? "Saving…" : persist.isError ? "Not saved" : "Saved for every POS"}
           </span>
         </div>
       </div>
