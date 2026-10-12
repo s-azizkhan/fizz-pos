@@ -6,11 +6,12 @@ import type { inferRouterInputs } from "@trpc/server";
 import type { AppRouter } from "@/lib/trpc/root";
 
 type Inputs = inferRouterInputs<AppRouter>["orders"];
-// A paid sale, or an open tab saved for later. Entries queued before `kind`
-// existed are checkouts.
+// A paid sale, an open tab saved for later, or a kitchen bump. Entries queued
+// before `kind` existed are checkouts. A bump's clientId is only the queue key.
 export type QueuedSale = (
   | { kind?: "checkout"; input: Inputs["checkout"] & { clientId: string } }
   | { kind: "save"; input: Inputs["save"] & { clientId: string } }
+  | { kind: "kot"; input: Inputs["kotMove"] & { clientId: string } }
 ) & {
   // Set when the server rejected the sale outright (not a network blip). Kept,
   // never dropped — it's money — and skipped by the flush until someone looks.
@@ -64,7 +65,8 @@ export function subscribeOutbox(onChange: () => void) {
 export const outboxSnapshot = () => localStorage.getItem(KEY);
 export const outboxCounts = (raw: string | null) => {
   if (!raw) return { pending: 0, failed: 0 };
-  const list = read();
+  // The banner talks about orders; queued kitchen bumps sync quietly.
+  const list = read().filter((s) => s.kind !== "kot");
   const failed = list.filter((s) => s.failed).length;
   return { pending: list.length - failed, failed };
 };

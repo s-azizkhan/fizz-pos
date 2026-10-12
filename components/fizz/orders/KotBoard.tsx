@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useTRPC } from "@/lib/trpc/client";
 import { toast } from "@/lib/store/toast";
+import { isNetworkError, outbox } from "@/lib/store/outbox";
 import type { KitchenStatus, OrderType } from "@/lib/db/schema";
 import type { AppRouter } from "@/lib/trpc/root";
 import { ArrowRightIcon } from "@/components/fizz/dashboard/icons";
@@ -299,7 +300,8 @@ export default function KotBoard({
   const move = useMutation(
     trpc.orders.kotMove.mutationOptions({
       // The board refetches its own lanes; a full page refresh is wasted bytes.
-      meta: { noRefresh: true },
+      // Errors are handled in act(): a network failure queues, not toasts.
+      meta: { noRefresh: true, silentError: true },
       // onMutate's return value is handed back to onSettled as context — the
       // one place to park the in-flight glide without a ref or a module global.
       onMutate: ({ orderId, to }) => ({ glide: shift(orderId, to) }),
@@ -308,7 +310,10 @@ export default function KotBoard({
       // card has landed: a refetch mid-flight can briefly put one ticket in two
       // lanes, and two elements sharing a view-transition-name abort the glide.
       // Only the board's own queries — not every query in the app.
-      onSettled: (_data, _error, _vars, ctx) =>
+      // A bump queued offline keeps its optimistic lane — refetching now would
+      // snap the card back to what the server last said.
+      onSettled: (_data, error, _vars, ctx) =>
+        (error && isNetworkError(error)) ||
         (ctx?.glide ?? Promise.resolve()).then(() =>
           Promise.all([
             qc.invalidateQueries(trpc.orders.kot.pathFilter()),
@@ -324,6 +329,13 @@ export default function KotBoard({
       {
         onSuccess: () =>
           toast.success(to === "accepted" ? `${o.number} accepted` : `${o.number} is ready`),
+        // Dead link: keep the card where the cook put it and sync the bump
+        // when the network is back (Provider's outbox flush).
+        onError: (e) => {
+          if (!isNetworkError(e)) return toast.error(e.message);
+          outbox.add({ kind: "kot", input: { orderId: o.id, to, clientId: crypto.randomUUID() } });
+          toast.info(`${o.number} moved — syncs when you're back online`);
+        },
       },
     );
   }

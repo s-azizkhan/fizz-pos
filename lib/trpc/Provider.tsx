@@ -113,18 +113,27 @@ export default function Provider({ children }: { children: React.ReactNode }) {
       if (busy || !navigator.onLine) return;
       busy = true;
       let synced = 0;
+      let bumps = 0;
       try {
         for (const sale of outbox.all()) {
           if (sale.failed) continue;
           try {
             if (sale.kind === "save") await trpcClient.orders.save.mutate(sale.input);
+            else if (sale.kind === "kot") await replayKot(sale.input);
             else await trpcClient.orders.checkout.mutate(sale.input);
             outbox.remove(sale.input.clientId);
-            synced++;
+            if (sale.kind === "kot") bumps++;
+            else synced++;
           } catch (e) {
             // Still offline, or signed out: stop and retry later, keep order.
             if (isNetworkError(e) || codeOf(e) === "UNAUTHORIZED") break;
             const msg = e instanceof Error ? e.message : "Rejected";
+            // A refused bump isn't money — drop it; the board shows the truth.
+            if (sale.kind === "kot") {
+              outbox.remove(sale.input.clientId);
+              toast.error(`A kitchen bump couldn't sync: ${msg}`);
+              continue;
+            }
             outbox.fail(sale.input.clientId, msg);
             toast.error(`An offline order couldn't sync: ${msg}`);
           }
@@ -132,9 +141,20 @@ export default function Provider({ children }: { children: React.ReactNode }) {
       } finally {
         busy = false;
       }
+      // Replayed bumps: let the KOT board re-read the lanes.
+      if (bumps) void queryClient.invalidateQueries();
       if (synced) {
         toast.success(`Synced ${synced} offline order${synced > 1 ? "s" : ""}`);
         router.refresh();
+      }
+    }
+    // Bumps only move forward, so "already there" means another screen (or an
+    // earlier delivery of this replay) beat us to it — that's done, not failed.
+    async function replayKot({ orderId, to }: { orderId: string; to: "accepted" | "ready" }) {
+      try {
+        await trpcClient.orders.kotMove.mutate({ orderId, to });
+      } catch (e) {
+        if (codeOf(e) !== "CONFLICT" || !(e instanceof Error) || !e.message.startsWith("Already")) throw e;
       }
     }
     void flush();
@@ -144,7 +164,7 @@ export default function Provider({ children }: { children: React.ReactNode }) {
       window.removeEventListener("online", flush);
       clearInterval(t);
     };
-  }, [trpcClient, router]);
+  }, [trpcClient, router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
