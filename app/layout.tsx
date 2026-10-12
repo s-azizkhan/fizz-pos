@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter, Pixelify_Sans } from "next/font/google";
 import "./globals.css";
-import { Agentation } from "agentation";
 import { Suspense } from "react";
 import Toaster from "@/components/fizz/Toaster";
 import ConfirmHost from "@/components/fizz/ConfirmDialog";
@@ -10,6 +9,7 @@ import TrpcProvider from "@/lib/trpc/Provider";
 import SplashScreen from "@/components/fizz/pwa/SplashScreen";
 import NetworkStatus from "@/components/fizz/pwa/NetworkStatus";
 import ServiceWorkerRegistrar from "@/components/fizz/pwa/ServiceWorkerRegistrar";
+import DevToolbar from "@/components/fizz/dev/DevToolbar";
 
 // Must match the device list in scripts/generate-pwa-assets.mts — iOS only
 // uses a startup image whose media query matches the device exactly.
@@ -95,7 +95,7 @@ export default function RootLayout({
         <NetworkStatus />
         <SplashScreen />
         <ServiceWorkerRegistrar />
-        {process.env.NODE_ENV === "development" && <Agentation />}
+        <DevToolbar />
       </body>
     </html>
   );

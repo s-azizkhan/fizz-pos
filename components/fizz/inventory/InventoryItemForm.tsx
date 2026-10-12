@@ -4,8 +4,8 @@ import { useMutation } from "@tanstack/react-query";
 import {
   INVENTORY_CATEGORIES,
   INVENTORY_UNIT_LABELS,
-  inventoryUnit,
-} from "@/lib/db/schema";
+  INVENTORY_UNITS,
+} from "@/lib/db/schema/constants";
 import type { InventoryItem } from "@/lib/db/schema";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
@@ -82,7 +82,7 @@ export default function InventoryItemForm({
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Unit</span>
           <select name="unit" required defaultValue={item?.unit ?? "each"} className={`${inputCls} appearance-none`}>
-            {inventoryUnit.enumValues.map((u) => (
+            {INVENTORY_UNITS.map((u) => (
               <option key={u} value={u} className="bg-ink-soft text-cream">{INVENTORY_UNIT_LABELS[u]}</option>
             ))}
           </select>

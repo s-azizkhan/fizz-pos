@@ -3,6 +3,7 @@ import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/store/currencies";
 import { MENU_THEME_KEYS } from "@/lib/store/menu-themes";
 import { ORDER_PARTS, TEXT_SIZES, type Block } from "@/lib/print/templates";
+import { MENU_FONT_SCALES } from "./constants";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -149,8 +150,6 @@ export type StoreSettingsInput = z.infer<typeof storeSettingsForm>;
 
 // Public menu page customization. Fonts/scales are constrained to keep the
 // public renderer simple and SSR-safe.
-export const MENU_FONT_SCALES = ["sm", "md", "lg"] as const;
-export type MenuFontScale = (typeof MENU_FONT_SCALES)[number];
 
 export const menuAppearanceShape = {
   menuPublished: z.coerce.boolean().default(false),

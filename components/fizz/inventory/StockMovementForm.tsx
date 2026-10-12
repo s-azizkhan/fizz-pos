@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { stockMovementType, STOCK_MOVEMENT_LABELS } from "@/lib/db/schema";
+import { STOCK_MOVEMENT_TYPES, STOCK_MOVEMENT_LABELS } from "@/lib/db/schema/constants";
 import type { InventoryItem } from "@/lib/db/schema";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
@@ -58,7 +58,7 @@ export default function StockMovementForm({
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Movement</span>
           <select name="type" value={type} onChange={(e) => setType(e.target.value)} className={`${inputCls} appearance-none`}>
-            {stockMovementType.enumValues.map((t) => (
+            {STOCK_MOVEMENT_TYPES.map((t) => (
               <option key={t} value={t} className="bg-ink-soft text-cream">
                 {STOCK_MOVEMENT_LABELS[t]}
               </option>

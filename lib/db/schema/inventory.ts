@@ -2,44 +2,12 @@ import { index, numeric, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
+import { INVENTORY_CATEGORIES, INVENTORY_UNITS, STOCK_MOVEMENT_TYPES } from "./constants";
 
-// Units an inventory item is measured in. First value is the column default.
-export const inventoryUnit = pgEnum("inventory_unit", [
-  "each",
-  "g",
-  "kg",
-  "ml",
-  "l",
-  "pack",
-  "box",
-  "bag",
-]);
-export type InventoryUnit = (typeof inventoryUnit.enumValues)[number];
+// Units an inventory item is measured in. Values live in ./constants.
+export const inventoryUnit = pgEnum("inventory_unit", INVENTORY_UNITS);
 
-export const INVENTORY_UNIT_LABELS: Record<InventoryUnit, string> = {
-  each: "each",
-  g: "grams (g)",
-  kg: "kilograms (kg)",
-  ml: "millilitres (ml)",
-  l: "litres (L)",
-  pack: "pack",
-  box: "box",
-  bag: "bag",
-};
-
-// Broad stock categories for the café floor.
-export const INVENTORY_CATEGORIES = [
-  "Coffee",
-  "Dairy",
-  "Bakery",
-  "Produce",
-  "Dry Goods",
-  "Beverages",
-  "Packaging",
-  "Cleaning",
-  "Other",
-] as const;
-export type InventoryCategory = (typeof INVENTORY_CATEGORIES)[number];
+// Broad stock categories → ./constants (client-safe).
 
 // A tracked stock item. `quantity` is the live on-hand amount, kept in sync by
 // stock movements. Money stored as numeric strings to avoid float drift.
@@ -67,21 +35,8 @@ export const inventoryItems = pgTable("inventory_items", {
 export type InventoryItem = typeof inventoryItems.$inferSelect;
 
 // Why a stock level changed. `receive` adds, `waste`/`sale` remove, `adjust`
-// sets an absolute count (a manual recount).
-export const stockMovementType = pgEnum("stock_movement_type", [
-  "receive",
-  "waste",
-  "sale",
-  "adjust",
-]);
-export type StockMovementType = (typeof stockMovementType.enumValues)[number];
-
-export const STOCK_MOVEMENT_LABELS: Record<StockMovementType, string> = {
-  receive: "Received",
-  waste: "Waste / loss",
-  sale: "Used / sold",
-  adjust: "Recount",
-};
+// sets an absolute count (a manual recount). Values live in ./constants.
+export const stockMovementType = pgEnum("stock_movement_type", STOCK_MOVEMENT_TYPES);
 
 // An immutable log of every stock change. `delta` is the signed change applied;
 // `resulting` snapshots the on-hand quantity right after the movement.

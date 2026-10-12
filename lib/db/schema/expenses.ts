@@ -2,24 +2,11 @@ import { date, index, numeric, pgEnum, pgTable, text, timestamp, uuid } from "dr
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
+import { EXPENSE_CATEGORIES, EXPENSE_METHODS } from "./constants";
 
-// How an expense was paid. First value is the column default.
-export const expenseMethod = pgEnum("expense_method", ["cash", "online", "credit", "other"]);
-export type ExpenseMethod = (typeof expenseMethod.enumValues)[number];
+// How an expense was paid. Values (and categories) live in ./constants.
+export const expenseMethod = pgEnum("expense_method", EXPENSE_METHODS);
 
-// Spend categories for the café floor. Keep broad — descriptions add detail.
-export const EXPENSE_CATEGORIES = [
-  "Inventory",
-  "Supplies",
-  "Rent",
-  "Utilities",
-  "Payroll",
-  "Marketing",
-  "Maintenance",
-  "Equipment",
-  "Other",
-] as const;
-export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 // One row per expense. Money stored as numeric(12,2) strings to avoid drift.
 export const expenses = pgTable("expenses", {

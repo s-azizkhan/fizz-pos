@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
-import { MENU_FONT_SCALES } from "@/lib/db/schema";
+import { MENU_FONT_SCALES } from "@/lib/db/schema/constants";
 import { MENU_THEMES } from "@/lib/store/menu-themes";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { OrderSettings, Store } from "@/lib/db/schema";

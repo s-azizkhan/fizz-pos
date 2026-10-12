@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { EXPENSE_CATEGORIES, expenseMethod } from "@/lib/db/schema";
+import { EXPENSE_CATEGORIES, EXPENSE_METHODS } from "@/lib/db/schema/constants";
 import { currencySymbol, formatMoney } from "@/lib/store/format";
 import { DatePicker } from "@/components/fizz/ui/DatePicker";
 import NumberInput from "@/components/fizz/ui/NumberInput";
@@ -102,7 +102,7 @@ export default function ExpenseForm({
         <label className="flex flex-col gap-2">
           <span className={labelCls}>Payment method</span>
           <select name="paymentMethod" required defaultValue="cash" className={`${inputCls} appearance-none`}>
-            {expenseMethod.enumValues.map((m) => (
+            {EXPENSE_METHODS.map((m) => (
               <option key={m} value={m} className="bg-ink-soft text-cream">
                 {METHOD_LABELS[m]}
               </option>

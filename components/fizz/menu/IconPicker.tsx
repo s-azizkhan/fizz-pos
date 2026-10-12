@@ -1,6 +1,6 @@
 "use client";
 
-import { MENU_ICON_SUGGESTIONS } from "@/lib/db/schema";
+import { MENU_ICON_SUGGESTIONS } from "@/lib/db/schema/constants";
 import { resolveCategoryIcon } from "./category-icons";
 
 const inputCls =

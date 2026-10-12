@@ -67,15 +67,6 @@ export const menuItemVariants = pgTable("menu_item_variants", {
 ]);
 export type MenuItemVariant = typeof menuItemVariants.$inferSelect;
 
-// Curated emoji suggestions surfaced in the picker. NOT a constraint — any
-// emoji (or short symbol) is accepted; this list is just a quick-pick palette.
-export const MENU_ICON_SUGGESTIONS = [
-  "☕", "🍵", "🧋", "🥤", "🧊", "🍶", "🍷", "🍺", "🥂", "🍹",
-  "🥐", "🍞", "🥖", "🧁", "🍰", "🎂", "🍪", "🍩", "🥧", "🍫",
-  "🥪", "🍔", "🌮", "🌯", "🥗", "🍕", "🍝", "🍜", "🍳", "🥞",
-  "🧇", "🥯", "🥓", "🧀", "🍦", "🍨", "🍧", "🍓", "🍎", "🥑",
-  "🌿", "🔥", "⭐", "✨", "💧", "🌅", "🥥", "🍯", "🧂", "🍴",
-] as const;
 
 const money = z
   .coerce.number({ error: "Enter a valid price" })

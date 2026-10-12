@@ -6,7 +6,7 @@ import Modal from "@/components/fizz/Modal";
 import InventoryItemForm from "./InventoryItemForm";
 import StockMovementForm from "./StockMovementForm";
 import StockHistory from "./StockHistory";
-import { INVENTORY_UNIT_LABELS } from "@/lib/db/schema";
+import { INVENTORY_UNIT_LABELS } from "@/lib/db/schema/constants";
 import { formatMoney } from "@/lib/store/format";
 import { Chip, ChipBar, SearchInput } from "@/components/fizz/ui/controls";
 import { toast } from "@/lib/store/toast";

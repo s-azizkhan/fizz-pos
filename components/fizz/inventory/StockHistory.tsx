@@ -6,7 +6,7 @@ import {
   INVENTORY_UNIT_LABELS,
   STOCK_MOVEMENT_LABELS,
   type StockMovementType,
-} from "@/lib/db/schema";
+} from "@/lib/db/schema/constants";
 import type { InventoryItemRow } from "@/lib/store/inventory";
 import { ArrowUpIcon, ArrowDownIcon, TrashIcon, AdjustIcon } from "@/components/fizz/dashboard/icons";
 
