@@ -5,8 +5,8 @@
  * which is less code than configuring a plugin to do the same thing.
  *
  * 1. Build assets (/_next/static/*, icons, splash) are immutable → cache first.
- * 2. Page navigations → network first, fall back to the last good copy of that
- *    page, then to a self-contained offline document.
+ * 2. Page navigations → network first (4s head start), fall back to the last
+ *    good copy of that page, then to a self-contained offline document.
  * 3. Everything else (/api/trpc, POSTs, auth, anything non-GET) is never
  *    touched. Money and stock must never be served from a stale cache.
  */
@@ -172,28 +172,80 @@ async function cacheFirst(request) {
   return response;
 }
 
-async function networkFirst(request) {
-  try {
-    const response = await fetch(request);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Lie-fi guard. On a link that says "connected" but moves nothing, fetch()
+ * neither resolves nor fails for minutes. Give the network a head start, then
+ * answer from the last good copy and let the late response refresh the cache.
+ * With no copy we keep waiting — the network is the only hope.
+ */
+const NAV_TIMEOUT_MS = 4000;
+
+async function networkFirst(event) {
+  const { request } = event;
+  const network = fetch(request).then((response) => {
     // Only bank successful, non-redirected HTML. Caching a redirect to /login
     // would strand a signed-out session on the login page after signing in.
     if (response.ok && !response.redirected) {
-      const cache = await caches.open(PAGES);
-      cache.put(request, response.clone());
+      const copy = response.clone();
+      caches.open(PAGES).then((cache) => cache.put(request, copy));
     }
     return response;
+  });
+  // Keep the worker alive so a late response still lands in the cache.
+  event.waitUntil(network.then(() => {}, () => {}));
+  // The last good copy of this exact page still hydrates correctly, because
+  // the URL matches what React expects.
+  const cached = caches.match(request, MATCH_OPTS);
+  try {
+    return await Promise.race([
+      network,
+      sleep(NAV_TIMEOUT_MS).then(async () => (await cached) ?? network),
+    ]);
   } catch {
-    // The last good copy of this exact page still hydrates correctly, because
-    // the URL matches what React expects.
-    const cached = await caches.match(request, MATCH_OPTS);
-    if (cached) return cached;
-    return html(OFFLINE_HTML, 503);
+    return (await cached) ?? html(OFFLINE_HTML, 503);
   }
+}
+
+/**
+ * In-app navigations fetch an RSC payload, which we never cache. When one
+ * hangs and we hold an HTML copy of that page, fail it: Next then falls back
+ * to a full browser navigation, which networkFirst answers from the cache.
+ * Longer than NAV_TIMEOUT_MS because router.refresh() rides this path too —
+ * a slow-but-working refresh shouldn't be swapped for a stale reload.
+ * Prefetches are left alone; a failed one costs nothing.
+ */
+const RSC_TIMEOUT_MS = 8000;
+
+async function rscWithEscape(request) {
+  const network = fetch(request);
+  const hung = await Promise.race([
+    network.then(() => false, () => false),
+    sleep(RSC_TIMEOUT_MS).then(() => true),
+  ]);
+  if (!hung) return network;
+  const page = new URL(request.url);
+  page.searchParams.delete("_rsc");
+  const cached = await caches.match(page.toString(), MATCH_OPTS);
+  return cached ? Response.error() : network;
 }
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // RSC navigations: straight to the network, but with an escape hatch for
+  // lie-fi (never served from cache — see rscWithEscape).
+  if (
+    request.method === "GET" &&
+    url.origin === self.location.origin &&
+    request.headers.get("rsc") === "1" &&
+    !request.headers.has("next-router-prefetch")
+  ) {
+    event.respondWith(rscWithEscape(request));
+    return;
+  }
 
   // Never intercept mutations, cross-origin calls, or anything that carries a
   // tRPC call / RSC payload — those must always hit the network.
@@ -213,6 +265,6 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request));
+    event.respondWith(networkFirst(event));
   }
 });

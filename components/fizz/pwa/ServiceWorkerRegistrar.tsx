@@ -33,15 +33,27 @@ export default function ServiceWorkerRegistrar() {
       });
     }, console.error);
 
-    // Keep offline copies of the floor screens fresh: on load, on reconnect,
-    // and every 5 min while open. The worker throttles and skips signed-out.
+    // Keep offline copies of the floor screens fresh: shortly after load, on
+    // reconnect, and every 15 min while open. Warming re-downloads four whole
+    // pages, so it never competes with the page the user is waiting on: it
+    // waits out the initial load, skips hidden tabs, and skips data-saver /
+    // 2G links entirely. The worker throttles and skips signed-out.
     const warm = () => {
-      if (!navigator.onLine || !location.pathname.startsWith("/dashboard")) return;
+      const conn = (navigator as Navigator & {
+        connection?: { saveData?: boolean; effectiveType?: string };
+      }).connection;
+      if (
+        !navigator.onLine ||
+        document.visibilityState !== "visible" ||
+        conn?.saveData ||
+        /2g/.test(conn?.effectiveType ?? "") ||
+        !location.pathname.startsWith("/dashboard")
+      ) return;
       navigator.serviceWorker.ready.then((r) => r.active?.postMessage("warm"));
     };
-    warm();
+    const first = setTimeout(warm, 10_000);
     window.addEventListener("online", warm);
-    const t = setInterval(warm, 5 * 60_000);
+    const t = setInterval(warm, 15 * 60_000);
 
     let reloading = false;
     const onChange = () => {
@@ -53,6 +65,7 @@ export default function ServiceWorkerRegistrar() {
     return () => {
       navigator.serviceWorker.removeEventListener("controllerchange", onChange);
       window.removeEventListener("online", warm);
+      clearTimeout(first);
       clearInterval(t);
     };
   }, []);
