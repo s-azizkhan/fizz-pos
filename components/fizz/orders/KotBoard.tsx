@@ -159,6 +159,7 @@ function Ticket({
                 {order.reference}
               </span>
             )}
+            {order.webPending && <span className="text-bubble">WEB</span>}
             {order.status === "paid" && <span className="text-fizz">PAID</span>}
           </p>
         </div>

@@ -151,11 +151,11 @@ const ORDERS_PAGE = 60;
 
 export const ordersRouter = router({
   // A guest's order from the public menu (/m/[slug]). PUBLIC — no session.
-  // Lands as an open tab flagged webPending: on the Orders page, off the KOT
-  // board until staff open it in the POS. Prices come from the live menu,
+  // Lands as an open tab flagged webPending: on the Orders page, on the KOT
+  // board straight away. Prices come from the live menu,
   // never the client; the customer is linked by phone.
-  // ponytail: no rate limit — the item/qty caps bound one order, and staff
-  // review every web order before the kitchen sees it. Add per-IP throttling
+  // ponytail: no rate limit — the item/qty caps bound one order, but web
+  // orders now hit the KOT board unreviewed. Add per-IP throttling
   // (Upstash / a table) if prank orders ever become a nuisance.
   placeWeb: publicProcedure.input(webOrderSchema).mutation(async ({ input }) => {
     const menu = await getPublicMenu(input.slug);

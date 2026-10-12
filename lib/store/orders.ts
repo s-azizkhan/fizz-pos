@@ -23,7 +23,7 @@ export type OrderWithItems = Order & { items: OrderItem[] };
 // Only what the board draws — it re-polls every few seconds, so every column
 // shipped here is paid for on the kitchen's link all day.
 type KotItem = Pick<OrderItem, "id" | "name" | "variantName" | "quantity">;
-export type KotTicket = Pick<Order, "id" | "number" | "status" | "type" | "reference" | "kitchenStatus"> & {
+export type KotTicket = Pick<Order, "id" | "number" | "status" | "type" | "reference" | "kitchenStatus" | "webPending"> & {
   ageSeconds: number;
   items: KotItem[];
 };
@@ -190,6 +190,7 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
       type: orders.type,
       reference: orders.reference,
       kitchenStatus: orders.kitchenStatus,
+      webPending: orders.webPending,
       ageSeconds: sql<number>`extract(epoch from (now() - ${orders.createdAt}))`.mapWith(Number),
     })
     .from(orders)
@@ -197,8 +198,6 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
       and(
         eq(orders.storeId, STORE_ID),
         ne(orders.status, "void"),
-        // Guest web orders wait for staff before the kitchen sees them.
-        eq(orders.webPending, false),
         eq(orders.kitchenStatus, lane),
         inCurrentMonth(),
       ),
@@ -240,7 +239,6 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
       and(
         eq(orders.storeId, STORE_ID),
         ne(orders.status, "void"),
-        eq(orders.webPending, false),
         inCurrentMonth(),
       ),
     )
