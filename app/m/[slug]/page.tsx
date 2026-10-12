@@ -108,7 +108,15 @@ export default async function PublicMenuPage({
           )}
         </header>
 
-        {categories.length > 0 && <MenuSearch />}
+        {categories.length > 0 && (
+          <MenuSearch
+            storeName={store.name}
+            categories={categories.map((c) => c.name)}
+            whatsapp={cfg?.whatsapp}
+            phone={store.phone}
+            accent={accent}
+          />
+        )}
 
         {categories.length === 0 ? (
           <p className="mt-16 text-center text-[var(--m-muted)]">This menu is being plated. Check back soon.</p>
