@@ -8,6 +8,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { toast } from "@/lib/store/toast";
 import type { KitchenStatus, OrderType } from "@/lib/db/schema";
 import type { AppRouter } from "@/lib/trpc/root";
+import { ArrowRightIcon } from "@/components/fizz/dashboard/icons";
 
 // Inferred from the procedure rather than hand-written, so a schema change
 // can't silently drift the board's idea of a ticket.
@@ -524,7 +525,7 @@ export default function KotBoard({
                   disabled={at >= deckOrders.length - 1}
                   className="rounded-fizz border border-ink-line px-6 py-3 font-display text-lg font-bold text-cream transition-colors disabled:opacity-40"
                 >
-                  Next &rarr;
+                  <span className="inline-flex items-center gap-2">Next <ArrowRightIcon /></span>
                 </button>
               </div>
             )}

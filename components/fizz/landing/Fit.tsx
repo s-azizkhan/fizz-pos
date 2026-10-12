@@ -1,3 +1,4 @@
+import { CheckIcon, CloseIcon } from "@/components/fizz/dashboard/icons";
 // Qualify the reader. Saying who it's NOT for makes the "for" column land.
 
 const YES = [
@@ -34,7 +35,7 @@ export default function Fit() {
             <ul className="mt-4 flex flex-col gap-3">
               {YES.map((t) => (
                 <li key={t} className="flex gap-3 text-cream">
-                  <span className="text-fizz">✓</span>
+                  <CheckIcon className="mt-0.5 h-5 w-5 shrink-0 text-fizz" />
                   {t}
                 </li>
               ))}
@@ -47,7 +48,7 @@ export default function Fit() {
             <ul className="mt-4 flex flex-col gap-3">
               {NO.map((t) => (
                 <li key={t} className="flex gap-3 text-steam">
-                  <span>✕</span>
+                  <CloseIcon className="mt-0.5 h-5 w-5 shrink-0" />
                   {t}
                 </li>
               ))}

@@ -1,4 +1,5 @@
 import { PHONE_DISPLAY, TEL_HREF } from "./contact";
+import { PlusIcon } from "@/components/fizz/dashboard/icons";
 
 // Objection handling. Native <details> — no JS.
 const QA = [
@@ -63,7 +64,7 @@ export default function Faq() {
             <details key={x.q} className="group px-6 py-5">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-lg font-semibold text-cream">
                 {x.q}
-                <span className="text-fizz transition-transform group-open:rotate-45">+</span>
+                <PlusIcon className="h-5 w-5 shrink-0 text-fizz transition-transform duration-300 group-open:rotate-45" />
               </summary>
               <p className="mt-3 max-w-[60ch] text-steam">{x.a}</p>
             </details>

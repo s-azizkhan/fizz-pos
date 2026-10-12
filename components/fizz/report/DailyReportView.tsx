@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DatePicker } from "@/components/fizz/ui/DatePicker";
 import { toDateInput } from "@/lib/store/date-range";
+import { startNav } from "@/components/fizz/NavProgress";
 import { formatMoney } from "@/lib/store/format";
 import type { DailyReport, DayInsight } from "@/lib/store/daily-report";
 import type { Metric, Slice } from "@/lib/store/analytics";
@@ -63,7 +64,10 @@ export default function DailyReportView({
               aria-label="Report date"
               value={report.date}
               max={toDateInput(new Date())}
-              onChange={(v) => router.push(`/dashboard/report?date=${v}`)}
+              onChange={(v) => {
+                startNav();
+                router.push(`/dashboard/report?date=${v}`);
+              }}
               className="flex w-full items-center justify-between gap-3 rounded-fizz border border-ink-line bg-ink-soft px-4 py-2.5 text-sm font-semibold text-cream outline-none transition-colors hover:border-fizz focus-visible:border-fizz focus-visible:ring-2 focus-visible:ring-fizz/40"
             />
           </div>

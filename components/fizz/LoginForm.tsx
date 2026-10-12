@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
+import { startNav } from "@/components/fizz/NavProgress";
 
 export default function LoginForm() {
   const trpc = useTRPC();
@@ -18,6 +19,7 @@ export default function LoginForm() {
       onSuccess: ({ redirectTo }) => {
         // The session cookie is set by the procedure; redirect() cannot run
         // inside one, so navigate here. refresh() pulls the authed RSC tree.
+        startNav();
         router.replace(redirectTo);
         router.refresh();
       },

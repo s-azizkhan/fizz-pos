@@ -1,6 +1,7 @@
 "use client";
 
 import { useUi } from "@/lib/store/ui";
+import { MenuToggleIcon } from "@/components/fizz/dashboard/icons";
 
 const LINKS = [
   { href: "#problem", label: "The leak" },
@@ -51,7 +52,7 @@ export default function Nav() {
           aria-label="Toggle menu"
           aria-expanded={mobileNavOpen}
         >
-          {mobileNavOpen ? "✕" : "☰"}
+          <MenuToggleIcon open={mobileNavOpen} className="h-6 w-6" />
         </button>
       </nav>
 

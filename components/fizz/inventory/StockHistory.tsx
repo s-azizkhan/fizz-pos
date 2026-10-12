@@ -8,17 +8,18 @@ import {
   type StockMovementType,
 } from "@/lib/db/schema";
 import type { InventoryItemRow } from "@/lib/store/inventory";
+import { ArrowUpIcon, ArrowDownIcon, TrashIcon, AdjustIcon } from "@/components/fizz/dashboard/icons";
 
 // Visual identity per movement type. `credit` drives the +/− sign treatment;
 // `tone` is a Tailwind text class from the brand palette.
 const STYLE: Record<
   StockMovementType,
-  { tone: string; ring: string; glyph: string; credit: boolean | null }
+  { tone: string; ring: string; Glyph: typeof ArrowUpIcon; credit: boolean | null }
 > = {
-  receive: { tone: "text-fizz", ring: "border-fizz/40 bg-fizz/10", glyph: "↑", credit: true },
-  sale: { tone: "text-bubble", ring: "border-bubble/40 bg-bubble/10", glyph: "↓", credit: false },
-  waste: { tone: "text-[#E2655A]", ring: "border-[#E2655A]/40 bg-[#E2655A]/10", glyph: "✕", credit: false },
-  adjust: { tone: "text-steam", ring: "border-ink-line bg-ink", glyph: "≈", credit: null },
+  receive: { tone: "text-fizz", ring: "border-fizz/40 bg-fizz/10", Glyph: ArrowUpIcon, credit: true },
+  sale: { tone: "text-bubble", ring: "border-bubble/40 bg-bubble/10", Glyph: ArrowDownIcon, credit: false },
+  waste: { tone: "text-[#E2655A]", ring: "border-[#E2655A]/40 bg-[#E2655A]/10", Glyph: TrashIcon, credit: false },
+  adjust: { tone: "text-steam", ring: "border-ink-line bg-ink", Glyph: AdjustIcon, credit: null },
 };
 
 const dateFmt = new Intl.DateTimeFormat("en-US", {
@@ -110,7 +111,7 @@ export default function StockHistory({ item }: { item: InventoryItemRow }) {
                   className="flex items-center gap-3 rounded-fizz border border-ink-line bg-ink p-3"
                 >
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm ${s.ring} ${s.tone}`}>
-                    {s.glyph}
+                    <s.Glyph className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

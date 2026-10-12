@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc/client";
 import { navForRole } from "./nav-items";
-import { LogoutIcon } from "./icons";
+import { LogoutIcon, MoreIcon } from "./icons";
 import type { UserRole } from "@/lib/db/schema";
 import { useUi } from "@/lib/store/ui";
 import { useSwipeDismiss } from "@/lib/use-swipe-dismiss";
@@ -74,6 +74,7 @@ export default function BottomNav({
                     key={item.href}
                     href={item.href}
                     onClick={closeMore}
+                    aria-current={active ? "page" : undefined}
                     transitionTypes={["nav-forward"]}
                     className={`flex flex-col items-center gap-2 rounded-fizz border p-4 text-center text-xs font-medium transition-colors ${
                       active
@@ -139,6 +140,7 @@ export default function BottomNav({
               key={item.href}
               href={item.href}
               onClick={closeMore}
+              aria-current={active ? "page" : undefined}
               transitionTypes={[item.href === "/dashboard" ? "nav-back" : "nav-forward"]}
               className={`relative flex flex-col items-center gap-0.5 rounded-full py-2 text-[10px] font-medium transition-colors ${
                 active ? "text-fizz" : "text-steam"
@@ -157,7 +159,7 @@ export default function BottomNav({
             moreOpen || moreActive ? "text-fizz" : "text-steam"
           }`}
         >
-          <span className="grid h-5 w-5 place-items-center text-lg leading-none">⋯</span>
+          <MoreIcon className={`shrink-0 ${moreOpen ? "fz-host-on" : ""}`} />
           More
         </button>
         </div>

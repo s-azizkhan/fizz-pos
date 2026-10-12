@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter, Pixelify_Sans } from "next/font/google";
 import "./globals.css";
 import { Agentation } from "agentation";
+import { Suspense } from "react";
 import Toaster from "@/components/fizz/Toaster";
+import NavProgress, { NAV_SCRIPT } from "@/components/fizz/NavProgress";
 import TrpcProvider from "@/lib/trpc/Provider";
 import SplashScreen from "@/components/fizz/pwa/SplashScreen";
 import NetworkStatus from "@/components/fizz/pwa/NetworkStatus";
@@ -82,7 +84,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full bg-ink text-cream">
+        <script dangerouslySetInnerHTML={{ __html: NAV_SCRIPT }} />
         <TrpcProvider>{children}</TrpcProvider>
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
         <Toaster />
         <NetworkStatus />
         <SplashScreen />

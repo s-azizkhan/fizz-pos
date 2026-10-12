@@ -12,6 +12,7 @@ import { receipt as receiptTicket, type ReceiptData } from "@/lib/print/template
 import type { OrderRow, StatusFilter } from "./types";
 import KotTicket from "./KotTicket";
 import MonthFilter from "@/components/fizz/MonthFilter";
+import { startNav } from "@/components/fizz/NavProgress";
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine in",
@@ -83,11 +84,13 @@ export default function OrdersClient({
   );
 
   function edit(id: string) {
+    startNav();
     router.push(`/dashboard/pos?order=${id}`);
   }
 
   function settle(id: string) {
     // Reuse the POS's pay flow — opening the tab there gives the full sheet.
+    startNav();
     router.push(`/dashboard/pos?order=${id}`);
   }
 

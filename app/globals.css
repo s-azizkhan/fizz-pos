@@ -278,6 +278,35 @@ body {
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Navigation pending (NavProgress): lime bar crawls along the top while the
+   next route loads; the pressed link/button pulses so the tap reads as heard. */
+@keyframes nav-crawl {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(0.9); }
+}
+@keyframes nav-pending {
+  from { opacity: 1; }
+  to { opacity: 0.5; }
+}
+html[data-nav]::before {
+  content: "";
+  position: fixed;
+  top: env(safe-area-inset-top, 0);
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  height: 2px;
+  background: var(--color-fizz);
+  transform-origin: left;
+  pointer-events: none;
+  animation: nav-crawl 8s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+}
+html[data-nav], html[data-nav] * { cursor: progress; }
+[data-nav-pending] {
+  pointer-events: none;
+  animation: nav-pending 0.6s ease-in-out infinite alternate;
+}
+
 /* Launch screen: the wordmark settles, the lime rule draws under it. */
 @keyframes splash-mark {
   from { opacity: 0; transform: scale(0.94); }
@@ -294,6 +323,8 @@ body {
   .fizz-shimmer,
   .fizz-splash-mark,
   .fizz-splash-bar { animation: none; }
+  html[data-nav]::before { animation: none; transform: scaleX(0.6); }
+  [data-nav-pending] { animation: none; opacity: 0.6; }
 
   ::view-transition-old(*),
   ::view-transition-new(*),
@@ -354,3 +385,93 @@ body {
   .fizz-liquid-pill { transition: opacity 200ms ease-out; }
 }
 
+
+/* ===== Animated icons (components/fizz/dashboard/icons.tsx) =====
+   Parts animate once when the host link/button is hovered, or when the host
+   is the current page — so the icon "wakes up" as you land on it. */
+.fz-icon * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.fz-icon .fz-page { transform-origin: left center; }
+.fz-icon .fz-lid { transform-origin: left bottom; }
+.fz-icon .fz-flap { transform-origin: right center; }
+.fz-icon .fz-feed,
+.fz-icon .fz-paper { transform-origin: center top; }
+
+:is(a, button:not(:disabled), summary, .fz-host):hover,
+[aria-current="page"],
+.fz-host-on {
+  & .fz-t1 { animation: fz-pop 0.45s ease-out; }
+  & .fz-t2 { animation: fz-pop 0.45s 0.06s ease-out; }
+  & .fz-t3 { animation: fz-pop 0.45s 0.12s ease-out; }
+  & .fz-t4 { animation: fz-pop 0.45s 0.18s ease-out; }
+  & .fz-card { animation: fz-swipe 0.6s ease-in-out; }
+  & .fz-steam { animation: fz-steam 0.9s ease-out; }
+  & .fz-paper { animation: fz-print 0.55s ease-out; }
+  & .fz-l1, & .fz-l2, & .fz-l3, & .fz-draw { stroke-dasharray: 1; }
+  & .fz-l1 { animation: fz-ink 0.4s 0.1s ease-out backwards; }
+  & .fz-l2 { animation: fz-ink 0.4s 0.2s ease-out backwards; }
+  & .fz-l3 { animation: fz-ink 0.4s 0.3s ease-out backwards; }
+  & .fz-page { animation: fz-flip 0.6s ease-in-out; }
+  & .fz-coin { animation: fz-drop 0.6s cubic-bezier(0.5, 0, 0.6, 1.4); }
+  & .fz-flap { animation: fz-open 0.5s ease-in-out; }
+  & .fz-lid { animation: fz-lift 0.5s ease-in-out; }
+  & .fz-fill { animation: fz-slosh 0.7s ease-in-out; }
+  & .fz-draw { animation: fz-ink 0.6s ease-out; }
+  & .fz-arrow { animation: fz-nudge-ur 0.5s 0.35s ease-out; }
+  & .fz-buddy { animation: fz-hop 0.5s ease-out; }
+  & .fz-feed { animation: fz-feed 0.7s ease-out; }
+  & .fz-spin { animation: fz-spin 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+  & .fz-nod { animation: fz-nod 0.6s ease-in-out; }
+  & .fz-nudge-l { animation: fz-nudge-l 0.4s ease-out; }
+  & .fz-nudge-r { animation: fz-nudge-r 0.4s ease-out; }
+  & .fz-d1 { animation: fz-hop 0.45s ease-out; }
+  & .fz-d2 { animation: fz-hop 0.45s 0.08s ease-out; }
+  & .fz-d3 { animation: fz-hop 0.45s 0.16s ease-out; }
+  & .fz-twist { animation: fz-twist 0.35s ease-out; }
+  & .fz-bob-up { animation: fz-bob-up 0.5s ease-out; }
+  & .fz-bob-down { animation: fz-bob-down 0.5s ease-out; }
+  & .fz-knob1 { animation: fz-slide-l 0.6s ease-in-out; }
+  & .fz-knob2 { animation: fz-slide-r 0.6s ease-in-out; }
+  & .fz-ring { animation: fz-hop 0.4s ease-out; }
+  & .fz-blink { animation: fz-blink 0.4s ease-in-out; }
+}
+
+/* Self-playing: check draws in on mount, alert pings once. */
+.fz-draw-in { stroke-dasharray: 1; animation: fz-ink 0.45s 0.1s ease-out backwards; }
+.fz-ping { animation: fz-pop 0.5s ease-out; }
+
+/* Burger ⇄ close morph. */
+.fz-burger :is(.fz-b1, .fz-b2, .fz-b3) { transition: transform 0.25s ease, opacity 0.2s ease; }
+.fz-burger.is-open .fz-b1 { transform: translateY(5px) rotate(45deg); }
+.fz-burger.is-open .fz-b2 { opacity: 0; transform: scaleX(0); }
+.fz-burger.is-open .fz-b3 { transform: translateY(-5px) rotate(-45deg); }
+
+@keyframes fz-pop { 40% { transform: scale(0.8); } 70% { transform: scale(1.08); } }
+@keyframes fz-swipe { 30% { transform: translateY(-3px); } 60% { transform: translateY(1px); } }
+@keyframes fz-steam { 0% { opacity: 0; transform: translateY(2px); } 50% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+@keyframes fz-print { 0% { transform: translateY(3px) scaleY(0.85); } 100% { transform: none; } }
+@keyframes fz-ink { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes fz-flip { 50% { transform: scaleX(-1); } }
+@keyframes fz-drop { 0% { transform: translateY(-6px); opacity: 0; } 40% { opacity: 1; } 100% { transform: none; } }
+@keyframes fz-open { 50% { transform: translateX(2px) rotate(-8deg); } }
+@keyframes fz-lift { 45% { transform: translateY(-2.5px) rotate(-10deg); } }
+@keyframes fz-slosh { 25% { transform: rotate(-8deg); } 60% { transform: rotate(6deg); } }
+@keyframes fz-nudge-ur { 50% { transform: translate(1.5px, -1.5px); } }
+@keyframes fz-hop { 40% { transform: translateY(-2.5px); } }
+@keyframes fz-feed { 0% { transform: translateY(-5px) scaleY(0.4); opacity: 0.4; } 100% { transform: none; opacity: 1; } }
+@keyframes fz-spin { to { transform: rotate(180deg); } }
+@keyframes fz-nod { 25% { transform: rotate(-12deg); } 60% { transform: rotate(10deg); } }
+@keyframes fz-nudge-l { 50% { transform: translateX(-2.5px); } }
+@keyframes fz-nudge-r { 50% { transform: translateX(2.5px); } }
+@keyframes fz-twist { from { transform: rotate(-90deg) scale(0.7); } }
+@keyframes fz-bob-up { 50% { transform: translateY(-2.5px); } }
+@keyframes fz-bob-down { 50% { transform: translateY(2.5px); } }
+@keyframes fz-slide-l { 50% { transform: translateX(-6px); } }
+@keyframes fz-slide-r { 50% { transform: translateX(6px); } }
+@keyframes fz-blink { 50% { transform: scaleY(0.1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .fz-icon, .fz-icon * { animation: none !important; transition: none !important; }
+}

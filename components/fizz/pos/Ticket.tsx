@@ -2,6 +2,7 @@
 
 import { FEE_FIELDS, feesTotal } from "./FeesModal";
 import type { CartLine, OrderFees, OrderType } from "./types";
+import { TrashIcon, MinusIcon } from "@/components/fizz/dashboard/icons";
 
 const ORDER_TYPES: { value: OrderType; label: string; hint: string }[] = [
   { value: "dine_in", label: "Dine in", hint: "⇧I" },
@@ -169,7 +170,7 @@ export default function Ticket({
                       aria-label={l.quantity === 1 ? "Remove line" : "Decrease"}
                       className="h-10 w-10 rounded-fizz border border-ink-line text-lg text-[#E2655A] transition-colors hover:border-[#E2655A] lg:h-8 lg:w-8 lg:text-base"
                     >
-                      {l.quantity === 1 ? "✕" : "−"}
+                      {l.quantity === 1 ? <TrashIcon className="mx-auto h-4 w-4" /> : <MinusIcon className="mx-auto h-4 w-4" />}
                     </button>
                     <span className="w-8 text-center font-display font-bold">
                       {l.quantity}

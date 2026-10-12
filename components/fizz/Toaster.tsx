@@ -1,12 +1,13 @@
 "use client";
 
 import { useToastStore, type ToastType } from "@/lib/store/toast";
+import { CheckIcon, AlertIcon, InfoIcon, CloseIcon } from "@/components/fizz/dashboard/icons";
 
 // Accent bar + glyph per toast type. Lime = good, red = error, cyan = info.
-const TONE: Record<ToastType, { bar: string; glyph: string; glyphCls: string }> = {
-  success: { bar: "bg-fizz", glyph: "●", glyphCls: "text-fizz" },
-  error: { bar: "bg-[#E2655A]", glyph: "✕", glyphCls: "text-[#E2655A]" },
-  info: { bar: "bg-bubble", glyph: "●", glyphCls: "text-bubble" },
+const TONE: Record<ToastType, { bar: string; Glyph: typeof CheckIcon; glyphCls: string }> = {
+  success: { bar: "bg-fizz", Glyph: CheckIcon, glyphCls: "text-fizz" },
+  error: { bar: "bg-[#E2655A]", Glyph: AlertIcon, glyphCls: "text-[#E2655A]" },
+  info: { bar: "bg-bubble", Glyph: InfoIcon, glyphCls: "text-bubble" },
 };
 
 export default function Toaster() {
@@ -30,9 +31,7 @@ export default function Toaster() {
             className="fizz-toast pointer-events-auto flex w-full max-w-sm items-start gap-3 overflow-hidden rounded-fizz border border-ink-line bg-ink-soft/95 py-3 pl-0 pr-3 shadow-[0_18px_50px_-12px_rgba(0,0,0,0.7)] backdrop-blur"
           >
             <span className={`h-auto w-1 self-stretch shrink-0 ${tone.bar}`} />
-            <span className={`mt-0.5 text-sm font-bold ${tone.glyphCls}`}>
-              {tone.glyph}
-            </span>
+            <tone.Glyph className={`mt-0.5 h-5 w-5 shrink-0 ${tone.glyphCls}`} />
             <p className="flex-1 py-0.5 text-sm text-cream">{t.message}</p>
             <button
               type="button"
@@ -40,7 +39,7 @@ export default function Toaster() {
               aria-label="Dismiss"
               className="shrink-0 text-steam transition-colors hover:text-cream"
             >
-              ✕
+              <CloseIcon className="h-4 w-4" />
             </button>
           </div>
         );

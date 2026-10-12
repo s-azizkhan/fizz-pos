@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { fromDateInput, toDateInput } from "@/lib/store/date-range";
+import { CalendarIcon } from "@/components/fizz/dashboard/icons";
 
 // Fizz's own date + month pickers. Values are plain strings — YYYY-MM-DD for
 // days, YYYY-MM for months — matching the `date` columns and URL params, so
@@ -72,15 +73,6 @@ function Chevron({ dir }: { dir: "left" | "right" }) {
   return (
     <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path d={dir === "left" ? "M10 3 5 8l5 5" : "m6 3 5 5-5 5"} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 16 16" className="h-4 w-4 shrink-0 text-steam" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-      <rect x="2" y="3" width="12" height="11" rx="2" />
-      <path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" strokeLinecap="round" />
     </svg>
   );
 }
@@ -429,7 +421,7 @@ export function DatePicker({
         className={className}
       >
         <span className="truncate">{formatDay(current)}</span>
-        <CalendarIcon />
+        <CalendarIcon className="h-4 w-4 shrink-0 text-steam" />
       </button>
       {name && <input type="hidden" name={name} value={current} />}
       <Popover anchor={trigger} open={open} onClose={() => setOpen(false)} label="Choose date">
@@ -470,7 +462,7 @@ export function MonthPicker({
         onClick={() => setOpen((o) => !o)}
         className="flex min-w-[9.5rem] items-center justify-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold text-cream outline-none transition-colors hover:bg-ink-line focus-visible:ring-2 focus-visible:ring-fizz"
       >
-        <CalendarIcon />
+        <CalendarIcon className="h-4 w-4 shrink-0 text-steam" />
         {formatMonth(value)}
       </button>
       <button type="button" className={navBtnCls} aria-label="Next month" disabled={!!max && value >= max} onClick={() => onChange(shiftMonth(value, 1))}>

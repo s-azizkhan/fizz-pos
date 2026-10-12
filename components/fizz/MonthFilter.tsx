@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { MonthPicker } from "@/components/fizz/ui/DatePicker";
 import { currentMonth } from "@/lib/store/date-range";
+import { startNav } from "@/components/fizz/NavProgress";
 
 // Month picker that drives the ?month=YYYY-MM search param.
 export default function MonthFilter({ month }: { month: string }) {
@@ -13,7 +14,10 @@ export default function MonthFilter({ month }: { month: string }) {
     <MonthPicker
       value={month}
       max={currentMonth()}
-      onChange={(m) => router.push(`${pathname}?month=${m}`)}
+      onChange={(m) => {
+        startNav();
+        router.push(`${pathname}?month=${m}`);
+      }}
     />
   );
 }

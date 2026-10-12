@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
+import { startNav } from "@/components/fizz/NavProgress";
 
 // The invitee fills in only who they are. Email and role ride on the token —
 // they're shown above this form as read-only, never posted back.
@@ -17,6 +18,7 @@ export default function JoinForm({ token }: { token: string }) {
     trpc.team.accept.mutationOptions({
       meta: { silentError: true },
       onSuccess: ({ redirectTo }) => {
+        startNav();
         router.replace(redirectTo);
         router.refresh();
       },

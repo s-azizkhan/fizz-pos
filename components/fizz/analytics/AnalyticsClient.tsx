@@ -6,6 +6,7 @@ import { formatMoney } from "@/lib/store/format";
 import { PRESET_LABELS, PRESET_ORDER, toDateInput, type RangePreset } from "@/lib/store/date-range";
 import { DatePicker } from "@/components/fizz/ui/DatePicker";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
+import { startNav } from "@/components/fizz/NavProgress";
 import type { Analytics, Metric, SeriesPoint, Slice } from "@/lib/store/analytics";
 
 // Percentage change between current and previous, guarding divide-by-zero.
@@ -49,10 +50,12 @@ export default function AnalyticsClient({
 
   function applyPreset(p: RangePreset) {
     setShowCustom(false);
+    startNav();
     router.push(`/dashboard/analytics?range=${p}`);
   }
   function applyCustom() {
     if (!customFrom || !customTo) return;
+    startNav();
     router.push(`/dashboard/analytics?range=custom&from=${customFrom}&to=${customTo}`);
   }
 

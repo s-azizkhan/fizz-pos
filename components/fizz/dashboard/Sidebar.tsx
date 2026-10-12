@@ -79,6 +79,7 @@ export default function Sidebar({
               key={item.href}
               href={item.href}
               title={collapsed ? item.label : undefined}
+              aria-current={active ? "page" : undefined}
               className={[
                 "group flex items-center gap-3 rounded-fizz px-3 py-2.5 text-sm font-medium transition-colors",
                 collapsed ? "lg:justify-center" : "",
