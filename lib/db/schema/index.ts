@@ -8,6 +8,7 @@ export * from "./dailySales";
 export * from "./expenses";
 export * from "./menu";
 export * from "./inventory";
+export * from "./customer";
 export * from "./order";
 export * from "./recipe";
 export * from "./orderSettings";

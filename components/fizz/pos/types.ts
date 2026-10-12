@@ -61,6 +61,7 @@ export type LoadedOrder = {
   number: string;
   type: OrderType;
   reference: string | null;
+  customer: { id: string; name: string | null; phone: string | null } | null;
   discount: number;
   fees: OrderFees;
   lines: CartLine[];

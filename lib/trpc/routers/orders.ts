@@ -24,6 +24,7 @@ import {
 import { nextOrderNumber, getStore } from "@/lib/store/data";
 import { receiptStore } from "@/lib/store/order-settings";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
+import { resolveCustomer } from "@/lib/store/customers";
 import { router, protectedProcedure, adminProcedure } from "@/lib/trpc/init";
 
 // The money columns every write shares, derived from computeTotals.
@@ -191,6 +192,7 @@ export const ordersRouter = router({
               .set({
                 type,
                 reference,
+                customerId: await resolveCustomer(tx, input),
                 ...moneyColumns(totals),
                 servedBy: ctx.user.id,
                 updatedAt: new Date(),
@@ -222,6 +224,7 @@ export const ordersRouter = router({
               status: "open",
               type,
               reference,
+              customerId: await resolveCustomer(tx, input),
               ...moneyColumns(totals),
               servedBy: ctx.user.id,
             })
@@ -297,6 +300,7 @@ export const ordersRouter = router({
             status: "paid" as const,
             type,
             reference,
+            customerId: await resolveCustomer(tx, input),
             ...moneyColumns(totals),
             paymentMethod,
             tendered: tendered != null ? tendered.toFixed(2) : null,

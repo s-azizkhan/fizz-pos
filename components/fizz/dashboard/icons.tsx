@@ -162,6 +162,17 @@ export function UsersIcon({ className }: P) {
   );
 }
 
+// Customers — a contact card.
+export function ContactIcon({ className }: P) {
+  return (
+    <Svg name="contact" className={className}>
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <circle cx="9" cy="11" r="2.5" />
+      <path d="M5.5 17a3.5 3.5 0 0 1 7 0M15 10h3M15 14h3" />
+    </Svg>
+  );
+}
+
 // Printers — paper feeds out.
 export function PrinterIcon({ className }: P) {
   return (

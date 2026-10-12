@@ -2,6 +2,7 @@
 
 import { FEE_FIELDS, feesTotal } from "./FeesModal";
 import type { CartLine, OrderFees, OrderType } from "./types";
+import CustomerFields, { type Customer } from "./CustomerFields";
 import { TrashIcon, MinusIcon } from "@/components/fizz/dashboard/icons";
 
 const ORDER_TYPES: { value: OrderType; label: string; hint: string }[] = [
@@ -21,6 +22,8 @@ export default function Ticket({
   onOrderType,
   reference,
   onReference,
+  customer,
+  onCustomer,
   fees,
   onOpenFees,
   editingNumber,
@@ -41,6 +44,8 @@ export default function Ticket({
   onOrderType: (t: OrderType) => void;
   reference: string;
   onReference: (v: string) => void;
+  customer: Customer;
+  onCustomer: (c: Customer) => void;
   fees: OrderFees;
   onOpenFees: () => void;
   editingNumber: string | null;
@@ -111,7 +116,7 @@ export default function Ticket({
           />
         )}
 
-        {/* Fees — compact chips; tap to open the editor. */}
+        {/* Fees + customer — compact chips; tap to open. */}
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           <button
             onClick={onOpenFees}
@@ -128,6 +133,7 @@ export default function Ticket({
               {f.label.replace(" fee", "")} {money(fees[f.key])}
             </button>
           ))}
+          <CustomerFields value={customer} onChange={onCustomer} />
         </div>
       </div>
 

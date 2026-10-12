@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { trpc } from "@/lib/trpc/server";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { getCustomer } from "@/lib/store/customers";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
 
@@ -52,6 +53,7 @@ export default async function TillPage({
           number: order.number,
           type: order.type,
           reference: order.reference,
+          customer: order.customerId ? await getCustomer(order.customerId) : null,
           discount: Number(order.discount),
           fees: {
             service: Number(order.serviceFee),

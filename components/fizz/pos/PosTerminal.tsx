@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import { useTRPC } from "@/lib/trpc/client";
 import type { AppRouter } from "@/lib/trpc/root";
@@ -30,6 +30,7 @@ import { autoPrint, kotDelta, printToDefault } from "@/lib/print/print-order";
 import { kot as kotTicket, receipt as receiptTicket } from "@/lib/print/templates";
 import { usePrinter } from "@/lib/store/printer";
 import KeyboardHints from "./KeyboardHints";
+import type { Customer } from "./CustomerFields";
 
 // The point-of-sale terminal. Keyboard-first: a global search captures typing,
 // arrow/number keys add items, and the ticket lives on the right. Built for a
@@ -61,12 +62,26 @@ export default function PosTerminal({
   const settle = useMutation(
     trpc.orders.checkout.mutationOptions({ meta: { silentError: true } }),
   );
+  const queryClient = useQueryClient();
+  // A brand-new customer was keyed in — pull them into the on-device book.
+  const refreshBook = () => {
+    if (!customer.id && (customer.name || customer.phone)) {
+      void queryClient.invalidateQueries(trpc.customers.book.queryFilter());
+    }
+  };
   const hasPrinter = usePrinter((s) => !!s.deviceId);
   const cart = useCart(loaded?.lines ?? []);
   const [query, setQuery] = useState("");
   const [activeCat, setActiveCat] = useState<string>(categories[0]?.id ?? "");
   const [orderType, setOrderType] = useState<OrderType>(loaded?.type ?? "dine_in");
   const [reference, setReference] = useState(loaded?.reference ?? "");
+  const [customer, setCustomer] = useState<Customer>({
+    id: loaded?.customer?.id ?? null,
+    name: loaded?.customer?.name ?? "",
+    phone: loaded?.customer?.phone ?? "",
+  });
+  // Bumped on reset so the ticket's folded sections start closed again.
+  const [ticketKey, setTicketKey] = useState(0);
   const NO_FEES: OrderFees = { service: 0, packaging: 0, delivery: 0 };
   const [fees, setFees] = useState<OrderFees>(loaded?.fees ?? NO_FEES);
   const [feesOpen, setFeesOpen] = useState(false);
@@ -110,6 +125,8 @@ export default function PosTerminal({
   function resetTerminal() {
     cart.clear();
     setReference("");
+    setCustomer({ id: null, name: "", phone: "" });
+    setTicketKey((k) => k + 1);
     setOrderType("dine_in");
     setFees(NO_FEES);
     setEditingId(null);
@@ -228,6 +245,9 @@ export default function PosTerminal({
       orderId: editingId ?? undefined,
       type: orderType,
       reference,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
       discount: loaded?.discount ?? 0,
       fees,
       items: linePayload(),
@@ -239,6 +259,7 @@ export default function PosTerminal({
       // Tab is saved — clear the terminal so the next order can be rung right
       // away. Revisit/settle the saved tab from the orders page.
       toast.success(`Saved tab ${res.orderNumber} — ready for the next order`);
+      refreshBook();
       if (usePrinter.getState().autoKot && fresh.length > 0) {
         autoPrint("KOT", (cfg) =>
           kotTicket(
@@ -371,6 +392,9 @@ export default function PosTerminal({
       orderId: editingId ?? undefined,
       type: orderType,
       reference,
+      customerId: customer.id,
+      customerName: customer.name,
+      customerPhone: customer.phone,
       paymentMethod: input.paymentMethod,
       discount: input.discount,
       fees,
@@ -385,6 +409,7 @@ export default function PosTerminal({
       setPayOpen(false);
       setReceipt(res);
       toast.success("Order settled");
+      refreshBook();
       // Receipt first (the customer is waiting), then the kitchen's lines.
       const { autoReceipt, autoKot } = usePrinter.getState();
       if (autoReceipt) autoPrint("Receipt", (cfg) => receiptTicket(res, cfg));
@@ -512,6 +537,7 @@ export default function PosTerminal({
           ].join(" ")}
         >
           <Ticket
+            key={ticketKey}
             lines={cart.lines}
             subtotal={cart.subtotal}
             count={cart.count}
@@ -520,6 +546,8 @@ export default function PosTerminal({
             onOrderType={changeOrderType}
             reference={reference}
             onReference={setReference}
+            customer={customer}
+            onCustomer={setCustomer}
             fees={fees}
             onOpenFees={() => setFeesOpen(true)}
             editingNumber={editingNumber}
@@ -570,6 +598,8 @@ export default function PosTerminal({
           tax={tax}
           upi={upi}
           money={money}
+          customer={customer}
+          onCustomer={setCustomer}
           submitting={settle.isPending}
           onPay={handlePay}
           onClose={() => setPayOpen(false)}

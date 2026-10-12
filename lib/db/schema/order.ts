@@ -11,6 +11,7 @@ import {
 import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
+import { customers } from "./customer";
 
 // How a finished order was paid. Mirrors the daily-sales split so totals
 // reconcile across the two surfaces.
@@ -59,6 +60,8 @@ export const orders = pgTable("orders", {
   type: orderType("type").notNull().default("dine_in"),
   // Optional table / tab label keyed at the POS.
   reference: text("reference"),
+  // Optional link to the café's customer book (lib/db/schema/customer.ts).
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 12, scale: 2 }).notNull().default("0"),
   // Tax charged on the (discounted) subtotal. `taxRate` snapshots the % used.
@@ -89,6 +92,8 @@ export const orders = pgTable("orders", {
   index("orders_store_created_at_idx").on(t.storeId, t.createdAt),
   // The KOT board polls by store + kitchen lane, oldest first.
   index("orders_store_kitchen_status_idx").on(t.storeId, t.kitchenStatus),
+  // Customer history + lifetime totals look orders up by customer.
+  index("orders_customer_id_idx").on(t.customerId),
 ]);
 export type Order = typeof orders.$inferSelect;
 
@@ -144,6 +149,16 @@ export type OrderFees = z.infer<typeof feesSchema>;
 
 // Offline replay: the POS's idempotency key and when the order actually
 // happened (it may sync hours later). Server clamps soldAt to a sane window.
+// Optional customer. `customerId` when picked from search; name/phone are
+// resolved server-side into the customer book (works offline, no id yet).
+const optText = (max: number) =>
+  z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || null);
+const customerFields = {
+  customerId: z.uuid().nullable().optional(),
+  customerName: optText(80),
+  customerPhone: optText(20),
+};
+
 const offlineFields = {
   clientId: z.uuid().optional(),
   soldAt: z.coerce.date().optional(),
@@ -165,6 +180,7 @@ export const checkoutSchema = z.object({
   fees: feesSchema,
   tendered: money.optional(),
   items: z.array(lineSchema).min(1, "Add at least one item"),
+  ...customerFields,
   ...offlineFields,
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
@@ -184,6 +200,7 @@ export const saveOrderSchema = z.object({
   discount: money.default(0),
   fees: feesSchema,
   items: z.array(lineSchema).min(1, "Add at least one item"),
+  ...customerFields,
   ...offlineFields,
 });
 export type SaveOrderInput = z.infer<typeof saveOrderSchema>;

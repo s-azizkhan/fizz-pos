@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { upiPayLink } from "@/lib/store/format";
 import UpiQr from "@/components/fizz/UpiQr";
 import { FEE_FIELDS, feesTotal } from "./FeesModal";
+import CustomerFields, { type Customer } from "./CustomerFields";
 import type { OrderFees, PaymentMethod, TaxConfig, UpiConfig } from "./types";
 
 const METHODS: { value: PaymentMethod; label: string; key: string }[] = [
@@ -21,6 +22,8 @@ export default function PayModal({
   tax,
   upi,
   money,
+  customer,
+  onCustomer,
   submitting,
   onPay,
   onClose,
@@ -30,6 +33,8 @@ export default function PayModal({
   tax: TaxConfig;
   upi: UpiConfig | null;
   money: (n: number) => string;
+  customer: Customer;
+  onCustomer: (c: Customer) => void;
   submitting: boolean;
   onPay: (input: {
     paymentMethod: PaymentMethod;
@@ -209,6 +214,10 @@ export default function PayModal({
               className="mt-1 w-full rounded-fizz border border-ink-line bg-ink px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
             />
           </label>
+
+          <div className="mt-4">
+            <CustomerFields value={customer} onChange={onCustomer} inputClass="bg-ink" />
+          </div>
 
           {/* Online / UPI */}
           {method === "online" && (
