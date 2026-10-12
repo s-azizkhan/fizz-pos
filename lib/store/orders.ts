@@ -10,7 +10,7 @@ import {
   type OrderStatus,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
-import { fromDateInput, monthBounds } from "@/lib/store/date-range";
+import { fromDateInput, monthBounds, resolvePreset } from "@/lib/store/date-range";
 
 export type OrderWithItems = Order & { items: OrderItem[] };
 
@@ -78,6 +78,13 @@ export async function getOrder(id: string): Promise<OrderWithItems | null> {
 // OLDEST FIRST: the queue is a queue, so the newest ticket lands at the back.
 // `ready` is final and unbounded, so that lane is capped; the working lanes are
 // small by nature and returned whole.
+// The board only covers the current month, so stale tickets from earlier
+// months that were never bumped don't clog the lanes forever.
+function inCurrentMonth() {
+  const { start, end } = resolvePreset("this_month");
+  return and(gte(orders.createdAt, start), lt(orders.createdAt, end));
+}
+
 export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
   const rows = await db
     .select({
@@ -90,6 +97,7 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
         eq(orders.storeId, STORE_ID),
         ne(orders.status, "void"),
         eq(orders.kitchenStatus, lane),
+        inCurrentMonth(),
       ),
     )
     .orderBy(lane === "ready" ? desc(orders.createdAt) : asc(orders.createdAt))
@@ -119,7 +127,9 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
       count: sql<number>`count(*)`.mapWith(Number),
     })
     .from(orders)
-    .where(and(eq(orders.storeId, STORE_ID), ne(orders.status, "void")))
+    .where(
+      and(eq(orders.storeId, STORE_ID), ne(orders.status, "void"), inCurrentMonth()),
+    )
     .groupBy(orders.kitchenStatus);
 
   const out: Record<KitchenStatus, number> = { new: 0, accepted: 0, ready: 0 };
