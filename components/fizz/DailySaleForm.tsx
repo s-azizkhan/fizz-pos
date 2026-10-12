@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
@@ -29,6 +29,10 @@ export default function DailySaleForm({
   const trpc = useTRPC();
   const create = useMutation(trpc.dailySales.create.mutationOptions());
   const saved = useSavedFlag(create.isSuccess);
+  const qc = useQueryClient();
+
+  const [saleDate, setSaleDate] = useState(todayLocal);
+  const [fetching, setFetching] = useState(false);
 
   const [cash, setCash] = useState("0");
   const [online, setOnline] = useState("0");
@@ -48,6 +52,7 @@ export default function DailySaleForm({
             setCash("0");
             setOnline("0");
             setCredit("0");
+            setSaleDate(todayLocal());
             onSuccess?.();
           },
         });
@@ -66,10 +71,41 @@ export default function DailySaleForm({
           <span className={labelCls}>Sale date</span>
           <DatePicker
             name="saleDate"
-            defaultValue={todayLocal()}
+            value={saleDate}
+            onChange={setSaleDate}
             max={todayLocal()}
           />
         </label>
+        <div className="flex flex-col justify-end">
+          <button
+            type="button"
+            disabled={fetching}
+            onClick={async () => {
+              setFetching(true);
+              try {
+                const t = await qc.fetchQuery({
+                  ...trpc.dailySales.tillTotals.queryOptions(saleDate),
+                  staleTime: 0,
+                });
+                setCash(t.cashSale);
+                setOnline(t.onlineSale);
+                setCredit(t.creditSale);
+                toast.success("Filled from sales");
+              } catch {
+                toast.error("Couldn't fetch till sales. Try again.");
+              } finally {
+                setFetching(false);
+              }
+            }}
+            className="rounded-fizz border border-ink-line bg-ink px-4 py-3 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz disabled:opacity-60"
+          >
+            {fetching
+              ? "Fetching…"
+              : saleDate === todayLocal()
+                ? "Fill from today's sales"
+                : "Fill from this day's sales"}
+          </button>
+        </div>
         {(
           [
             ["cashSale", "Cash sale", cash, setCash],

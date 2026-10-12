@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { dailySales, dailySaleForm } from "@/lib/db/schema";
+import { dailySales, dailySaleForm, orders } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { listDailySales, getDailySale } from "@/lib/store/daily-sales";
+import { fromDateInput } from "@/lib/store/date-range";
 import { router, protectedProcedure } from "@/lib/trpc/init";
 
 const fizzled = new TRPCError({
@@ -19,6 +20,32 @@ export const dailySalesRouter = router({
     .query(({ input }) => listDailySales(input)),
 
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getDailySale(input)),
+
+  // Paid till orders for one day, split to match the form. Card counts as
+  // credit — the order enum mirrors the daily-sales split (see order.ts).
+  tillTotals: protectedProcedure
+    .input(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .query(async ({ input }) => {
+      const start = fromDateInput(input);
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+      const rows = await db
+        .select({
+          method: orders.paymentMethod,
+          total: sql<string>`coalesce(sum(${orders.total}), 0)`,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.storeId, STORE_ID),
+            eq(orders.status, "paid"),
+            gte(orders.paidAt, start),
+            lt(orders.paidAt, end),
+          ),
+        )
+        .groupBy(orders.paymentMethod);
+      const by = (m: string) => Number(rows.find((r) => r.method === m)?.total ?? 0).toFixed(2);
+      return { cashSale: by("cash"), onlineSale: by("online"), creditSale: by("card") };
+    }),
 
   // Any signed-in user may record; we stamp who keyed it.
   create: protectedProcedure
