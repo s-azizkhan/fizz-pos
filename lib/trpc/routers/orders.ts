@@ -24,7 +24,7 @@ import {
 import { nextOrderNumber, getStore } from "@/lib/store/data";
 import { receiptStore } from "@/lib/store/order-settings";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
-import { router, protectedProcedure } from "@/lib/trpc/init";
+import { router, protectedProcedure, adminProcedure } from "@/lib/trpc/init";
 
 // The money columns every write shares, derived from computeTotals.
 function moneyColumns(t: ReturnType<typeof computeTotals>) {
@@ -63,15 +63,15 @@ async function writeItems(
 }
 
 // Load an order for editing, asserting it's still open. Guards against settling
-// or re-saving a tab someone else already closed.
-async function requireOpen(orderId: string) {
+// or re-saving a tab someone else already closed. Admins may edit any state.
+async function requireOpen(orderId: string, role: string) {
   const [row] = await db
     .select()
     .from(orders)
     .where(and(eq(orders.id, orderId), eq(orders.storeId, STORE_ID)))
     .limit(1);
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Order not found." });
-  if (row.status !== "open")
+  if (row.status !== "open" && role !== "admin")
     throw new TRPCError({
       code: "CONFLICT",
       message: "This order is already closed.",
@@ -183,7 +183,7 @@ export const ordersRouter = router({
       );
 
       if (orderId) {
-        const existing = await requireOpen(orderId);
+        const existing = await requireOpen(orderId, ctx.user.role);
         try {
           await db.transaction(async (tx) => {
             await tx
@@ -281,10 +281,14 @@ export const ordersRouter = router({
       // Replay of a sale that already landed: answer with the same receipt and
       // touch nothing — no new number, no second stock deduction.
       const dup = await byClientId(clientId);
+      const existing = !dup && orderId ? await requireOpen(orderId, ctx.user.role) : null;
+      // Admin re-settling an already-paid order: keep its sale time and don't
+      // burn stock a second time.
+      const resettle = existing?.status === "paid";
       let number = dup
         ? dup.number
-        : orderId
-          ? (await requireOpen(orderId)).number
+        : existing
+          ? existing.number
           : await nextOrderNumber();
 
       if (!dup) try {
@@ -299,7 +303,7 @@ export const ordersRouter = router({
             changeDue: changeDue != null ? changeDue.toFixed(2) : null,
             servedBy: ctx.user.id,
             updatedAt: new Date(),
-            paidAt: at,
+            paidAt: (resettle && existing?.paidAt) || at,
           };
 
           let id = orderId;
@@ -315,7 +319,9 @@ export const ordersRouter = router({
           await writeItems(tx, id, totals.lines);
           // Settling is the point of sale — burn the recipe stock now. Open tabs
           // (save) deliberately don't deduct, so this fires exactly once.
-          await applyRecipeDeductions(tx, totals.lines, ctx.user.id);
+          // ponytail: admin edits of a paid order don't reconcile stock; add a
+          // diff-based deduction if inventory accuracy on edits matters.
+          if (!resettle) await applyRecipeDeductions(tx, totals.lines, ctx.user.id);
         });
       } catch (e) {
         if (e instanceof TRPCError) throw e;
@@ -333,7 +339,7 @@ export const ordersRouter = router({
         orderNumber: number,
         store: await receiptStore(),
         currency: store.currency,
-        createdAt: dup?.paidAt ?? at,
+        createdAt: dup?.paidAt ?? ((resettle && existing?.paidAt) || at),
         type,
         reference,
         paymentMethod,
@@ -357,11 +363,11 @@ export const ordersRouter = router({
       };
     }),
 
-  // Cancel an open tab without taking payment.
+  // Cancel an open tab without taking payment. Admins can void any order.
   void: protectedProcedure
     .input(z.uuid())
-    .mutation(async ({ input: orderId }) => {
-      await requireOpen(orderId);
+    .mutation(async ({ ctx, input: orderId }) => {
+      await requireOpen(orderId, ctx.user.role);
       try {
         await db
           .update(orders)
@@ -373,5 +379,18 @@ export const ordersRouter = router({
       bumpPaths();
       return { ok: true as const };
     }),
-});
 
+  // Hard delete, any state. Line items cascade.
+  delete: adminProcedure
+    .input(z.uuid())
+    .mutation(async ({ input: orderId }) => {
+      const gone = await db
+        .delete(orders)
+        .where(and(eq(orders.id, orderId), eq(orders.storeId, STORE_ID)))
+        .returning({ id: orders.id });
+      if (!gone.length)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Order not found." });
+      bumpPaths();
+      return { ok: true as const };
+    }),
+});

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Agentation } from "agentation";
 import { Suspense } from "react";
 import Toaster from "@/components/fizz/Toaster";
+import ConfirmHost from "@/components/fizz/ConfirmDialog";
 import NavProgress, { NAV_SCRIPT } from "@/components/fizz/NavProgress";
 import TrpcProvider from "@/lib/trpc/Provider";
 import SplashScreen from "@/components/fizz/pwa/SplashScreen";
@@ -90,6 +91,7 @@ export default function RootLayout({
           <NavProgress />
         </Suspense>
         <Toaster />
+        <ConfirmHost />
         <NetworkStatus />
         <SplashScreen />
         <ServiceWorkerRegistrar />

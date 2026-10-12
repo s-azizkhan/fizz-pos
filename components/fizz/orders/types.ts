@@ -24,4 +24,4 @@ export type OrderRow = {
   receipt: ReceiptData | null; // paid orders only, for reprints
 };
 
-export type StatusFilter = "open" | "paid" | "all";
+export type StatusFilter = "open" | "paid" | "void" | "all";

@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
 import { toast } from "@/lib/store/toast";
+import { confirmDialog } from "@/components/fizz/ConfirmDialog";
 import type { UserRole } from "@/lib/db/schema";
 
 export type Member = {
@@ -223,10 +224,14 @@ function RemoveButton({ member }: { member: Member }) {
     <button
       type="button"
       disabled={remove.isPending}
-      onClick={() => {
-        if (confirm(`Remove ${member.name} from the team?`)) {
-          remove.mutate({ userId: member.id });
-        }
+      onClick={async () => {
+        const ok = await confirmDialog({
+          title: `Remove ${member.name}?`,
+          body: "They lose dashboard access right away.",
+          confirmLabel: "Remove",
+          danger: true,
+        });
+        if (ok) remove.mutate({ userId: member.id });
       }}
       className="rounded-full border border-ink-line px-3 py-1 text-xs font-semibold text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
     >

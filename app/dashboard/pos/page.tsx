@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { trpc } from "@/lib/trpc/server";
+import { getCurrentUser } from "@/lib/auth/dal";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
 
@@ -12,7 +13,8 @@ export default async function TillPage({
 }) {
   const api = await trpc();
   const { order: orderId } = await searchParams;
-  const [store, menu, order] = await Promise.all([
+  const [user, store, menu, order] = await Promise.all([
+    getCurrentUser(),
     api.store.get(),
     api.menu.full(),
     orderId ? api.orders.byId(orderId) : Promise.resolve(null),
@@ -42,9 +44,9 @@ export default async function TillPage({
     .filter((c) => c.items.length > 0);
 
   // Hydrate an existing OPEN tab into the cart when ?order= is passed and the
-  // order is still editable. Paid/void orders are ignored (read-only history).
+  // order is still editable. Paid/void orders are read-only, except for admins.
   const loaded: LoadedOrder | null =
-    order && order.status === "open"
+    order && (order.status === "open" || user.role === "admin")
       ? {
           id: order.id,
           number: order.number,

@@ -16,7 +16,7 @@ export default async function OrdersPage({
   const { month: monthParam } = await searchParams;
   const month = /^\d{4}-\d{2}$/.test(monthParam ?? "") ? monthParam! : currentMonth();
   const api = await trpc();
-  await getCurrentUser();
+  const user = await getCurrentUser();
   const [store, all, header] = await Promise.all([
     api.store.get(),
     api.orders.list({ month }),
@@ -69,5 +69,5 @@ export default async function OrdersPage({
         : null,
   }));
 
-  return <OrdersClient orders={orders} month={month} currency={store.currency} storeName={store.name} />;
+  return <OrdersClient isAdmin={user.role === "admin"} orders={orders} month={month} currency={store.currency} storeName={store.name} />;
 }

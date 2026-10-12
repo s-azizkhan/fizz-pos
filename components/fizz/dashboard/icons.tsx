@@ -367,3 +367,11 @@ export function PlusIcon({ className }: P) {
     </Svg>
   );
 }
+
+export function PencilIcon({ className }: P) {
+  return (
+    <Svg name="pencil" className={className}>
+      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4zM13.5 6.5l4 4" />
+    </Svg>
+  );
+}

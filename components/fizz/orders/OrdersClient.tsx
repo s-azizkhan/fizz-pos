@@ -13,6 +13,8 @@ import type { OrderRow, StatusFilter } from "./types";
 import KotTicket from "./KotTicket";
 import MonthFilter from "@/components/fizz/MonthFilter";
 import { startNav } from "@/components/fizz/NavProgress";
+import { confirmDialog } from "@/components/fizz/ConfirmDialog";
+import { CashIcon, ChefIcon, CloseIcon, PencilIcon, ReceiptIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine in",
@@ -38,13 +40,16 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 ];
 
 // Orders dashboard: filter by open/paid, revisit an open tab to edit in the
-// POS, settle it, or void it. Paid orders are read-only receipts.
+// POS, settle it, or void it. Paid orders are read-only receipts — except for
+// admins, who can edit, void or delete an order in any state.
 export default function OrdersClient({
+  isAdmin,
   orders,
   month,
   currency,
   storeName,
 }: {
+  isAdmin: boolean;
   orders: OrderRow[];
   month: string;
   currency: string;
@@ -53,6 +58,7 @@ export default function OrdersClient({
   const router = useRouter();
   const trpc = useTRPC();
   const voidOrder = useMutation(trpc.orders.void.mutationOptions());
+  const deleteOrder = useMutation(trpc.orders.delete.mutationOptions());
   const [filter, setFilter] = useState<StatusFilter>("open");
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -104,21 +110,35 @@ export default function OrdersClient({
     }
   }
 
-  function doVoid(id: string) {
-    if (!confirm("Void this open tab? This cannot be undone.")) return;
+  async function run(
+    id: string,
+    ask: Parameters<typeof confirmDialog>[0],
+    done: string,
+    fn: () => Promise<unknown>,
+  ) {
+    if (!(await confirmDialog({ danger: true, ...ask }))) return;
     setBusyId(id);
     startTransition(async () => {
       try {
-        await voidOrder.mutateAsync(id);
-        toast.success("Order voided");
+        await fn();
+        toast.success(done);
         router.refresh();
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : "Couldn't void the order");
+        toast.error(e instanceof Error ? e.message : "Something fizzled");
       } finally {
         setBusyId(null);
       }
     });
   }
+
+  const doVoid = (id: string) =>
+    run(id, { title: "Void this order?", body: "This cannot be undone.", confirmLabel: "Void" }, "Order voided", () =>
+      voidOrder.mutateAsync(id),
+    );
+  const doDelete = (id: string) =>
+    run(id, { title: "Delete this order?", body: "Gone for good — it vanishes from sales and reports.", confirmLabel: "Delete" }, "Order deleted", () =>
+      deleteOrder.mutateAsync(id),
+    );
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
@@ -156,7 +176,7 @@ export default function OrdersClient({
       {/* Filters */}
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <ChipBar>
-          {FILTERS.map((f) => (
+          {(isAdmin ? [...FILTERS, { value: "void" as const, label: "Voided" }] : FILTERS).map((f) => (
             <Chip
               key={f.value}
               active={filter === f.value}
@@ -212,7 +232,7 @@ export default function OrdersClient({
                       : "border-ink-line bg-ink text-steam"
                   }`}
                 >
-                  {o.status === "open" ? "Open" : "Paid"}
+                  {o.status === "open" ? "Open" : o.status === "paid" ? "Paid" : "Void"}
                 </span>
               </div>
 
@@ -248,44 +268,62 @@ export default function OrdersClient({
               </div>
 
               {/* Actions */}
-              {o.status === "open" && (
+              {(o.status === "open" || isAdmin) && (
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() => edit(o.id)}
-                    className="flex-1 rounded-fizz border border-ink-line bg-ink px-3 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz border border-ink-line bg-ink px-3 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
                   >
+                    <PencilIcon className="h-4 w-4" />
                     Edit
                   </button>
-                  <button
-                    onClick={() => settle(o.id)}
-                    className="flex-1 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02]"
-                  >
-                    Settle
-                  </button>
-                  <button
-                    onClick={() => doVoid(o.id)}
-                    disabled={pending && busyId === o.id}
-                    aria-label="Void tab"
-                    className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
-                  >
-                    ✕
-                  </button>
+                  {o.status === "open" && (
+                    <button
+                      onClick={() => settle(o.id)}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02]"
+                    >
+                      <CashIcon className="h-4 w-4" />
+                      Settle
+                    </button>
+                  )}
+                  {o.status !== "void" && (
+                    <button
+                      onClick={() => doVoid(o.id)}
+                      disabled={pending && busyId === o.id}
+                      aria-label="Void order"
+                      className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
+                    >
+                      <CloseIcon className="h-4 w-4" />
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button
+                      onClick={() => doDelete(o.id)}
+                      disabled={pending && busyId === o.id}
+                      aria-label="Delete order"
+                      className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               )}
 
               {/* Kitchen ticket — print/reprint for any order */}
               <button
                 onClick={() => setKotFor(o)}
-                className="mt-2 block w-full rounded-fizz border border-ink-line px-3 py-2 text-center text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
               >
-                🧾 {o.status === "open" ? "Print KOT" : "Reprint KOT"}
+                <ChefIcon className="h-4 w-4" />
+                {o.status === "open" ? "Print KOT" : "Reprint KOT"}
               </button>
               {o.receipt && (
                 <button
                   onClick={() => reprint(o.receipt!)}
-                  className="mt-2 block w-full rounded-fizz border border-ink-line px-3 py-2 text-center text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
                 >
-                  🧾 Reprint receipt
+                  <ReceiptIcon className="h-4 w-4" />
+                  Reprint receipt
                 </button>
               )}
             </article>
