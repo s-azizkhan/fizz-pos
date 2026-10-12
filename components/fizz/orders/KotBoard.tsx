@@ -10,6 +10,7 @@ import { isNetworkError, outbox } from "@/lib/store/outbox";
 import type { KitchenStatus, OrderType } from "@/lib/db/schema";
 import type { AppRouter } from "@/lib/trpc/root";
 import { ArrowRightIcon } from "@/components/fizz/dashboard/icons";
+import RingAlarm from "./RingAlarm";
 
 // Inferred from the procedure rather than hand-written, so a schema change
 // can't silently drift the board's idea of a ticket.
@@ -371,6 +372,14 @@ export default function KotBoard({
 
   return (
     <div className="mx-auto flex max-w-[1900px] flex-col px-4 py-4 sm:px-6 sm:py-6 lg:py-8">
+      {/* New tickets in the Queue ring until a cook taps Stop (or accepts
+          them). Bottom, so it never sits on top of the web-order banner. */}
+      <RingAlarm
+        items={queues.new.data ?? []}
+        storageKey="fizz-kot-acked"
+        label="New kitchen ticket"
+        position="bottom"
+      />
       {/* Header ------------------------------------------------------------ */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
