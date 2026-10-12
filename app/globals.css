@@ -145,6 +145,22 @@ body {
 }
 .fizz-toast { animation: toast-in 0.22s ease-out; }
 
+/* Light streak sweeping across a solid button (public cart bar). */
+@keyframes sheen {
+  from { transform: translateX(-120%) skewX(-20deg); }
+  to { transform: translateX(320%) skewX(-20deg); }
+}
+.fizz-sheen { position: relative; overflow: hidden; }
+.fizz-sheen::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, currentColor 28%, transparent), transparent);
+  animation: sheen 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fizz-glow,
   .fizz-marquee,
@@ -153,6 +169,7 @@ body {
   .fizz-orbit,
   .fizz-bubble,
   .fizz-toast,
+  .fizz-sheen::after,
   .fizz-ticket,
   .fizz-late {
     animation: none !important;

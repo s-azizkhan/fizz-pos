@@ -196,20 +196,41 @@ export function AddToCart({
         type="button"
         aria-label={`Remove one ${name}`}
         onClick={() => setQty(itemKey, qty - 1)}
-        className="grid size-6 place-items-center rounded-full text-[0.9em] font-bold leading-none hover:bg-black/10"
+        className="grid size-6 place-items-center rounded-full bg-white text-[0.9em] font-bold leading-none text-[#E2655A] transition-transform hover:scale-110 active:scale-95"
       >
         −
       </button>
-      <span className="min-w-4 text-center text-[0.8em] font-bold tabular-nums">{qty}</span>
+      <QtyInput qty={qty} onCommit={(q) => setQty(itemKey, q)} />
       <button
         type="button"
         aria-label={`Add one ${name}`}
         onClick={() => setQty(itemKey, qty + 1)}
-        className="grid size-6 place-items-center rounded-full text-[0.9em] font-bold leading-none hover:bg-black/10"
+        className="grid size-6 place-items-center rounded-full bg-white text-[0.9em] font-bold leading-none text-black transition-transform hover:scale-110 active:scale-95"
       >
         +
       </button>
     </span>
+  );
+}
+
+// Tap the number to type a quantity. Commits on blur/Enter; 0 removes the line.
+function QtyInput({ qty, onCommit }: { qty: number; onCommit: (q: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const commit = () => {
+    if (draft !== null && draft !== "") onCommit(Math.min(Number(draft), 99));
+    setDraft(null);
+  };
+  return (
+    <input
+      value={draft ?? String(qty)}
+      onChange={(e) => setDraft(e.target.value.replace(/\D/g, "").slice(0, 2))}
+      onFocus={(e) => e.currentTarget.select()}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      inputMode="numeric"
+      aria-label="Quantity"
+      className="w-6 bg-transparent text-center text-[0.8em] font-bold tabular-nums outline-none"
+    />
   );
 }
 
@@ -242,6 +263,8 @@ export function FloatingCart({
   const [mode, setMode] = useState<string>(modes[0]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  // Saved on this device: show a summary instead of the inputs until "Change".
+  const [known, setKnown] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const trpc = useTRPC();
   const place = useMutation(
@@ -293,8 +316,14 @@ export function FloatingCart({
       const c = JSON.parse(localStorage.getItem("fizz-customer") ?? "{}");
       if (typeof c.name === "string") setName(c.name);
       if (typeof c.phone === "string") setPhone(c.phone);
+      setKnown(!!c.name?.trim() && String(c.phone ?? "").replace(/\D/g, "").length >= 8);
     } catch {}
   }, []);
+
+  // Emptying the cart unmounts the sheet; close it too or the scroll lock stays.
+  useEffect(() => {
+    if (!n && open) setOpen(false);
+  }, [n, open, setOpen]);
 
   // Sheet open = page behind must not scroll.
   useEffect(() => {
@@ -414,7 +443,7 @@ export function FloatingCart({
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="fizz-toast flex w-full max-w-md items-center justify-between gap-4 rounded-full px-5 py-3.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.02] active:scale-95"
+              className="fizz-toast fizz-sheen flex w-full max-w-md items-center justify-between gap-4 rounded-full px-5 py-3.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.02] active:scale-95"
               style={{ backgroundColor: accent, color: contrastOn(accent) }}
             >
               <span className="flex items-center gap-2.5 text-[0.95em] font-bold">
@@ -545,28 +574,45 @@ export function FloatingCart({
                     className="resize-none rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
                   />
                 )}
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  aria-label="Your name"
-                  autoComplete="name"
-                  maxLength={60}
-                  required
-                  className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
-                />
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\- ]/g, ""))}
-                  placeholder="Phone number"
-                  aria-label="Phone number"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  maxLength={20}
-                  required
-                  className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
-                />
+                {known ? (
+                  <div className="flex items-center justify-between gap-3 rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em]">
+                    <span className="min-w-0 truncate text-[var(--m-text)]">
+                      {name} · <span className="text-[var(--m-muted)]">{phone}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setKnown(false)}
+                      className="shrink-0 font-semibold text-[color:var(--m-accent)]"
+                    >
+                      Change
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    aria-label="Your name"
+                    autoComplete="name"
+                    maxLength={60}
+                    required
+                    className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
+                  />
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\- ]/g, ""))}
+                    placeholder="Phone number"
+                    aria-label="Phone number"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    maxLength={20}
+                    required
+                    className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
+                  />
+                  </>
+                )}
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -608,10 +654,21 @@ export function FloatingCart({
                 type="button"
                 onClick={send}
                 disabled={blocked}
-                className="mt-4 w-full rounded-[var(--m-radius)] py-3.5 text-[1em] font-bold transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className={`${blocked ? "" : "fizz-sheen "}mt-4 flex w-full items-center justify-center gap-2 rounded-[var(--m-radius)] py-3.5 text-[1em] font-bold transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50`}
                 style={{ backgroundColor: accent, color: contrastOn(accent) }}
               >
-                {place.isPending ? "Placing order…" : (missing ?? "Send order on WhatsApp")}
+                {place.isPending ? (
+                  "Placing order…"
+                ) : missing ? (
+                  missing
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="size-5">
+                      <path d="M20.5 3.5A11.9 11.9 0 0 0 12 0C5.4 0 0 5.4 0 12c0 2.1.6 4.2 1.6 6L0 24l6.2-1.6A12 12 0 0 0 12 24c6.6 0 12-5.4 12-12 0-3.2-1.2-6.2-3.5-8.5ZM12 22a10 10 0 0 1-5.1-1.4l-.4-.2-3.7 1 1-3.6-.2-.4A10 10 0 1 1 12 22Zm5.500-7.500c-.3-.2-1.800-.9-2.100-1s-.5-.2-.7.2-.8 1-1 1.200-.4.200-.700.100a8.200 8.200 0 0 1-4-3.500c-.3-.5.300-.5.900-1.600.1-.2 0-.4 0-.5l-1-2.300c-.2-.6-.5-.5-.7-.5h-.6a1.200 1.200 0 0 0-.9.400 3.700 3.700 0 0 0-1.100 2.700c0 1.600 1.200 3.200 1.300 3.400s2.300 3.500 5.600 4.900c2 .8 2.800.9 3.800.7.600-.1 1.800-.7 2-1.500s.3-1.400.2-1.500-.3-.2-.6-.4Z" />
+                    </svg>
+                    Send order on WhatsApp
+                  </>
+                )}
               </button>
               {error && (
                 <p role="alert" className="mt-3 text-center text-[0.85em] text-[#E2655A]">
