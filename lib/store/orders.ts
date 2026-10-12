@@ -251,6 +251,19 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
   return out;
 }
 
+// Guest web orders nobody has accepted yet — what the new-order alarm rings
+// for. Polled from every dashboard screen, so it returns three columns only.
+export async function pendingWebOrders() {
+  return db
+    .select({ id: orders.id, number: orders.number })
+    .from(orders)
+    .where(
+      and(eq(orders.storeId, STORE_ID), eq(orders.status, "open"), eq(orders.webPending, true)),
+    )
+    .orderBy(asc(orders.createdAt))
+    .limit(20);
+}
+
 // Count of currently-open tabs — used for the POS/orders badge.
 export async function openOrderCount(): Promise<number> {
   const [row] = await db

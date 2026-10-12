@@ -3,6 +3,7 @@ import { getStore } from "@/lib/store/data";
 import DashboardShell from "@/components/fizz/dashboard/DashboardShell";
 import TicketLayoutSync from "@/components/fizz/printers/TicketLayoutSync";
 import PrinterKeepAlive from "@/components/fizz/printers/PrinterKeepAlive";
+import WebOrderAlarm from "@/components/fizz/orders/WebOrderAlarm";
 
 export default async function DashboardLayout({
   children,
@@ -14,6 +15,7 @@ export default async function DashboardLayout({
     <DashboardShell user={{ name: user.name, role: user.role }}>
       <TicketLayoutSync initial={store.ticketLayouts ?? {}} />
       <PrinterKeepAlive />
+      <WebOrderAlarm />
       {children}
     </DashboardShell>
   );

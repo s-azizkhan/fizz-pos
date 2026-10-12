@@ -19,6 +19,7 @@ import {
   listOrders,
   getOrder,
   openOrderCount,
+  pendingWebOrders,
   listKot,
   kotCounts,
 } from "@/lib/store/orders";
@@ -254,6 +255,7 @@ export const ordersRouter = router({
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getOrder(input)),
 
   openCount: protectedProcedure.query(() => openOrderCount()),
+  webPending: protectedProcedure.query(() => pendingWebOrders()),
 
   // --- Kitchen board -------------------------------------------------------
   // Polled on an interval by the KOT screen, so keep both of these cheap.
