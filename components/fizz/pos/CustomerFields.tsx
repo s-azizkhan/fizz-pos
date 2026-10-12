@@ -40,7 +40,7 @@ export type Customer = { id: string | null; name: string; phone: string };
 
 // Optional customer name + phone, folded behind a chip until asked for. Typing
 // in either field searches the café's regulars; pick one to link the order.
-// Opens on its own when there's already something on it.
+// Always starts folded; the chip shows who's linked when there's a customer.
 export default function CustomerFields({
   value,
   onChange,
@@ -52,7 +52,7 @@ export default function CustomerFields({
 }) {
   const book = useCustomerBook();
   const filled = !!(value.id || value.name || value.phone);
-  const [open, setOpen] = useState(filled);
+  const [open, setOpen] = useState(false);
   // Whatever field was typed in last drives the lookup — searched locally.
   const [typed, setTyped] = useState("");
   const q = typed.trim();
@@ -71,7 +71,7 @@ export default function CustomerFields({
         onClick={() => setOpen(true)}
         className="rounded-full border border-ink-line bg-ink-soft px-3 py-1 text-xs text-steam transition-colors hover:border-fizz hover:text-fizz"
       >
-        ＋ Customer
+        {filled ? `Customer · ${value.name || value.phone}` : "＋ Customer"}
       </button>
     );
   }
