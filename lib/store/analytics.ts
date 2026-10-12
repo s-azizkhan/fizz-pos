@@ -9,6 +9,7 @@ import {
   orders,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
+import { ORDER_SOURCE_LABELS } from "@/lib/db/schema/constants";
 import type { DateRange } from "@/lib/store/date-range";
 
 export type Metric = {
@@ -49,6 +50,7 @@ export type Analytics = {
   trendUnit: "hour" | "day";
   byPayment: Slice[];
   byType: Slice[];
+  bySource: Slice[]; // which channel sold: counter, web menu, Zomato…
   byCategory: Slice[];
   topItems: TopItem[];
   busiestLabel: string | null; // peak day/hour by revenue
@@ -120,7 +122,7 @@ export async function getAnalytics(
 ): Promise<Analytics> {
   const { start, end } = range;
 
-  const [cur, prior, curExp, priorExp, payRows, typeRows, catRows, topRows, trendRows] =
+  const [cur, prior, curExp, priorExp, payRows, typeRows, sourceRows, catRows, topRows, trendRows] =
     await Promise.all([
       paidTotals(start, end),
       paidTotals(prev.start, prev.end),
@@ -160,6 +162,23 @@ export async function getAnalytics(
           ),
         )
         .groupBy(orders.type),
+      // By source (channel).
+      db
+        .select({
+          key: orders.source,
+          value: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
+          count: sql<number>`count(*)`.mapWith(Number),
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.storeId, STORE_ID),
+            eq(orders.status, "paid"),
+            gte(orders.paidAt, start),
+            lt(orders.paidAt, end),
+          ),
+        )
+        .groupBy(orders.source),
       // By menu category (via order items -> menu item -> category).
       db
         .select({
@@ -262,6 +281,14 @@ export async function getAnalytics(
     }))
     .sort((a, b) => b.value - a.value);
 
+  const bySource: Slice[] = sourceRows
+    .map((r) => ({
+      label: ORDER_SOURCE_LABELS[r.key],
+      value: r2(r.value),
+      count: r.count,
+    }))
+    .sort((a, b) => b.value - a.value);
+
   const byCategory: Slice[] = catRows
     .map((r) => ({
       label: r.key ?? "Uncategorised",
@@ -293,6 +320,7 @@ export async function getAnalytics(
     trendUnit: hourly ? "hour" : "day",
     byPayment,
     byType,
+    bySource,
     byCategory,
     topItems,
     busiestLabel: busiest && busiest.value > 0 ? busiest.label : null,

@@ -180,8 +180,8 @@ export default function AnalyticsClient({
         )}
       </Card>
 
-      {/* Breakdowns */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+      {/* Breakdowns — the three "how it sold" splits side by side. */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card>
           <h2 className="font-display text-lg font-bold">By payment method</h2>
           <SliceList slices={analytics.byPayment} money={money} />
@@ -190,6 +190,12 @@ export default function AnalyticsClient({
           <h2 className="font-display text-lg font-bold">By order type</h2>
           <SliceList slices={analytics.byType} money={money} />
         </Card>
+        <Card>
+          <h2 className="font-display text-lg font-bold">By source</h2>
+          <SliceList slices={analytics.bySource} money={money} />
+        </Card>
+      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card>
           <h2 className="font-display text-lg font-bold">Sales by category</h2>
           <SliceList slices={analytics.byCategory} money={money} />
