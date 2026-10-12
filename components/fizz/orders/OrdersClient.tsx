@@ -122,7 +122,6 @@ export default function OrdersClient({
       try {
         await fn();
         toast.success(done);
-        router.refresh();
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Something fizzled");
       } finally {

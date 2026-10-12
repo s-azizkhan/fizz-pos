@@ -55,12 +55,12 @@ export default function PosTerminal({
   const trpc = useTRPC();
   // handleSave toasts its own outcome (or queues offline); no global toast.
   const saveTab = useMutation(
-    trpc.orders.save.mutationOptions({ meta: { silentError: true } }),
+    trpc.orders.save.mutationOptions({ meta: { silentError: true, noRefresh: true } }),
   );
   // The error renders in the pay modal, or the sale queues offline; either way
   // no global toast.
   const settle = useMutation(
-    trpc.orders.checkout.mutationOptions({ meta: { silentError: true } }),
+    trpc.orders.checkout.mutationOptions({ meta: { silentError: true, noRefresh: true } }),
   );
   const queryClient = useQueryClient();
   // A brand-new customer was keyed in — pull them into the on-device book.

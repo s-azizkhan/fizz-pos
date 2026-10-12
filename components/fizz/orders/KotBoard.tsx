@@ -20,7 +20,9 @@ export type LaneData = Record<KitchenStatus, KotOrder[]>;
 const WARN_S = 180;
 const LATE_S = 360;
 
-const POLL_MS = 4000;
+// Every tick re-downloads all three lanes; 8s keeps a kitchen screen from
+// eating a weak link while still feeling live.
+const POLL_MS = 8000;
 
 type LaneDef = {
   key: KitchenStatus;
@@ -296,6 +298,8 @@ export default function KotBoard({
 
   const move = useMutation(
     trpc.orders.kotMove.mutationOptions({
+      // The board refetches its own lanes; a full page refresh is wasted bytes.
+      meta: { noRefresh: true },
       // onMutate's return value is handed back to onSettled as context — the
       // one place to park the in-flight glide without a ref or a module global.
       onMutate: ({ orderId, to }) => ({ glide: shift(orderId, to) }),
@@ -303,8 +307,14 @@ export default function KotBoard({
       // the server refused (another screen got there first). Held until the
       // card has landed: a refetch mid-flight can briefly put one ticket in two
       // lanes, and two elements sharing a view-transition-name abort the glide.
+      // Only the board's own queries — not every query in the app.
       onSettled: (_data, _error, _vars, ctx) =>
-        (ctx?.glide ?? Promise.resolve()).then(() => qc.invalidateQueries()),
+        (ctx?.glide ?? Promise.resolve()).then(() =>
+          Promise.all([
+            qc.invalidateQueries(trpc.orders.kot.pathFilter()),
+            qc.invalidateQueries(trpc.orders.kotCounts.pathFilter()),
+          ]),
+        ),
     }),
   );
 

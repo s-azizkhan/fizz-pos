@@ -26,6 +26,24 @@ function isExpiredSession(error: unknown) {
   return codeOf(error) === "UNAUTHORIZED" && window.location.pathname !== "/login";
 }
 
+// Abort a request that hangs — lie-fi: wifi says connected, nothing moves.
+// Without this a stalled checkout spins on "Ringing…" for minutes and never
+// reaches the offline queue. The abort surfaces as a TRPCClientError with no
+// `data`, i.e. isNetworkError, so the sale queues; clientId makes the replay
+// safe even if the slow original did land. 12s is well past a slow-3G sale.
+const TIMEOUT_MS = 12_000;
+function fetchWithTimeout(url: RequestInfo | URL, init?: RequestInit) {
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  // Queries carry react-query's own signal; keep it. ponytail: browsers without
+  // AbortSignal.any (Safari < 17.4) keep the caller's signal and get no timeout.
+  const signal = !init?.signal
+    ? timeout
+    : "any" in AbortSignal
+      ? AbortSignal.any([init.signal, timeout])
+      : init.signal;
+  return fetch(url, { ...init, signal });
+}
+
 export default function Provider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
@@ -47,7 +65,12 @@ export default function Provider({ children }: { children: React.ReactNode }) {
         mutationCache: new MutationCache({
           // revalidatePath() in a Route Handler only marks a path for later; it
           // no longer pushes a fresh RSC payload the way a Server Action did.
-          onSuccess: () => router.refresh(),
+          // Screens that already hold the new state (POS, KOT) opt out with
+          // meta: { noRefresh: true } — a refresh there re-downloads the whole
+          // page for nothing, which is seconds on a weak link.
+          onSuccess: (_data, _vars, _ctx, mutation) => {
+            if (!mutation.meta?.noRefresh) router.refresh();
+          },
           onError: (error, _vars, _ctx, mutation) => {
             if (isExpiredSession(error)) {
               // Full navigation, not router.push: re-runs proxy.ts and drops
@@ -76,7 +99,7 @@ export default function Provider({ children }: { children: React.ReactNode }) {
         // httpBatchLink, never httpBatchStreamLink: Set-Cookie cannot be sent
         // once the response streams, which would make login silently issue no
         // session.
-        httpBatchLink({ url: "/api/trpc", transformer: superjson }),
+        httpBatchLink({ url: "/api/trpc", transformer: superjson, fetch: fetchWithTimeout }),
       ],
     }),
   );

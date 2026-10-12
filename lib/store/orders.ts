@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, getTableColumns, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   orderItems,
@@ -18,7 +18,13 @@ export type OrderWithItems = Order & { items: OrderItem[] };
 // `timestamp` without a time zone, so the client would read it as local time and
 // be wrong by the UTC offset — on a board whose entire job is "how long has this
 // been waiting", that is the one number that must not drift.
-export type KotTicket = OrderWithItems & { ageSeconds: number };
+// Only what the board draws — it re-polls every few seconds, so every column
+// shipped here is paid for on the kitchen's link all day.
+type KotItem = Pick<OrderItem, "id" | "name" | "variantName" | "quantity">;
+export type KotTicket = Pick<Order, "id" | "number" | "status" | "type" | "reference" | "kitchenStatus"> & {
+  ageSeconds: number;
+  items: KotItem[];
+};
 
 // List orders for the store created in a YYYY-MM month, newest first. Open
 // tabs always show regardless of month — they're still live. Optional status
@@ -88,7 +94,12 @@ function inCurrentMonth() {
 export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
   const rows = await db
     .select({
-      ...getTableColumns(orders),
+      id: orders.id,
+      number: orders.number,
+      status: orders.status,
+      type: orders.type,
+      reference: orders.reference,
+      kitchenStatus: orders.kitchenStatus,
       ageSeconds: sql<number>`extract(epoch from (now() - ${orders.createdAt}))`.mapWith(Number),
     })
     .from(orders)
@@ -101,19 +112,25 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
       ),
     )
     .orderBy(lane === "ready" ? desc(orders.createdAt) : asc(orders.createdAt))
-    .limit(lane === "ready" ? 30 : 200);
+    .limit(lane === "ready" ? 10 : 200);
   if (rows.length === 0) return [];
 
   const items = await db
-    .select()
+    .select({
+      id: orderItems.id,
+      orderId: orderItems.orderId,
+      name: orderItems.name,
+      variantName: orderItems.variantName,
+      quantity: orderItems.quantity,
+    })
     .from(orderItems)
     .where(inArray(orderItems.orderId, rows.map((o) => o.id)));
 
-  const byOrder = new Map<string, OrderItem[]>();
-  for (const it of items) {
-    const list = byOrder.get(it.orderId) ?? [];
+  const byOrder = new Map<string, KotItem[]>();
+  for (const { orderId, ...it } of items) {
+    const list = byOrder.get(orderId) ?? [];
     list.push(it);
-    byOrder.set(it.orderId, list);
+    byOrder.set(orderId, list);
   }
   return rows.map((o) => ({ ...o, items: byOrder.get(o.id) ?? [] }));
 }
