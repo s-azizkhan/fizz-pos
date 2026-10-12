@@ -20,17 +20,10 @@ export type MenuCategoryWithItems = MenuCategory & {
   items: MenuItemWithVariants[];
 };
 
-// Menu render order, applied everywhere the tree is rendered (manager, POS,
-// public menu, printable PDF): veg first, then non-veg, then unspecified —
-// and within each diet group, cheapest first (Basic → … → Ultimate).
-const DIET_RANK: Record<string, number> = { veg: 0, nonveg: 1 };
-const dietRank = (d: string | null) => (d ? DIET_RANK[d] ?? 2 : 2);
+// Items render in their manual (drag) `position` order everywhere — manager,
+// POS, public menu, printable PDF. Variants still go cheapest first.
 const byPrice = (a: { price: string }, b: { price: string }) =>
   Number(a.price) - Number(b.price);
-
-function compareMenuItems(a: MenuItem, b: MenuItem) {
-  return dietRank(a.diet) - dietRank(b.diet) || byPrice(a, b) || a.name.localeCompare(b.name);
-}
 
 // Assemble the full menu tree (active rows only), ordered by position. Used by
 // both the admin manager and the public renderer. `onlyAvailable` hides
@@ -70,7 +63,6 @@ async function buildMenu(onlyAvailable: boolean): Promise<MenuCategoryWithItems[
     });
     itemsByCat.set(it.categoryId, list);
   }
-  for (const list of itemsByCat.values()) list.sort(compareMenuItems);
 
   return cats.map((c) => ({ ...c, items: itemsByCat.get(c.id) ?? [] }));
 }

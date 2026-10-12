@@ -199,6 +199,35 @@ export const menuRouter = router({
       return { ok: true as const };
     }),
 
+  // Persist a new item order within one category: ids in order. Rows outside
+  // that category (or another store's) are ignored by the WHERE.
+  reorderItems: editorProcedure
+    .input(z.object({ categoryId: z.uuid(), ids: z.array(z.uuid("Invalid order.")) }))
+    .mutation(async ({ input }) => {
+      const [cat] = await db
+        .select({ id: menuCategories.id })
+        .from(menuCategories)
+        .where(and(eq(menuCategories.id, input.categoryId), eq(menuCategories.storeId, STORE_ID)));
+      if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found." });
+      try {
+        await db.transaction(async (tx) => {
+          for (let i = 0; i < input.ids.length; i++) {
+            await tx
+              .update(menuItems)
+              .set({ position: i + 1, updatedAt: new Date() })
+              .where(and(eq(menuItems.id, input.ids[i]), eq(menuItems.categoryId, input.categoryId)));
+          }
+        });
+      } catch {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not save order.",
+        });
+      }
+      bump();
+      return { ok: true as const };
+    }),
+
   // Persist a new category order: an array of ids, in order.
   reorderCategories: editorProcedure
     .input(z.array(z.uuid("Invalid order.")))

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { currencySymbol, formatMoney } from "@/lib/store/format";
 import { toast } from "@/lib/store/toast";
@@ -8,6 +8,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { MenuCategoryIconGlyph } from "./category-icons";
 import IconPicker from "./IconPicker";
 import RecipeEditor from "./RecipeEditor";
+import { applyOrder, useDragSort } from "./useDragSort";
 import type {
   MenuCategoryWithItems,
   MenuItemWithVariants,
@@ -15,7 +16,7 @@ import type {
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { RecipeComponent } from "@/lib/db/schema";
 import NumberInput from "@/components/fizz/ui/NumberInput";
-import { ArrowDownIcon, ArrowUpIcon, BoxIcon, CheckIcon, CloseIcon, EyeIcon, EyeOffIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
+import { BoxIcon, CheckIcon, CloseIcon, EyeIcon, EyeOffIcon, GripIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -24,6 +25,9 @@ const btnPrimary =
   "inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-5 py-2.5 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60";
 const btnGhost =
   "inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz";
+// touch-none: the browser must not scroll while a finger drags the grip.
+const gripCls =
+  "inline-flex shrink-0 touch-none cursor-grab items-center justify-center rounded-fizz text-steam hover:text-fizz focus-visible:text-fizz active:cursor-grabbing data-[dragging]:text-fizz";
 
 type VariantDraft = { name: string; price: string; cost: string };
 
@@ -213,12 +217,14 @@ function ItemRow({
   currency,
   ingredients,
   recipe,
+  grip,
 }: {
   item: MenuItemWithVariants;
   categoryId: string;
   currency: string;
   ingredients: RecipeIngredient[];
   recipe: RecipeComponent[];
+  grip: ReturnType<ReturnType<typeof useDragSort>["handle"]>;
 }) {
   const [editing, setEditing] = useState(false);
   const [recipeOpen, setRecipeOpen] = useState(false);
@@ -250,6 +256,9 @@ function ItemRow({
     <div className="flex flex-col gap-3 rounded-fizz border border-ink-line bg-ink p-3 sm:flex-row sm:items-start sm:justify-between sm:p-4">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
+          <button {...grip} className={`${gripCls} -my-1 -ml-1 p-1`}>
+            <GripIcon className="h-4 w-4" />
+          </button>
           <span className="min-w-0 break-words font-semibold text-cream">{item.name}</span>
           {!item.available && (
             <span className="rounded-full border border-[#E2655A]/50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-[#E2655A]">
@@ -310,17 +319,15 @@ function ItemRow({
 function CategoryCard({
   category,
   currency,
-  index,
-  count,
-  onMove,
+  grip,
+  collapsed,
   ingredients,
   recipes,
 }: {
   category: MenuCategoryWithItems;
   currency: string;
-  index: number;
-  count: number;
-  onMove: (dir: -1 | 1) => void;
+  grip: ReturnType<ReturnType<typeof useDragSort>["handle"]>;
+  collapsed: boolean;
   ingredients: RecipeIngredient[];
   recipes: Record<string, RecipeComponent[]>;
 }) {
@@ -343,6 +350,21 @@ function CategoryCard({
   );
   const error = update.error?.message ?? null;
 
+  // Same optimistic-order pattern as categories in MenuManager below.
+  const [itemOrder, setItemOrder] = useState<string[] | null>(null);
+  const reorderItems = useMutation(
+    trpc.menu.reorderItems.mutationOptions({
+      meta: { noRefresh: true },
+      onError: () => setItemOrder(null),
+    }),
+  );
+  const items = applyOrder(category.items, itemOrder);
+  const itemSort = useDragSort(`items-${category.id}`, items.map((i) => i.id), (ids) => {
+    setItemOrder(ids);
+    reorderItems.mutate({ categoryId: category.id, ids });
+  });
+  const shownItems = applyOrder(items, itemSort.order);
+
   function saveCategory() {
     update.mutate({ id: category.id, name, icon });
   }
@@ -351,10 +373,9 @@ function CategoryCard({
     <div className="rounded-fizz border border-ink-line bg-ink-soft p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-[10rem] flex-1 items-center gap-3">
-          <div className="flex shrink-0 flex-col">
-            <button type="button" disabled={index === 0} onClick={() => onMove(-1)} className="px-2 py-1 leading-none text-steam hover:text-fizz disabled:opacity-30" aria-label="Move up"><ArrowUpIcon className="h-4 w-4 shrink-0" /></button>
-            <button type="button" disabled={index === count - 1} onClick={() => onMove(1)} className="px-2 py-1 leading-none text-steam hover:text-fizz disabled:opacity-30" aria-label="Move down"><ArrowDownIcon className="h-4 w-4 shrink-0" /></button>
-          </div>
+          <button {...grip} className={`${gripCls} -ml-2 p-2`}>
+            <GripIcon className="h-5 w-5" />
+          </button>
           <span className="text-2xl"><MenuCategoryIconGlyph name={category.icon} /></span>
           {editing ? (
             <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} min-w-0 sm:max-w-[220px]`} />
@@ -387,23 +408,32 @@ function CategoryCard({
         </div>
       </div>
 
-      {editing && (
+      {editing && !collapsed && (
         <div className="mt-4 flex flex-col gap-2">
           <IconPicker value={icon} onChange={setIcon} />
           {error && <span className="text-sm text-[#E2655A]">{error}</span>}
         </div>
       )}
 
+      {/* Collapsed while any category is dragged, so tall cards are easy to move. */}
+      {!collapsed && (
       <div className="mt-4 flex flex-col gap-3 sm:mt-5">
-        {category.items.map((it) => (
-          <ItemRow
+        {shownItems.map((it) => (
+          <div
             key={it.id}
+            data-sort={`items-${category.id}`}
+            data-id={it.id}
+            className={itemSort.dragId === it.id ? "rounded-fizz opacity-70 ring-2 ring-fizz/40" : undefined}
+          >
+          <ItemRow
             item={it}
             categoryId={category.id}
             currency={currency}
             ingredients={ingredients}
             recipe={recipes[it.id] ?? []}
+            grip={itemSort.handle(it.id)}
           />
+          </div>
         ))}
         {adding ? (
           <ItemForm categoryId={category.id} currency={currency} onDone={() => setAdding(false)} />
@@ -414,6 +444,7 @@ function CategoryCard({
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }
@@ -444,25 +475,13 @@ export default function MenuManager({
   // menu mutation) was ignored, so hiding or renaming an item looked like a
   // no-op until a full page load.
   const [order, setOrder] = useState<string[] | null>(null);
-  const categories = useMemo(() => {
-    if (!order) return initial;
-    const byId = new Map(initial.map((c) => [c.id, c]));
-    const ranked = order.map((id) => byId.get(id)).filter(Boolean) as typeof initial;
-    // Anything created since the reorder (not in `order`) goes on the end.
-    const seen = new Set(order);
-    return [...ranked, ...initial.filter((c) => !seen.has(c.id))];
-  }, [initial, order]);
-
-  function move(index: number, dir: -1 | 1) {
-    const next = [...categories];
-    const target = index + dir;
-    if (target < 0 || target >= next.length) return;
-    [next[index], next[target]] = [next[target], next[index]];
-    const ids = next.map((c) => c.id);
+  const categories = applyOrder(initial, order);
+  const sort = useDragSort("categories", categories.map((c) => c.id), (ids) => {
     setOrder(ids);
     // Optimistic: local order is already applied; see `reorder` above.
     reorder.mutate(ids);
-  }
+  });
+  const shown = applyOrder(categories, sort.order);
 
   return (
     <div className="flex flex-col gap-6">
@@ -471,17 +490,22 @@ export default function MenuManager({
           No categories yet. Create one above to start building your menu.
         </div>
       ) : (
-        categories.map((c, i) => (
-          <CategoryCard
+        shown.map((c) => (
+          <div
             key={c.id}
-            category={c}
-            currency={currency}
-            index={i}
-            count={categories.length}
-            onMove={(dir) => move(i, dir)}
-            ingredients={ingredients}
-            recipes={recipes}
-          />
+            data-sort="categories"
+            data-id={c.id}
+            className={sort.dragId === c.id ? "rounded-fizz opacity-70 ring-2 ring-fizz/40" : undefined}
+          >
+            <CategoryCard
+              category={c}
+              currency={currency}
+              grip={sort.handle(c.id)}
+              collapsed={sort.dragId !== null}
+              ingredients={ingredients}
+              recipes={recipes}
+            />
+          </div>
         ))
       )}
     </div>
