@@ -83,6 +83,8 @@ export default function TicketDesigner({
   const qc = useQueryClient();
   const persist = useMutation(
     trpc.store.setTicketLayout.mutationOptions({
+      // Fires on every debounced edit; the layout is already local state.
+      meta: { noRefresh: true },
       onSuccess: (_r, v) => {
         qc.setQueryData(trpc.store.ticketLayouts.queryKey(), (old) => ({ ...old, [v.kind]: v.blocks }));
       },

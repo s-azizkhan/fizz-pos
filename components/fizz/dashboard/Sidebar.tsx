@@ -25,6 +25,8 @@ export default function Sidebar({
   const trpc = useTRPC();
   const signOut = useMutation(
     trpc.auth.logout.mutationOptions({
+      // A full navigation follows; refreshing the page first is wasted bytes.
+      meta: { noRefresh: true },
       // Full navigation, not router.push: the session cookie is gone, so
       // re-run proxy.ts and drop every cached client payload.
       // assign(), not `location.href =`: the React Compiler rejects writing

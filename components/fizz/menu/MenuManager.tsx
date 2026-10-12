@@ -417,7 +417,14 @@ export default function MenuManager({
   recipes: Record<string, RecipeComponent[]>;
 }) {
   const trpc = useTRPC();
-  const reorder = useMutation(trpc.menu.reorderCategories.mutationOptions());
+  // Optimistic: no page refresh needed on success; on failure drop the local
+  // order so the server's order shows again (the global toast says why).
+  const reorder = useMutation(
+    trpc.menu.reorderCategories.mutationOptions({
+      meta: { noRefresh: true },
+      onError: () => setOrder(null),
+    }),
+  );
 
   // Only the optimistic ORDER lives in state — never the category rows
   // themselves. Holding the rows here meant a fresh server render (after any
@@ -440,8 +447,7 @@ export default function MenuManager({
     [next[index], next[target]] = [next[target], next[index]];
     const ids = next.map((c) => c.id);
     setOrder(ids);
-    // Optimistic: local order is already applied. The global router.refresh()
-    // re-syncs from the server, and a failure surfaces via the global toast.
+    // Optimistic: local order is already applied; see `reorder` above.
     reorder.mutate(ids);
   }
 
