@@ -240,6 +240,23 @@ export const ordersRouter = router({
     return receipt(number);
   }),
 
+  // A guest checking on their own web order. PUBLIC — the clientId they minted
+  // is an unguessable UUID, so it doubles as the access key (no number lookups).
+  webStatus: publicProcedure.input(z.uuid()).query(async ({ input }) => {
+    const [o] = await db
+      .select({
+        number: orders.number,
+        status: orders.status,
+        kitchenStatus: orders.kitchenStatus,
+        webPending: orders.webPending,
+        total: orders.total,
+      })
+      .from(orders)
+      .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, input)))
+      .limit(1);
+    return o ?? null;
+  }),
+
   list: protectedProcedure
     .input(
       z.object({

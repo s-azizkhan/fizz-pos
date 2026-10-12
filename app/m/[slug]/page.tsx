@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
 import { MenuCategoryIconGlyph } from "@/components/fizz/menu/category-icons";
 import { AddToCart, FloatingCart } from "@/components/fizz/menu/PublicOrder";
+import MenuSearch from "@/components/fizz/menu/MenuSearch";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
 
 export const dynamic = "force-dynamic";
@@ -107,12 +108,14 @@ export default async function PublicMenuPage({
           )}
         </header>
 
+        {categories.length > 0 && <MenuSearch />}
+
         {categories.length === 0 ? (
           <p className="mt-16 text-center text-[var(--m-muted)]">This menu is being plated. Check back soon.</p>
         ) : (
           <div className="mt-12 flex flex-col gap-12">
             {categories.map((cat) => (
-              <section key={cat.id}>
+              <section key={cat.id} data-cat>
                 <div className="flex items-center gap-3">
                   <span style={{ color: accent }}>
                     <MenuCategoryIconGlyph name={cat.icon} />
@@ -126,7 +129,14 @@ export default async function PublicMenuPage({
                 </div>
                 <div className="mt-5 flex flex-col divide-y divide-[var(--m-line)]">
                   {cat.items.map((item) => (
-                    <div key={item.id} className="py-4">
+                    <div
+                      key={item.id}
+                      className="py-4"
+                      data-q={[cat.name, item.name, item.description, ...item.variants.map((v) => v.name)]
+                        .filter(Boolean)
+                        .join(" ")
+                        .toLowerCase()}
+                    >
                       <div className="flex items-start justify-between gap-6">
                         <div className="min-w-0">
                           <p className="text-[1.05em] font-semibold">
@@ -218,6 +228,7 @@ export default async function PublicMenuPage({
           modes={modes}
           deliveryFee={Number(cfg!.deliveryFee)}
           packagingFee={Number(cfg!.packagingFee)}
+          upi={store.upiId ? { vpa: store.upiId, name: store.upiName } : null}
         />
       )}
     </main>

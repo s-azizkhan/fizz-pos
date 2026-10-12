@@ -2,15 +2,19 @@
 
 import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
-import { useMutation } from "@tanstack/react-query";
-import { formatMoney } from "@/lib/store/format";
+import { persist } from "zustand/middleware";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { formatMoney, upiPayLink } from "@/lib/store/format";
+import UpiQr from "@/components/fizz/UpiQr";
 import { useTRPC } from "@/lib/trpc/client";
 import { isNetworkError } from "@/lib/store/outbox";
 
 // Cart for the public menu. Module-level zustand store so the per-item add
 // buttons (rendered inside the server page) and the floating cart share state
 // without threading a provider through the server tree.
-// ponytail: not persisted — a café menu cart is a one-sitting thing.
+// Persisted to localStorage (cart + last placed order) so a reload or a trip to
+// WhatsApp and back doesn't lose them. skipHydration: the server page renders
+// the empty cart, so FloatingCart rehydrates after mount to avoid a mismatch.
 export type CartLine = {
   key: string;
   itemId: string;
@@ -20,8 +24,14 @@ export type CartLine = {
   qty: number;
 };
 
+// The order this guest last sent — its clientId is the key for status lookups.
+type Placed = { clientId: string; number: string; total: number; at: number };
+const PLACED_TTL = 12 * 60 * 60 * 1000;
+
 type CartState = {
   lines: CartLine[];
+  placed: Placed | null;
+  setPlaced: (p: Placed | null) => void;
   open: boolean;
   add: (line: Omit<CartLine, "qty">) => void;
   setQty: (key: string, qty: number) => void;
@@ -29,22 +39,46 @@ type CartState = {
   setOpen: (v: boolean) => void;
 };
 
-const useCart = create<CartState>((set) => ({
-  lines: [],
-  open: false,
-  add: (line) =>
-    set((s) => ({
-      lines: s.lines.some((l) => l.key === line.key)
-        ? s.lines.map((l) => (l.key === line.key ? { ...l, qty: l.qty + 1 } : l))
-        : [...s.lines, { ...line, qty: 1 }],
-    })),
-  setQty: (key, qty) =>
-    set((s) => ({
-      lines: qty <= 0 ? s.lines.filter((l) => l.key !== key) : s.lines.map((l) => (l.key === key ? { ...l, qty } : l)),
-    })),
-  clear: () => set({ lines: [], open: false }),
-  setOpen: (v) => set({ open: v }),
-}));
+const useCart = create<CartState>()(
+  persist(
+    (set) => ({
+      lines: [],
+      placed: null,
+      setPlaced: (placed) => set({ placed }),
+      open: false,
+      add: (line) =>
+        set((s) => ({
+          lines: s.lines.some((l) => l.key === line.key)
+            ? s.lines.map((l) => (l.key === line.key ? { ...l, qty: l.qty + 1 } : l))
+            : [...s.lines, { ...line, qty: 1 }],
+        })),
+      setQty: (key, qty) =>
+        set((s) => ({
+          lines: qty <= 0 ? s.lines.filter((l) => l.key !== key) : s.lines.map((l) => (l.key === key ? { ...l, qty } : l)),
+        })),
+      clear: () => set({ lines: [], open: false }),
+      setOpen: (v) => set({ open: v }),
+    }),
+    {
+      name: "fizz-cart",
+      skipHydration: true,
+      partialize: (s) => ({ lines: s.lines, placed: s.placed }),
+    },
+  ),
+);
+
+type WebStatus = { status: string; kitchenStatus: string; webPending: boolean; total: string } | null | undefined;
+
+const STEPS = ["Sent", "Confirmed", "Preparing", "Ready"];
+// How far along the guest's order is. -1 = cancelled.
+function stageOf(st: WebStatus): number {
+  if (!st) return 0;
+  if (st.status === "void") return -1;
+  if (st.kitchenStatus === "ready") return 3;
+  if (st.kitchenStatus === "accepted") return 2;
+  return st.webPending ? 0 : 1;
+}
+const stageLabel = (i: number) => (i < 0 ? "Cancelled" : STEPS[i]);
 
 // Accent color is store-chosen (a theme suggests one, the café can override),
 // so button labels pick black or white by luminance instead of assuming dark.
@@ -189,6 +223,7 @@ export function FloatingCart({
   modes,
   deliveryFee,
   packagingFee,
+  upi,
 }: {
   slug: string;
   storeName: string;
@@ -199,8 +234,11 @@ export function FloatingCart({
   modes: string[];
   deliveryFee: number;
   packagingFee: number;
+  /** Café's UPI payee, when set — enables pay-by-QR on the status sheet. */
+  upi: { vpa: string; name: string | null } | null;
 }) {
-  const { lines, open, setOpen, clear } = useCart();
+  const { lines, open, setOpen, clear, placed, setPlaced } = useCart();
+  const [statusOpen, setStatusOpen] = useState(false);
   const [mode, setMode] = useState<string>(modes[0]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -213,7 +251,17 @@ export function FloatingCart({
   const clientId = useRef<string | null>(null);
   const [note, setNote] = useState("");
   const [address, setAddress] = useState("");
+  // Only for the no-signal fallback, where no order exists to track.
   const [sent, setSent] = useState(false);
+  const { data: status } = useQuery(
+    trpc.orders.webStatus.queryOptions(placed?.clientId ?? "", {
+      enabled: !!placed,
+      refetchInterval: (q) => {
+        const d = q.state.data;
+        return d && (d.status === "void" || (d.status === "paid" && d.kitchenStatus === "ready")) ? false : 8000;
+      },
+    }),
+  );
   const n = count(lines);
   const isDelivery = mode === "Delivery";
   const fee = isDelivery ? deliveryFee : 0;
@@ -231,15 +279,23 @@ export function FloatingCart({
           : null;
   const blocked = !!missing || place.isPending;
 
+  // Bring back the saved cart / order after mount; drop an order from yesterday.
+  useEffect(() => {
+    void Promise.resolve(useCart.persist.rehydrate()).then(() => {
+      const p = useCart.getState().placed;
+      if (p && Date.now() - p.at > PLACED_TTL) setPlaced(null);
+    });
+  }, [setPlaced]);
+
   // Sheet open = page behind must not scroll.
   useEffect(() => {
-    if (!open) return;
+    if (!open && !statusOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open]);
+  }, [open, statusOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -248,7 +304,7 @@ export function FloatingCart({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
 
-  if (!n && !sent) return null;
+  if (!n && !sent && !placed) return null;
 
   // Save the order first (that's where the number comes from), then open
   // WhatsApp with it typed out. The tab is opened up front, inside the tap —
@@ -256,7 +312,7 @@ export function FloatingCart({
   const send = async () => {
     if (blocked) return;
     setError(null);
-    clientId.current ??= crypto.randomUUID();
+    const id = (clientId.current ??= crypto.randomUUID());
     const win = window.open("", "_blank");
     const details = {
       mode,
@@ -267,10 +323,11 @@ export function FloatingCart({
       currency,
     };
     let text: string;
+    let tracked = false;
     try {
       const r = await place.mutateAsync({
         slug,
-        clientId: clientId.current,
+        clientId: id,
         mode: mode as "Dine-in" | "Takeaway" | "Delivery",
         name,
         phone,
@@ -289,6 +346,9 @@ export function FloatingCart({
           total: Number(r.total),
         },
       });
+      setPlaced({ clientId: id, number: r.orderNumber, total: Number(r.total), at: Date.now() });
+      setStatusOpen(true);
+      tracked = true;
     } catch (e) {
       // The café refused it (ordering off, item gone): say why, send nothing.
       if (!isNetworkError(e)) {
@@ -314,41 +374,79 @@ export function FloatingCart({
     if (win) win.location.href = url;
     else window.location.href = url;
     clientId.current = null;
-    setSent(true);
+    if (!tracked) setSent(true);
     clear();
   };
 
   return (
     <>
-      {/* Pill */}
-      {!open && (
-        <div className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <button
-            type="button"
-            onClick={() => (sent ? setSent(false) : setOpen(true))}
-            className="fizz-toast flex w-full max-w-md items-center justify-between gap-4 rounded-full px-5 py-3.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.02] active:scale-95"
-            style={{ backgroundColor: accent, color: contrastOn(accent) }}
-          >
-            {sent ? (
-              <span className="w-full text-center text-[0.95em] font-bold">Order sent ●  Start another</span>
-            ) : (
-              <>
-                <span className="flex items-center gap-2.5 text-[0.95em] font-bold">
-                  <span
-                    className="grid size-6 place-items-center rounded-full text-[0.75em] tabular-nums"
-                    style={{ backgroundColor: contrastOn(accent), color: accent }}
-                  >
-                    {n}
-                  </span>
-                  View order
+      {/* Pills: order status (after an order is sent) above the cart */}
+      {!open && !statusOpen && (
+        <div className="fixed inset-x-0 bottom-0 z-40 flex flex-col items-center gap-2 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          {placed && (
+            <button
+              type="button"
+              onClick={() => setStatusOpen(true)}
+              className="fizz-toast flex w-full max-w-md items-center justify-between gap-3 rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] px-5 py-3 text-[var(--m-text)] shadow-[0_10px_40px_-12px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.02] active:scale-95"
+            >
+              <span className="flex items-center gap-2.5 text-[0.9em] font-bold">
+                <span className="size-2.5 animate-pulse rounded-full" style={{ backgroundColor: accent }} />
+                Order #{placed.number} · {stageLabel(stageOf(status))}
+              </span>
+              <span className="text-[0.8em] font-semibold text-[var(--m-muted)]">
+                {status?.status === "paid" ? "Paid ●" : "View"}
+              </span>
+            </button>
+          )}
+          {n > 0 ? (
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="fizz-toast flex w-full max-w-md items-center justify-between gap-4 rounded-full px-5 py-3.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.55)] transition-transform hover:scale-[1.02] active:scale-95"
+              style={{ backgroundColor: accent, color: contrastOn(accent) }}
+            >
+              <span className="flex items-center gap-2.5 text-[0.95em] font-bold">
+                <span
+                  className="grid size-6 place-items-center rounded-full text-[0.75em] tabular-nums"
+                  style={{ backgroundColor: contrastOn(accent), color: accent }}
+                >
+                  {n}
                 </span>
-                <span className="text-[0.95em] font-bold tabular-nums">
-                  {formatMoney(due, currency)}
-                </span>
-              </>
-            )}
-          </button>
+                View order
+              </span>
+              <span className="text-[0.95em] font-bold tabular-nums">{formatMoney(due, currency)}</span>
+            </button>
+          ) : (
+            sent &&
+            !placed && (
+              <button
+                type="button"
+                onClick={() => setSent(false)}
+                className="fizz-toast w-full max-w-md rounded-full px-5 py-3.5 text-center text-[0.95em] font-bold shadow-[0_10px_40px_-12px_rgba(0,0,0,0.55)]"
+                style={{ backgroundColor: accent, color: contrastOn(accent) }}
+              >
+                Order sent ●  Start another
+              </button>
+            )
+          )}
         </div>
+      )}
+
+      {/* Order status + pay */}
+      {statusOpen && placed && (
+        <StatusSheet
+          placed={placed}
+          status={status}
+          currency={currency}
+          accent={accent}
+          storeName={storeName}
+          upi={upi}
+          onClose={() => setStatusOpen(false)}
+          onClear={() => {
+            setPlaced(null);
+            setStatusOpen(false);
+          }}
+        />
       )}
 
       {/* Sheet */}
@@ -516,5 +614,137 @@ export function FloatingCart({
         </div>
       )}
     </>
+  );
+}
+
+// ---- Order status sheet: progress, then pay by UPI QR ----------------------
+function StatusSheet({
+  placed,
+  status,
+  currency,
+  accent,
+  storeName,
+  upi,
+  onClose,
+  onClear,
+}: {
+  placed: Placed;
+  status: WebStatus;
+  currency: string;
+  accent: string;
+  storeName: string;
+  upi: { vpa: string; name: string | null } | null;
+  onClose: () => void;
+  onClear: () => void;
+}) {
+  const stage = stageOf(status);
+  const paid = status?.status === "paid";
+  const total = status ? Number(status.total) : placed.total;
+  const finished = stage < 0 || (paid && stage === 3);
+  // Amount is the server's total, prefilled so the guest never types it.
+  const link = upi
+    ? upiPayLink({ vpa: upi.vpa, name: upi.name ?? storeName, amount: total, note: `Order ${placed.number}` })
+    : null;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <button
+        type="button"
+        aria-label="Close order status"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Order status"
+        className="fizz-sheet relative flex max-h-[88dvh] w-full max-w-md flex-col rounded-t-[24px] border border-[var(--m-line)] bg-[var(--m-surface)] text-[var(--m-text)] sm:rounded-[var(--m-radius)]"
+      >
+        <div className="flex items-center justify-between border-b border-[var(--m-line)] px-6 py-5">
+          <div>
+            <p className="text-[0.7em] font-semibold uppercase tracking-[0.3em]" style={{ color: accent }}>
+              Order status
+            </p>
+            <h2 className="mt-1 text-[1.3em] font-bold tracking-tight">
+              #{placed.number} · {storeName}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="grid size-9 place-items-center rounded-full border border-[var(--m-line)] text-[var(--m-muted)] hover:opacity-70"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <p className="text-[1.4em] font-bold tracking-tight" style={{ color: stage < 0 ? "#E2655A" : accent }}>
+            {stageLabel(stage)}
+            {paid && <span className="ml-2 text-[0.6em] font-semibold text-[var(--m-muted)]">Paid ●</span>}
+          </p>
+          {stage >= 0 && (
+            <ol className="mt-4 grid grid-cols-4 gap-2">
+              {STEPS.map((label, i) => (
+                <li key={label} className="text-center">
+                  <span
+                    className="block h-1.5 rounded-full"
+                    style={{ backgroundColor: i <= stage ? accent : "var(--m-line)" }}
+                  />
+                  <span
+                    className={`mt-1.5 block text-[0.7em] ${i <= stage ? "font-semibold" : "text-[var(--m-muted)]"}`}
+                  >
+                    {label}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+          <p className="mt-4 flex justify-between text-[1.05em] font-bold">
+            <span>Total</span>
+            <span className="tabular-nums">{formatMoney(total, currency)}</span>
+          </p>
+
+          {link && !paid && stage >= 0 && (
+            <div className="mt-6 flex flex-col items-center gap-3 border-t border-[var(--m-line)] pt-6">
+              <p className="text-[0.75em] font-semibold uppercase tracking-[0.2em] text-[var(--m-muted)]">
+                Pay {formatMoney(total, currency)} by UPI
+              </p>
+              <UpiQr value={link} size={196} />
+              <p className="text-[0.8em] text-[var(--m-muted)]">
+                {upi!.name ?? storeName} · {upi!.vpa}
+              </p>
+              <a
+                href={link}
+                className="w-full rounded-[var(--m-radius)] py-3 text-center text-[0.95em] font-bold"
+                style={{ backgroundColor: accent, color: contrastOn(accent) }}
+              >
+                Open in UPI app
+              </a>
+              <p className="text-center text-[0.75em] text-[var(--m-muted)]">
+                Amount is prefilled. Show the receipt to staff once paid — they&apos;ll mark it settled.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="border-t border-[var(--m-line)] px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5">
+          <button
+            type="button"
+            onClick={finished ? onClear : onClose}
+            className="w-full rounded-[var(--m-radius)] border border-[var(--m-line)] py-3 text-[0.95em] font-semibold hover:opacity-70"
+          >
+            {finished ? "Done" : "Close"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
