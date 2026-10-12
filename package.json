@@ -11,7 +11,8 @@
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx --env-file=.env scripts/seed-admin.mts",
     "check:invites": "tsx --env-file=.env scripts/check-invite-flow.mts",
-    "check:kot": "tsx --env-file=.env scripts/check-kot-flow.mts"
+    "check:kot": "tsx --env-file=.env scripts/check-kot-flow.mts",
+    "check:offline": "tsx --env-file=.env scripts/check-offline-replay.mts"
   },
   "dependencies": {
     "@tanstack/react-query": "5.102.8",

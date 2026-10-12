@@ -92,6 +92,13 @@
       "when": 1791731145045,
       "tag": "0012_lucky_king_bedlam",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791787622907,
+      "tag": "0013_opposite_juggernaut",
+      "breakpoints": true
     }
   ]
 }

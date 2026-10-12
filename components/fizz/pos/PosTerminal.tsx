@@ -8,6 +8,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import { useTRPC } from "@/lib/trpc/client";
 import type { AppRouter } from "@/lib/trpc/root";
 import { toast } from "@/lib/store/toast";
+import { isNetworkError, outbox } from "@/lib/store/outbox";
 import { useCart } from "./useCart";
 import type {
   LoadedOrder,
@@ -52,7 +53,11 @@ export default function PosTerminal({
   const router = useRouter();
   const trpc = useTRPC();
   const saveTab = useMutation(trpc.orders.save.mutationOptions());
-  const settle = useMutation(trpc.orders.checkout.mutationOptions());
+  // The error renders in the pay modal, or the sale queues offline; either way
+  // no global toast.
+  const settle = useMutation(
+    trpc.orders.checkout.mutationOptions({ meta: { silentError: true } }),
+  );
   const hasPrinter = usePrinter((s) => !!s.deviceId);
   const cart = useCart(loaded?.lines ?? []);
   const [query, setQuery] = useState("");
@@ -325,17 +330,21 @@ export default function PosTerminal({
     // path never did.
     if (cart.lines.length === 0 || settle.isPending) return;
     const fresh = kotDelta(cart.lines, loaded?.lines ?? []);
+    const sale = {
+      orderId: editingId ?? undefined,
+      type: orderType,
+      reference,
+      paymentMethod: input.paymentMethod,
+      discount: input.discount,
+      fees,
+      tendered: input.tendered,
+      items: linePayload(),
+      // Idempotency key: lets the outbox replay this sale without doubling it.
+      clientId: crypto.randomUUID(),
+      soldAt: new Date(),
+    };
     try {
-      const res = await settle.mutateAsync({
-        orderId: editingId ?? undefined,
-        type: orderType,
-        reference,
-        paymentMethod: input.paymentMethod,
-        discount: input.discount,
-        fees,
-        tendered: input.tendered,
-        items: linePayload(),
-      });
+      const res = await settle.mutateAsync(sale);
       setPayOpen(false);
       setReceipt(res);
       toast.success("Order settled");
@@ -360,6 +369,33 @@ export default function PosTerminal({
       }
       resetTerminal();
     } catch (e) {
+      // Network down on a brand-new sale: bank it on the device and keep
+      // ringing. Settling an existing tab stays online-only — the tab lives on
+      // the server and may have changed under us.
+      if (!editingId && isNetworkError(e)) {
+        outbox.add(sale);
+        setPayOpen(false);
+        toast.info("Offline — sale saved on this device, syncs when you're back");
+        // The kitchen still needs the ticket; the real number arrives on sync.
+        if (usePrinter.getState().autoKot && fresh.length > 0) {
+          autoPrint("KOT", (cfg) =>
+            kotTicket(
+              {
+                storeName,
+                orderNumber: `OFF-${sale.clientId.slice(0, 4).toUpperCase()}`,
+                type: orderType,
+                reference: reference || null,
+                createdAt: sale.soldAt,
+                addOn: false,
+                items: fresh,
+              },
+              cfg,
+            ),
+          );
+        }
+        resetTerminal();
+        return;
+      }
       // Surface the error inside the pay modal.
       return e instanceof Error ? e.message : "Something fizzled at the POS.";
     }

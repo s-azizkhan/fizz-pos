@@ -79,6 +79,21 @@ async function requireOpen(orderId: string) {
   return row;
 }
 
+// The order a previous delivery of this offline sale already created, if any.
+async function byClientId(clientId: string | undefined) {
+  if (!clientId) return undefined;
+  const [row] = await db
+    .select({ number: orders.number, paidAt: orders.paidAt })
+    .from(orders)
+    .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, clientId)))
+    .limit(1);
+  return row;
+}
+
+// Backdating window for a replayed offline sale. Anything outside it (a bad
+// device clock, a tampered payload) books at server time instead.
+const MAX_OFFLINE_MS = 7 * 24 * 60 * 60 * 1000;
+
 function fizzled(message: string) {
   return new TRPCError({ code: "INTERNAL_SERVER_ERROR", message });
 }
@@ -222,6 +237,8 @@ export const ordersRouter = router({
         fees,
         tendered,
         items,
+        clientId,
+        soldAt,
       } = input;
       const store = await getStore();
       const totals = computeTotals(
@@ -243,11 +260,22 @@ export const ordersRouter = router({
           ? r2(tendered - totals.total)
           : null;
 
-      const number = orderId
-        ? (await requireOpen(orderId)).number
-        : await nextOrderNumber();
+      const now = Date.now();
+      const at =
+        soldAt && soldAt.getTime() <= now && now - soldAt.getTime() < MAX_OFFLINE_MS
+          ? soldAt
+          : new Date(now);
 
-      try {
+      // Replay of a sale that already landed: answer with the same receipt and
+      // touch nothing — no new number, no second stock deduction.
+      const dup = await byClientId(clientId);
+      let number = dup
+        ? dup.number
+        : orderId
+          ? (await requireOpen(orderId)).number
+          : await nextOrderNumber();
+
+      if (!dup) try {
         await db.transaction(async (tx) => {
           const settle = {
             status: "paid" as const,
@@ -259,7 +287,7 @@ export const ordersRouter = router({
             changeDue: changeDue != null ? changeDue.toFixed(2) : null,
             servedBy: ctx.user.id,
             updatedAt: new Date(),
-            paidAt: new Date(),
+            paidAt: at,
           };
 
           let id = orderId;
@@ -268,7 +296,7 @@ export const ordersRouter = router({
           } else {
             const [o] = await tx
               .insert(orders)
-              .values({ storeId: STORE_ID, number, ...settle })
+              .values({ storeId: STORE_ID, number, clientId, createdAt: at, ...settle })
               .returning({ id: orders.id });
             id = o.id;
           }
@@ -279,7 +307,11 @@ export const ordersRouter = router({
         });
       } catch (e) {
         if (e instanceof TRPCError) throw e;
-        throw fizzled("Something fizzled at the POS. Try again.");
+        // Two deliveries of the same offline sale raced; the other one won the
+        // unique index. Same sale, so answer as a replay.
+        const won = await byClientId(clientId);
+        if (!won) throw fizzled("Something fizzled at the POS. Try again.");
+        number = won.number;
       }
 
       bumpPaths();
@@ -289,7 +321,7 @@ export const ordersRouter = router({
         orderNumber: number,
         store: await receiptStore(),
         currency: store.currency,
-        createdAt: new Date(),
+        createdAt: dup?.paidAt ?? at,
         type,
         reference,
         paymentMethod,

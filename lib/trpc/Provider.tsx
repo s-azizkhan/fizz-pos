@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   MutationCache,
@@ -12,6 +12,7 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
 import { TRPCProvider } from "@/lib/trpc/client";
 import { toast } from "@/lib/store/toast";
+import { isNetworkError, outbox } from "@/lib/store/outbox";
 import type { AppRouter } from "@/lib/trpc/root";
 
 function codeOf(error: unknown) {
@@ -76,6 +77,47 @@ export default function Provider({ children }: { children: React.ReactNode }) {
       ],
     }),
   );
+
+  // Replay sales rung offline, oldest first, one at a time. Runs on load, on
+  // the online edge, and on a timer — navigator.onLine can say "online" on a
+  // captive wifi that goes nowhere, so the edge alone isn't enough.
+  useEffect(() => {
+    let busy = false;
+    async function flush() {
+      if (busy || !navigator.onLine) return;
+      busy = true;
+      let synced = 0;
+      try {
+        for (const sale of outbox.all()) {
+          if (sale.failed) continue;
+          try {
+            await trpcClient.orders.checkout.mutate(sale.input);
+            outbox.remove(sale.input.clientId);
+            synced++;
+          } catch (e) {
+            // Still offline, or signed out: stop and retry later, keep order.
+            if (isNetworkError(e) || codeOf(e) === "UNAUTHORIZED") break;
+            const msg = e instanceof Error ? e.message : "Rejected";
+            outbox.fail(sale.input.clientId, msg);
+            toast.error(`An offline sale couldn't sync: ${msg}`);
+          }
+        }
+      } finally {
+        busy = false;
+      }
+      if (synced) {
+        toast.success(`Synced ${synced} offline sale${synced > 1 ? "s" : ""}`);
+        router.refresh();
+      }
+    }
+    void flush();
+    window.addEventListener("online", flush);
+    const t = setInterval(flush, 30_000);
+    return () => {
+      window.removeEventListener("online", flush);
+      clearInterval(t);
+    };
+  }, [trpcClient, router]);
 
   return (
     <QueryClientProvider client={queryClient}>

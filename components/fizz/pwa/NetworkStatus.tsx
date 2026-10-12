@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import { outboxCounts, outboxSnapshot, subscribeOutbox } from "@/lib/store/outbox";
 
 function subscribe(onChange: () => void) {
   window.addEventListener("online", onChange);
@@ -21,6 +22,9 @@ const isOnline = () => navigator.onLine;
 export default function NetworkStatus() {
   const online = useSyncExternalStore(subscribe, isOnline, () => true);
   const [restored, setRestored] = useState(false);
+  const { pending, failed } = outboxCounts(
+    useSyncExternalStore(subscribeOutbox, outboxSnapshot, () => null),
+  );
 
   useEffect(() => {
     if (online) return;
@@ -35,9 +39,20 @@ export default function NetworkStatus() {
     return () => clearTimeout(t);
   }, [restored]);
 
-  if (online && !restored) return null;
+  // Queued sales keep the pill up even online, until the flush clears them.
+  const queued = pending + failed;
+  if (online && !restored && !queued) return null;
 
-  const offline = !online;
+  const offline = !online || failed > 0;
+  const label = failed
+    ? `${failed} offline sale${failed > 1 ? "s" : ""} couldn't sync — tell a manager`
+    : !online
+      ? pending
+        ? `Offline — ${pending} sale${pending > 1 ? "s" : ""} saved on this device`
+        : "Offline — new sales save on this device"
+      : pending
+        ? `Syncing ${pending} offline sale${pending > 1 ? "s" : ""}…`
+        : "Back online";
 
   return (
     <div
@@ -57,7 +72,7 @@ export default function NetworkStatus() {
             offline ? "animate-pulse bg-[#E2655A]" : "bg-fizz"
           }`}
         />
-        {offline ? "Offline — nothing will save until you're back" : "Back online"}
+        {label}
       </span>
     </div>
   );

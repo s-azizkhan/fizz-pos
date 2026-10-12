@@ -46,6 +46,10 @@ export const orders = pgTable("orders", {
     .references(() => store.id, { onDelete: "cascade" }),
   // Human-facing receipt number from the store's order numbering config.
   number: text("number").notNull(),
+  // Idempotency key minted by the POS per sale. A sale queued offline is
+  // replayed until acked, so the same key may arrive twice — the unique index
+  // makes the second one a lookup instead of a second order + stock deduction.
+  clientId: uuid("client_id").unique(),
   status: orderStatus("status").notNull().default("open"),
   // Kitchen lane, independent of `status`. See kitchenStatus above.
   // ponytail: no per-transition timestamps — the board only needs "how long has
@@ -154,6 +158,10 @@ export const checkoutSchema = z.object({
   fees: feesSchema,
   tendered: money.optional(),
   items: z.array(lineSchema).min(1, "Add at least one item"),
+  // Offline replay: the POS's idempotency key and when the sale actually
+  // happened (it may sync hours later). Server clamps soldAt to a sane window.
+  clientId: z.uuid().optional(),
+  soldAt: z.coerce.date().optional(),
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
