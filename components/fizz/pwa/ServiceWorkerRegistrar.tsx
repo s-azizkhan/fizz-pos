@@ -33,6 +33,16 @@ export default function ServiceWorkerRegistrar() {
       });
     }, console.error);
 
+    // Keep offline copies of the floor screens fresh: on load, on reconnect,
+    // and every 5 min while open. The worker throttles and skips signed-out.
+    const warm = () => {
+      if (!navigator.onLine || !location.pathname.startsWith("/dashboard")) return;
+      navigator.serviceWorker.ready.then((r) => r.active?.postMessage("warm"));
+    };
+    warm();
+    window.addEventListener("online", warm);
+    const t = setInterval(warm, 5 * 60_000);
+
     let reloading = false;
     const onChange = () => {
       if (reloading) return;
@@ -40,8 +50,11 @@ export default function ServiceWorkerRegistrar() {
       window.location.reload();
     };
     navigator.serviceWorker.addEventListener("controllerchange", onChange);
-    return () =>
+    return () => {
       navigator.serviceWorker.removeEventListener("controllerchange", onChange);
+      window.removeEventListener("online", warm);
+      clearInterval(t);
+    };
   }, []);
 
   return null;

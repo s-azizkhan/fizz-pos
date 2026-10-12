@@ -11,7 +11,7 @@
  *    touched. Money and stock must never be served from a stale cache.
  */
 
-const VERSION = "fizz-v4";
+const VERSION = "fizz-v5";
 const SHELL = `${VERSION}-shell`;
 const PAGES = `${VERSION}-pages`;
 
@@ -118,9 +118,39 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Lets the page trigger an immediate update instead of waiting for a reload.
+/**
+ * Floor screens worth having offline. Sidebar clicks are client-side RSC
+ * fetches, which this worker never caches — so without warming, a screen only
+ * works offline if it was once opened with a full page load. Offline, Next
+ * falls back to a hard navigation, which then finds these copies.
+ * They show the board as of the last warm, not live data.
+ */
+const WARM = ["/dashboard", "/dashboard/pos", "/dashboard/kot", "/dashboard/orders"];
+let lastWarm = 0;
+
+async function warm() {
+  // ponytail: in-memory throttle, resets when the worker restarts — at worst
+  // one extra round of renders. Persist the stamp if that ever shows in logs.
+  if (Date.now() - lastWarm < 60_000) return;
+  lastWarm = Date.now();
+  const cache = await caches.open(PAGES);
+  await Promise.all(
+    WARM.map(async (path) => {
+      try {
+        const res = await fetch(path, { headers: { Accept: "text/html" } });
+        // Signed out → redirected to /login; never bank that (see networkFirst).
+        if (res.ok && !res.redirected) await cache.put(path, res);
+      } catch {
+        // Offline or flaky — keep whatever copy we already have.
+      }
+    }),
+  );
+}
+
 self.addEventListener("message", (event) => {
+  // Lets the page trigger an immediate update instead of waiting for a reload.
   if (event.data === "skip-waiting") self.skipWaiting();
+  if (event.data === "warm") event.waitUntil(warm());
 });
 
 function isStaticAsset(url) {
