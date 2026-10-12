@@ -34,7 +34,8 @@ export default function PayModal({
   upi: UpiConfig | null;
   money: (n: number) => string;
   customer: Customer;
-  onCustomer: (c: Customer) => void;
+  /** Absent = Customers feature off: no picker. */
+  onCustomer?: (c: Customer) => void;
   submitting: boolean;
   onPay: (input: {
     paymentMethod: PaymentMethod;
@@ -215,9 +216,11 @@ export default function PayModal({
             />
           </label>
 
-          <div className="mt-4">
-            <CustomerFields value={customer} onChange={onCustomer} inputClass="bg-ink" />
-          </div>
+          {onCustomer && (
+            <div className="mt-4">
+              <CustomerFields value={customer} onChange={onCustomer} inputClass="bg-ink" />
+            </div>
+          )}
 
           {/* Online / UPI */}
           {method === "online" && (

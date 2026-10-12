@@ -1,13 +1,18 @@
 import "server-only";
 import { cache } from "react";
+import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { store, type Store } from "@/lib/db/schema";
 import { formatDocNumber } from "@/lib/store/format";
 import { STORE_ID } from "@/lib/store/constants";
+import { featureOn, type FeatureKey } from "@/lib/store/features";
+import { cached } from "@/lib/store/cache";
 
-// Lazily create the singleton store row, then return it. Memoized per render.
-export const getStore = cache(async (): Promise<Store> => {
+// Lazily create the singleton store row, then return it. UNCACHED — use where
+// the counters must be exact (Store settings edits nextOrderSeq/nextInvoiceSeq,
+// which every sale bumps without busting the cache).
+export async function loadStore(): Promise<Store> {
   const rows = await db.select().from(store).where(eq(store.id, STORE_ID)).limit(1);
   if (rows[0]) return rows[0];
   const [created] = await db
@@ -19,7 +24,12 @@ export const getStore = cache(async (): Promise<Store> => {
   // Lost the insert race — read it back.
   const [row] = await db.select().from(store).where(eq(store.id, STORE_ID)).limit(1);
   return row;
-});
+}
+
+// The store row every page, layout and feature check reads: cached across
+// requests (tag "store"), memoized per render. Writers call bust("store").
+// The seq counters in it may lag — claim numbers with nextOrderNumber().
+export const getStore = cache(cached("store-row", "store", loadStore));
 
 // Atomically claim the next invoice number: increment seq, format with the
 // claimed value. Use when creating a real invoice.
@@ -51,4 +61,9 @@ export async function nextOrderNumber(): Promise<string> {
     seq: claimed,
     date: new Date(),
   });
+}
+
+// Page guard for an optional feature: switched off = bounce to the dashboard.
+export async function requireFeature(key: FeatureKey) {
+  if (!featureOn((await getStore()).disabledFeatures, key)) redirect("/dashboard");
 }

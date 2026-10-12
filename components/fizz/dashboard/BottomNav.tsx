@@ -20,8 +20,10 @@ function isActive(pathname: string, href: string) {
 
 export default function BottomNav({
   user,
+  off,
 }: {
   user: { name: string; role: UserRole };
+  off: string[];
 }) {
   const pathname = usePathname();
   const { moreOpen, toggleMore, closeMore } = useUi();
@@ -38,7 +40,7 @@ export default function BottomNav({
     }),
   );
   const swipe = useSwipeDismiss(closeMore);
-  const items = navForRole(user.role);
+  const items = navForRole(user.role, off);
   const tabs = items.slice(0, TAB_COUNT);
   const rest = items.slice(TAB_COUNT);
   const moreActive = rest.some((i) => isActive(pathname, i.href));

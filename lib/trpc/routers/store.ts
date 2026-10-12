@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { store, storeSettingsForm, ticketLayoutInput } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { getStore } from "@/lib/store/data";
-import { router, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
+import { bust } from "@/lib/store/cache";
+import { router, featureGate, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
 
 export const storeRouter = router({
   get: protectedProcedure.query(() => getStore()),
@@ -14,6 +15,7 @@ export const storeRouter = router({
   ticketLayouts: protectedProcedure.query(async () => (await getStore()).ticketLayouts ?? {}),
 
   setTicketLayout: editorProcedure
+    .use(featureGate("printers"))
     .input(ticketLayoutInput)
     .mutation(async ({ input }) => {
       // Merge one kind in SQL so saving the KOT never clobbers the receipt.
@@ -24,6 +26,7 @@ export const storeRouter = router({
           updatedAt: new Date(),
         })
         .where(eq(store.id, STORE_ID));
+      bust("store");
       return { ok: true as const };
     }),
 
@@ -50,7 +53,10 @@ export const storeRouter = router({
       }
       // Still correct for the data cache; no longer reaches the calling client
       // (see router.refresh() in lib/trpc/Provider.tsx).
+      bust("store");
       revalidatePath("/dashboard/store");
+      // Feature switches reshape the nav and the public menu.
+      revalidatePath("/", "layout");
       return { ok: true as const };
     }),
 });

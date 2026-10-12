@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import PrintersClient from "@/components/fizz/printers/PrintersClient";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Printers — Fizz" };
 
 // Every role: printer pairing is per device, and staff run the POS.
-export default function PrintersPage() {
+export default async function PrintersPage() {
+  await requireFeature("printers");
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 lg:py-14">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">

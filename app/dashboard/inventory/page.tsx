@@ -5,10 +5,12 @@ import { inventorySummary } from "@/lib/store/inventory";
 import { trpc } from "@/lib/trpc/server";
 import { formatMoney } from "@/lib/store/format";
 import InventoryManager from "@/components/fizz/inventory/InventoryManager";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Inventory — Fizz" };
 
 export default async function InventoryPage() {
+  await requireFeature("inventory");
   const api = await trpc();
   const user = await getCurrentUser();
   if (user.role === "staff") redirect("/dashboard");

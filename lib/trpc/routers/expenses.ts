@@ -6,17 +6,22 @@ import { db } from "@/lib/db";
 import { expenses, expenseForm } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { listExpenses, getExpense } from "@/lib/store/expenses";
-import { router, protectedProcedure } from "@/lib/trpc/init";
+import { router, featureGate, protectedProcedure } from "@/lib/trpc/init";
+
+// Whole router belongs to one feature; switched off = every call refuses.
+const gate = featureGate("expenses");
 
 export const expensesRouter = router({
   list: protectedProcedure
+    .use(gate)
     .input(z.string().regex(/^\d{4}-\d{2}$/))
     .query(({ input }) => listExpenses(input)),
 
-  byId: protectedProcedure.input(z.uuid()).query(({ input }) => getExpense(input)),
+  byId: protectedProcedure.use(gate).input(z.uuid()).query(({ input }) => getExpense(input)),
 
   // Any signed-in user may record; we stamp who keyed it.
   create: protectedProcedure
+    .use(gate)
     .input(expenseForm)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -35,6 +40,7 @@ export const expensesRouter = router({
 
   // Soft-delete. Admins and managers only.
   delete: protectedProcedure
+    .use(gate)
     .input(z.object({ id: z.uuid("Invalid entry.") }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "manager") {

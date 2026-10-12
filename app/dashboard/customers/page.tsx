@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { getStore } from "@/lib/store/data";
 import { listCustomers } from "@/lib/store/customers";
 import CustomersList from "@/components/fizz/customers/CustomersList";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Customers — Fizz" };
 
 // The café's customer book. Ships once; search filters on the device.
 export default async function CustomersPage() {
+  await requireFeature("customers");
   const [store, rows] = await Promise.all([getStore(), listCustomers()]);
 
   return (

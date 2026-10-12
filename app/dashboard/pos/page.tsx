@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { getCustomer } from "@/lib/store/customers";
 import { toLoadedOrder } from "@/lib/store/orders";
 import { getOrderSettings } from "@/lib/store/order-settings";
+import { featureOn } from "@/lib/store/features";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
 
@@ -70,6 +71,7 @@ export default async function TillPage({
           : null
       }
       cafeWhatsapp={ordering.whatsapp}
+      customers={featureOn(store.disabledFeatures, "customers")}
       loaded={loaded}
       requestedOrderId={orderId ?? null}
     />

@@ -67,15 +67,20 @@ const useCart = create<CartState>()(
   ),
 );
 
-type WebStatus = { status: string; kitchenStatus: string; webPending: boolean; total: string } | null | undefined;
+type WebStatus =
+  | { status: string; kitchenStatus: string; webPending: boolean; total: string; kot: boolean }
+  | null
+  | undefined;
 
 const STEPS = ["Sent", "Confirmed", "Preparing", "Ready"];
+// No KOT board = no kitchen steps to show.
+const stepsOf = (st: WebStatus) => (st?.kot === false ? STEPS.slice(0, 2) : STEPS);
 // How far along the guest's order is. -1 = cancelled.
 function stageOf(st: WebStatus): number {
   if (!st) return 0;
   if (st.status === "void") return -1;
-  if (st.kitchenStatus === "ready") return 3;
-  if (st.kitchenStatus === "accepted") return 2;
+  if (st.kot && st.kitchenStatus === "ready") return 3;
+  if (st.kot && st.kitchenStatus === "accepted") return 2;
   return st.webPending ? 0 : 1;
 }
 const stageLabel = (i: number) => (i < 0 ? "Cancelled" : STEPS[i]);
@@ -281,7 +286,7 @@ export function FloatingCart({
       enabled: !!placed,
       refetchInterval: (q) => {
         const d = q.state.data;
-        return d && (d.status === "void" || (d.status === "paid" && d.kitchenStatus === "ready")) ? false : 8000;
+        return d && (d.status === "void" || (d.status === "paid" && (!d.kot || d.kitchenStatus === "ready"))) ? false : 8000;
       },
     }),
   );
@@ -709,7 +714,8 @@ function StatusSheet({
   const stage = stageOf(status);
   const paid = status?.status === "paid";
   const total = status ? Number(status.total) : placed.total;
-  const finished = stage < 0 || (paid && stage === 3);
+  const steps = stepsOf(status);
+  const finished = stage < 0 || (paid && stage === steps.length - 1);
   // Amount is the server's total, prefilled so the guest never types it.
   const link = upi
     ? upiPayLink({ vpa: upi.vpa, name: upi.name ?? storeName, amount: total, note: `Order ${placed.number}` })
@@ -760,8 +766,8 @@ function StatusSheet({
             {paid && <span className="ml-2 text-[0.6em] font-semibold text-[var(--m-muted)]">Paid ●</span>}
           </p>
           {stage >= 0 && (
-            <ol className="mt-4 grid grid-cols-4 gap-2">
-              {STEPS.map((label, i) => (
+            <ol className={`mt-4 grid gap-2 ${steps.length === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
+              {steps.map((label, i) => (
                 <li key={label} className="text-center">
                   <span
                     className="block h-1.5 rounded-full"

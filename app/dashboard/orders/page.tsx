@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
 import { getOrderSettings, receiptStore } from "@/lib/store/order-settings";
 import { currentMonth } from "@/lib/store/date-range";
+import { featureOn } from "@/lib/store/features";
 import OrdersClient from "@/components/fizz/orders/OrdersClient";
 
 export const metadata: Metadata = { title: "Orders — Fizz" };
@@ -36,6 +37,7 @@ export default async function OrdersPage({
       receiptHeader={header}
       taxLabel={store.taxLabel}
       cafeWhatsapp={ordering.whatsapp}
+      kot={featureOn(store.disabledFeatures, "kot")}
     />
   );
 }

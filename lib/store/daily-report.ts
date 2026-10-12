@@ -7,6 +7,8 @@ import { getAnalytics, type Analytics } from "@/lib/store/analytics";
 import { fromDateInput, resolvePreset, toDateInput } from "@/lib/store/date-range";
 import { listInventory } from "@/lib/store/inventory";
 import { formatMoney } from "@/lib/store/format";
+import { getStore } from "@/lib/store/data";
+import { featureOn } from "@/lib/store/features";
 
 export type DayInsight = {
   kind: "good" | "warn" | "info";
@@ -52,7 +54,7 @@ export async function getDailyReport(
   const day = isToday ? "today" : "that day";
   const prevDay = isToday ? "yesterday" : "the day before";
 
-  const [analytics, dayOrders, inventory] = await Promise.all([
+  const [analytics, dayOrders, inventory, store] = await Promise.all([
     // Hourly trend for a single day.
     getAnalytics(today, yesterday, true),
     db
@@ -75,6 +77,7 @@ export async function getDailyReport(
       )
       .orderBy(asc(orders.createdAt)),
     listInventory(),
+    getStore(),
   ]);
 
   // Cash reconciliation from settled cash orders.
@@ -95,7 +98,8 @@ export async function getDailyReport(
   const peak = [...active].sort((a, b) => b.value - a.value)[0] ?? null;
   const quiet = [...active].sort((a, b) => a.value - b.value)[0] ?? null;
 
-  const low = inventory.filter((i) => i.lowStock);
+  // Inventory off = no stock to warn about.
+  const low = featureOn(store.disabledFeatures, "inventory") ? inventory.filter((i) => i.lowStock) : [];
   const openValue = r2(
     openTabsRows.reduce((s, o) => s + Number(o.total), 0),
   );

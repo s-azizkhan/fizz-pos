@@ -17,6 +17,7 @@ import {
 import { STORE_ID } from "@/lib/store/constants";
 import { getFullMenu, getPublicMenu } from "@/lib/store/menu";
 import { getOrderSettings } from "@/lib/store/order-settings";
+import { bust } from "@/lib/store/cache";
 import {
   router,
   protectedProcedure,
@@ -36,6 +37,7 @@ function rethrow(e: unknown): never {
 }
 
 function bump() {
+  bust("menu");
   revalidatePath("/dashboard/menu");
 }
 
@@ -130,6 +132,7 @@ export const menuRouter = router({
               : "Something fizzled. Try again.",
         });
       }
+      bust("store");
       revalidatePath("/dashboard/menu");
       // Still the only way the PUBLIC menu page goes stale-free for visitors.
       if (input.menuSlug) revalidatePath(`/m/${input.menuSlug}`);

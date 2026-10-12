@@ -113,6 +113,13 @@
       "when": 1791791214430,
       "tag": "0015_volatile_inhumans",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791814509940,
+      "tag": "0016_quick_spirit",
+      "breakpoints": true
     }
   ]
 }

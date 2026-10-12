@@ -14,6 +14,9 @@ type PrinterState = {
   // TicketLayoutSync.
   receipt: Block[];
   kot: Block[];
+  // Printers feature switched off for the store: never talk to a device.
+  // Set by PrinterKeepAlive from the dashboard layout.
+  off: boolean;
   setPrinter: (p: { id: string; name: string } | null) => void;
   setPaper: (p: PaperWidth) => void;
   setAuto: (p: Partial<Pick<PrinterState, "autoReceipt" | "autoKot">>) => void;
@@ -29,6 +32,7 @@ export const usePrinter = create<PrinterState>()(
       autoKot: true,
       receipt: RECEIPT_LAYOUT,
       kot: KOT_LAYOUT,
+      off: false,
       setPrinter: (p) => set({ deviceId: p?.id ?? null, deviceName: p?.name ?? null }),
       setPaper: (paper) => set({ paper }),
       setAuto: (p) => set(p),

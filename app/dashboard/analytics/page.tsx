@@ -12,6 +12,7 @@ import {
   type RangePreset,
 } from "@/lib/store/date-range";
 import AnalyticsClient from "@/components/fizz/analytics/AnalyticsClient";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Analytics — Fizz" };
 
@@ -30,6 +31,7 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
+  await requireFeature("analytics");
   const api = await trpc();
   const user = await getCurrentUser();
   if (user.role === "staff") redirect("/dashboard");

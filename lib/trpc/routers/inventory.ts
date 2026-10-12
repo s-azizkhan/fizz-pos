@@ -15,7 +15,7 @@ import {
   getInventoryItem,
   listMovements,
 } from "@/lib/store/inventory";
-import { router, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
+import { router, featureGate, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
 
 const fizzled = new TRPCError({
   code: "INTERNAL_SERVER_ERROR",
@@ -34,14 +34,18 @@ function bump() {
   revalidatePath("/dashboard/inventory");
 }
 
-export const inventoryRouter = router({
-  list: protectedProcedure.query(() => listInventory()),
+// Whole router belongs to one feature; switched off = every call refuses.
+const gate = featureGate("inventory");
 
-  byId: protectedProcedure.input(z.uuid()).query(({ input }) => getInventoryItem(input)),
+export const inventoryRouter = router({
+  list: protectedProcedure.use(gate).query(() => listInventory()),
+
+  byId: protectedProcedure.use(gate).input(z.uuid()).query(({ input }) => getInventoryItem(input)),
 
   // Was fetchMovements. The movement log for one item, read on demand by the
   // history modal. Any signed-in user who can see inventory may read it.
   movements: protectedProcedure
+    .use(gate)
     .input(
       z.object({
         itemId: z.uuid("Invalid item."),
@@ -59,8 +63,9 @@ export const inventoryRouter = router({
     }),
 
   // ---- Items ------------------------------------------------------------
-  // editorProcedure replaces the old requireEditor() helper.
+  // editorProcedure.use(gate) replaces the old requireEditor() helper.
   createItem: editorProcedure
+    .use(gate)
     .input(inventoryItemForm)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -89,6 +94,7 @@ export const inventoryRouter = router({
     }),
 
   updateItem: editorProcedure
+    .use(gate)
     .input(inventoryItemForm.extend({ id: z.uuid("Invalid item.") }))
     .mutation(async ({ input }) => {
       // Editing item details must not silently move stock — quantity changes
@@ -114,6 +120,7 @@ export const inventoryRouter = router({
     }),
 
   deleteItem: editorProcedure
+    .use(gate)
     .input(z.object({ id: z.uuid("Invalid item.") }))
     .mutation(async ({ input }) => {
       try {
@@ -132,6 +139,7 @@ export const inventoryRouter = router({
 
   // ---- Stock movements --------------------------------------------------
   recordMovement: editorProcedure
+    .use(gate)
     .input(stockMovementForm)
     .mutation(async ({ ctx, input }) => {
       const { itemId, type, amount, note } = input;

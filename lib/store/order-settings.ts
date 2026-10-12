@@ -5,11 +5,13 @@ import { db } from "@/lib/db";
 import { orderSettings, type OrderSettings } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { getStore } from "@/lib/store/data";
+import { cached } from "@/lib/store/cache";
 import type { ReceiptData } from "@/lib/print/templates";
 
 // Lazily create the store's ordering-config row, then return it. Same pattern
-// as getStore(). Memoized per render.
-export const getOrderSettings = cache(async (): Promise<OrderSettings> => {
+// as getStore(): cached across requests under the "store" tag (the menu
+// settings modal writes both together), memoized per render.
+async function loadOrderSettings(): Promise<OrderSettings> {
   const [row] = await db
     .select()
     .from(orderSettings)
@@ -29,7 +31,8 @@ export const getOrderSettings = cache(async (): Promise<OrderSettings> => {
     .where(eq(orderSettings.storeId, STORE_ID))
     .limit(1);
   return again;
-});
+}
+export const getOrderSettings = cache(cached("order-settings", "store", loadOrderSettings));
 
 // Store header/footer fields a printed receipt needs (checkout + reprints).
 export async function receiptStore(): Promise<ReceiptData["store"]> {

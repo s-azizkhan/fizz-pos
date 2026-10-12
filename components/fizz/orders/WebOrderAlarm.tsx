@@ -15,7 +15,7 @@ import RingAlarm from "./RingAlarm";
 // (SSE / web push) if that bill matters.
 const POLL_MS = 15_000;
 
-export default function WebOrderAlarm() {
+export default function WebOrderAlarm({ kot }: { kot: boolean }) {
   const trpc = useTRPC();
   const qc = useQueryClient();
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function WebOrderAlarm() {
       onAccept={(id) =>
         accept
           .mutateAsync(id)
-          .then(() => toast.success("Sent to KOT"))
+          .then(() => toast.success(kot ? "Sent to KOT" : "Order accepted"))
           .catch((e) => toast.error(e instanceof Error ? e.message : "Something fizzled"))
           .finally(() => {
             void qc.invalidateQueries({ queryKey: trpc.orders.webPending.queryKey() });

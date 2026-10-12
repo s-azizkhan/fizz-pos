@@ -6,6 +6,7 @@ import { currentMonth } from "@/lib/store/date-range";
 import MonthFilter from "@/components/fizz/MonthFilter";
 import DailySalesTable from "@/components/fizz/DailySalesTable";
 import RecordSaleModal from "@/components/fizz/RecordSaleModal";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = {
   title: "Daily sales — Fizz",
@@ -16,6 +17,7 @@ export default async function DailySalesPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
+  await requireFeature("dailySales");
   const { month: monthParam } = await searchParams;
   const month = /^\d{4}-\d{2}$/.test(monthParam ?? "") ? monthParam! : currentMonth();
   const api = await trpc();

@@ -222,7 +222,7 @@ function ItemRow({
   item: MenuItemWithVariants;
   categoryId: string;
   currency: string;
-  ingredients: RecipeIngredient[];
+  ingredients: RecipeIngredient[] | null;
   recipe: RecipeComponent[];
   grip: ReturnType<ReturnType<typeof useDragSort>["handle"]>;
 }) {
@@ -241,7 +241,7 @@ function ItemRow({
     return <ItemForm categoryId={categoryId} item={item} currency={currency} onDone={() => setEditing(false)} />;
   }
 
-  if (recipeOpen) {
+  if (recipeOpen && ingredients) {
     return (
       <RecipeEditor
         item={item}
@@ -285,19 +285,22 @@ function ItemRow({
           {item.available ? <EyeOffIcon className="h-3.5 w-3.5 shrink-0" /> : <EyeIcon className="h-3.5 w-3.5 shrink-0" />}
           {item.available ? "Hide" : "Show"}
         </button>
-        <button
-          type="button"
-          onClick={() => setRecipeOpen(true)}
-          className={`inline-flex items-center justify-center gap-1 rounded-full border whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:py-1 font-semibold transition-colors ${
-            recipe.length > 0
-              ? "border-fizz/50 text-fizz hover:border-fizz"
-              : "border-ink-line text-steam hover:border-fizz hover:text-fizz"
-          }`}
-          title="Map this item to stock so sales auto-deduct"
-        >
-          <BoxIcon className="h-3.5 w-3.5 shrink-0" />
-          Recipe{recipe.length > 0 ? ` · ${recipe.length}` : ""}
-        </button>
+        {/* null ingredients = Inventory feature off: no recipes to map. */}
+        {ingredients && (
+          <button
+            type="button"
+            onClick={() => setRecipeOpen(true)}
+            className={`inline-flex items-center justify-center gap-1 rounded-full border whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:py-1 font-semibold transition-colors ${
+              recipe.length > 0
+                ? "border-fizz/50 text-fizz hover:border-fizz"
+                : "border-ink-line text-steam hover:border-fizz hover:text-fizz"
+            }`}
+            title="Map this item to stock so sales auto-deduct"
+          >
+            <BoxIcon className="h-3.5 w-3.5 shrink-0" />
+            Recipe{recipe.length > 0 ? ` · ${recipe.length}` : ""}
+          </button>
+        )}
         <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center justify-center gap-1 rounded-full border border-ink-line whitespace-nowrap px-2 py-2 text-xs sm:px-3 sm:py-1 font-semibold text-steam hover:border-fizz hover:text-fizz">
           <PencilIcon className="h-3.5 w-3.5 shrink-0" />
           Edit
@@ -328,7 +331,7 @@ function CategoryCard({
   currency: string;
   grip: ReturnType<ReturnType<typeof useDragSort>["handle"]>;
   collapsed: boolean;
-  ingredients: RecipeIngredient[];
+  ingredients: RecipeIngredient[] | null;
   recipes: Record<string, RecipeComponent[]>;
 }) {
   const [editing, setEditing] = useState(false);
@@ -457,7 +460,7 @@ export default function MenuManager({
 }: {
   categories: MenuCategoryWithItems[];
   currency: string;
-  ingredients: RecipeIngredient[];
+  ingredients: RecipeIngredient[] | null;
   recipes: Record<string, RecipeComponent[]>;
 }) {
   const trpc = useTRPC();

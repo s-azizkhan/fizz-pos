@@ -13,11 +13,16 @@ type WakeLock = { request(type: "screen"): Promise<Sentinel> };
 // locked phone/tablet suspends the tab and the OS drops the link with it.
 // ponytail: wake lock runs on every dashboard page while a Bluetooth printer is
 // set, desktops included. Scope it to /dashboard/pos if that's annoying.
-export default function PrinterKeepAlive() {
+// `on` = the store's Printers feature; off silences every device print.
+export default function PrinterKeepAlive({ on }: { on: boolean }) {
   const deviceId = usePrinter((s) => s.deviceId);
 
   useEffect(() => {
-    if (!deviceId || isUsbId(deviceId) || !bluetoothSupported()) return;
+    usePrinter.setState({ off: !on });
+  }, [on]);
+
+  useEffect(() => {
+    if (!on || !deviceId || isUsbId(deviceId) || !bluetoothSupported()) return;
     const stop = keepAlive(deviceId);
 
     const wake = (navigator as unknown as { wakeLock?: WakeLock }).wakeLock;
@@ -43,7 +48,7 @@ export default function PrinterKeepAlive() {
       document.removeEventListener("visibilitychange", grab);
       lock?.release().catch(() => {});
     };
-  }, [deviceId]);
+  }, [deviceId, on]);
 
   return null;
 }

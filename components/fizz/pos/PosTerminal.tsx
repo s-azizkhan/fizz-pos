@@ -68,6 +68,7 @@ function Terminal({
   tax,
   upi,
   cafeWhatsapp,
+  customers,
   loaded,
 }: {
   categories: PosCategory[];
@@ -77,6 +78,8 @@ function Terminal({
   upi: UpiConfig | null;
   /** The café's WhatsApp number; lends its country code to customer links. */
   cafeWhatsapp: string | null;
+  /** Customers feature on: show the name/phone picker. */
+  customers: boolean;
   loaded: LoadedOrder | null;
 }) {
   const router = useRouter();
@@ -597,7 +600,7 @@ function Terminal({
             source={source}
             onSource={setSource}
             customer={customer}
-            onCustomer={setCustomer}
+            onCustomer={customers ? setCustomer : undefined}
             fees={fees}
             onOpenFees={() => setFeesOpen(true)}
             editingNumber={editingNumber}
@@ -649,7 +652,7 @@ function Terminal({
           upi={upi}
           money={money}
           customer={customer}
-          onCustomer={setCustomer}
+          onCustomer={customers ? setCustomer : undefined}
           submitting={settle.isPending}
           onPay={handlePay}
           onClose={() => setPayOpen(false)}

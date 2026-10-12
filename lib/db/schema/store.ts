@@ -1,9 +1,11 @@
+import { sql } from "drizzle-orm";
 import { boolean, integer, jsonb, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { CURRENCY_CODES } from "@/lib/store/currencies";
 import { MENU_THEME_KEYS } from "@/lib/store/menu-themes";
 import { ORDER_PARTS, TEXT_SIZES, type Block } from "@/lib/print/templates";
 import { MENU_FONT_SCALES } from "./constants";
+import { FEATURE_KEYS } from "@/lib/store/features";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -66,6 +68,9 @@ export const store = pgTable("store", {
   // Preset look for the public menu. Keys live in lib/store/menu-themes.ts.
   menuTheme: text("menu_theme").notNull().default("midnight"),
   // Ordering config (cart, WhatsApp, delivery) lives in `order_settings`.
+  // Feature keys the café switched off (lib/store/features.ts). Stored as the
+  // OFF list so a new feature ships on. Check with featureOn().
+  disabledFeatures: text("disabled_features").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -145,6 +150,20 @@ export const storeSettingsForm = z.object({
   orderNumberFormat: z.string().trim().min(1).max(80),
   nextInvoiceSeq: z.coerce.number().int().min(1),
   nextOrderSeq: z.coerce.number().int().min(1),
+  // Switched-off features arrive as a JSON string from the client form.
+  disabledFeatures: z
+    .string()
+    .default("[]")
+    .transform((s, ctx) => {
+      let raw: unknown = null;
+      try {
+        raw = JSON.parse(s);
+      } catch {}
+      const r = z.array(z.enum(FEATURE_KEYS)).safeParse(raw);
+      if (r.success) return [...new Set(r.data)];
+      ctx.addIssue({ code: "custom", message: "Unknown feature in the list" });
+      return z.NEVER;
+    }),
 });
 export type StoreSettingsInput = z.infer<typeof storeSettingsForm>;
 

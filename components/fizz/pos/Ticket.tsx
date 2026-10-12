@@ -48,7 +48,8 @@ export default function Ticket({
   reference: string;
   onReference: (v: string) => void;
   customer: Customer;
-  onCustomer: (c: Customer) => void;
+  /** Absent = Customers feature off: no picker. */
+  onCustomer?: (c: Customer) => void;
   source: OrderSource;
   onSource: (s: OrderSource) => void;
   fees: OrderFees;
@@ -155,7 +156,7 @@ export default function Ticket({
               {f.label.replace(" fee", "")} {money(fees[f.key])}
             </button>
           ))}
-          <CustomerFields value={customer} onChange={onCustomer} />
+          {onCustomer && <CustomerFields value={customer} onChange={onCustomer} />}
         </div>
       </div>
 

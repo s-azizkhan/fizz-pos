@@ -11,8 +11,8 @@ export async function printToDefault(
   build: (cfg: PrintCfg) => Uint8Array<ArrayBuffer>,
   { interactive = false } = {},
 ): Promise<boolean> {
-  const { deviceId, paper, receipt, kot, setPrinter } = usePrinter.getState();
-  if (!deviceId || !printingSupported()) return false;
+  const { deviceId, paper, receipt, kot, off, setPrinter } = usePrinter.getState();
+  if (off || !deviceId || !printingSupported()) return false;
   const cfg = { paper, receipt, kot };
   try {
     await print(deviceId, build(cfg));

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
 import DailyReportView from "@/components/fizz/report/DailyReportView";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Daily report — Fizz" };
 
@@ -11,6 +12,7 @@ export default async function DailyReportPage({
 }: {
   searchParams: Promise<{ date?: string }>;
 }) {
+  await requireFeature("report");
   const api = await trpc();
   const user = await getCurrentUser();
   if (user.role === "staff") redirect("/dashboard");

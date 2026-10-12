@@ -10,9 +10,11 @@ import type { UserRole } from "@/lib/db/schema";
 
 export default function DashboardShell({
   user,
+  off,
   children,
 }: {
   user: { name: string; role: UserRole };
+  off: string[];
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -75,7 +77,7 @@ export default function DashboardShell({
         </main>
       </div>
 
-      <BottomNav user={user} />
+      <BottomNav user={user} off={off} />
     </div>
   );
 }

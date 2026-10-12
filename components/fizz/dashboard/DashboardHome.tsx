@@ -43,6 +43,8 @@ export default function DashboardHome({
   openingTime,
   closingTime,
   canSeeInsights,
+  inventory,
+  analytics,
   snapshot,
   quickActions,
 }: {
@@ -54,12 +56,17 @@ export default function DashboardHome({
   openingTime: string;
   closingTime: string;
   canSeeInsights: boolean;
+  inventory: boolean;
+  analytics: boolean;
   snapshot: HomeSnapshot;
   quickActions: { label: string; href: string; blurb: string }[];
 }) {
   const money = (x: number) => formatMoney(x, currency);
   const s = snapshot;
   const revDelta = delta(s.revenueToday);
+  // Inventory off = no stock to warn about.
+  const lowItems = inventory ? s.lowStock : [];
+  const lowCount = inventory ? s.lowStockCount : 0;
 
   // Time-dependent text is computed after mount to avoid SSR/client mismatch
   // (the wall clock is an external system we read once on the client).
@@ -122,12 +129,14 @@ export default function DashboardHome({
                 <p className="mt-1 text-sm text-steam">No sales yet today</p>
               )}
             </div>
-            <Link
-              href="/dashboard/analytics"
-              className="shrink-0 rounded-fizz border border-ink-line bg-ink/40 px-3 py-1.5 text-xs font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
-            >
-              Analytics →
-            </Link>
+            {analytics && (
+              <Link
+                href="/dashboard/analytics"
+                className="shrink-0 rounded-fizz border border-ink-line bg-ink/40 px-3 py-1.5 text-xs font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+              >
+                Analytics →
+              </Link>
+            )}
           </div>
           <Sparkline data={s.todaySpark} className="mt-6 h-16 w-full" />
           <p className="mt-1 text-[11px] text-steam">Hourly revenue · midnight → now</p>
@@ -144,7 +153,7 @@ export default function DashboardHome({
             href="/dashboard/orders"
             accent={s.openTabs > 0}
           />
-          {canSeeInsights ? (
+          {canSeeInsights && inventory ? (
             <Kpi
               label="Low stock"
               value={String(s.lowStockCount)}
@@ -165,7 +174,7 @@ export default function DashboardHome({
           <section className="rounded-fizz border border-ink-line bg-ink-soft p-5">
             <h2 className="font-display text-lg font-bold">Needs attention</h2>
             <div className="mt-4 space-y-3">
-              {s.openTabs === 0 && s.lowStockCount === 0 && (
+              {s.openTabs === 0 && lowCount === 0 && (
                 <p className="rounded-fizz border border-ink-line bg-ink p-4 text-sm text-steam">
                   All clear — no open tabs, stock looks healthy. ●
                 </p>
@@ -186,7 +195,7 @@ export default function DashboardHome({
                   </span>
                 </Link>
               )}
-              {s.lowStock.map((it) => (
+              {lowItems.map((it) => (
                 <Link
                   key={it.id}
                   href="/dashboard/inventory"
@@ -198,12 +207,12 @@ export default function DashboardHome({
                   </span>
                 </Link>
               ))}
-              {s.lowStockCount > s.lowStock.length && (
+              {lowCount > lowItems.length && (
                 <Link
                   href="/dashboard/inventory"
                   className="block text-center text-xs font-semibold text-fizz hover:underline"
                 >
-                  +{s.lowStockCount - s.lowStock.length} more low items →
+                  +{lowCount - lowItems.length} more low items →
                 </Link>
               )}
             </div>

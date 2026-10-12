@@ -1,4 +1,5 @@
 import type { UserRole } from "@/lib/db/schema";
+import { routeOff } from "@/lib/store/features";
 import {
   GridIcon,
   PosIcon,
@@ -45,6 +46,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Help & docs", href: "/dashboard/docs", icon: HelpIcon, roles: ["admin", "manager", "staff"], blurb: "How every page works, step by step." },
 ];
 
-export function navForRole(role: UserRole): NavItem[] {
-  return NAV_ITEMS.filter((i) => i.roles.includes(role));
+// `off` = the store's switched-off features; their pages drop out of every nav.
+export function navForRole(role: UserRole, off: readonly string[] = []): NavItem[] {
+  return NAV_ITEMS.filter((i) => i.roles.includes(role) && !routeOff(off, i.href));
 }

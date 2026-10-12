@@ -54,6 +54,7 @@ export default function OrdersClient({
   receiptHeader,
   taxLabel,
   cafeWhatsapp,
+  kot,
 }: {
   isAdmin: boolean;
   first: { rows: OrderRow[]; hasMore: boolean };
@@ -63,6 +64,7 @@ export default function OrdersClient({
   receiptHeader: ReceiptData["store"];
   taxLabel: string;
   cafeWhatsapp: string | null;
+  kot: boolean;
 }) {
   const router = useRouter();
   const trpc = useTRPC();
@@ -191,7 +193,7 @@ export default function OrdersClient({
     startTransition(async () => {
       try {
         await acceptWeb.mutateAsync(id);
-        toast.success("Sent to KOT");
+        toast.success(kot ? "Sent to KOT" : "Order accepted");
         void qc.invalidateQueries({ queryKey: trpc.orders.webPending.queryKey() });
         router.refresh();
       } catch (e) {
@@ -352,7 +354,7 @@ export default function OrdersClient({
                       className="flex w-full items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02] disabled:opacity-60"
                     >
                       <ChefIcon className="h-4 w-4" />
-                      Accept &amp; send to KOT
+                      {kot ? "Accept & send to KOT" : "Accept order"}
                     </button>
                   )}
                   <button

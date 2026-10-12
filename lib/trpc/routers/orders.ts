@@ -16,6 +16,7 @@ import {
   orders,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
+import { featureOn } from "@/lib/store/features";
 import { computeTotals, r2 } from "@/lib/store/totals";
 import {
   listOrders,
@@ -30,7 +31,7 @@ import { receiptStore } from "@/lib/store/order-settings";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
 import { resolveCustomer } from "@/lib/store/customers";
 import { getPublicMenu } from "@/lib/store/menu";
-import { router, protectedProcedure, adminProcedure, publicProcedure } from "@/lib/trpc/init";
+import { router, featureGate, protectedProcedure, adminProcedure, publicProcedure } from "@/lib/trpc/init";
 
 // The money columns every write shares, derived from computeTotals.
 function moneyColumns(t: ReturnType<typeof computeTotals>) {
@@ -246,6 +247,9 @@ export const ordersRouter = router({
             clientId: input.clientId,
             status: "open",
             webPending: true,
+            // KOT off: never enters a kitchen lane, so re-enabling it later
+            // doesn't flood the board with old orders.
+            kitchenStatus: featureOn(menu.store.disabledFeatures, "kot") ? "new" : "ready",
             source: "web",
             type,
             reference,
@@ -271,18 +275,22 @@ export const ordersRouter = router({
   // A guest checking on their own web order. PUBLIC — the clientId they minted
   // is an unguessable UUID, so it doubles as the access key (no number lookups).
   webStatus: publicProcedure.input(z.uuid()).query(async ({ input }) => {
-    const [o] = await db
-      .select({
-        number: orders.number,
-        status: orders.status,
-        kitchenStatus: orders.kitchenStatus,
-        webPending: orders.webPending,
-        total: orders.total,
-      })
-      .from(orders)
-      .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, input)))
-      .limit(1);
-    return o ?? null;
+    const [[o], { disabledFeatures }] = await Promise.all([
+      db
+        .select({
+          number: orders.number,
+          status: orders.status,
+          kitchenStatus: orders.kitchenStatus,
+          webPending: orders.webPending,
+          total: orders.total,
+        })
+        .from(orders)
+        .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, input)))
+        .limit(1),
+      getStore(),
+    ]);
+    // KOT off: the guest's tracker stops at "Confirmed" — no kitchen steps.
+    return o ? { ...o, kot: featureOn(disabledFeatures, "kot") } : null;
   }),
 
   list: protectedProcedure
@@ -326,16 +334,18 @@ export const ordersRouter = router({
   // --- Kitchen board -------------------------------------------------------
   // Polled on an interval by the KOT screen, so keep both of these cheap.
   kot: protectedProcedure
+    .use(featureGate("kot"))
     .input(z.enum(kitchenStatus.enumValues))
     .query(({ input }) => listKot(input)),
 
-  kotCounts: protectedProcedure.query(() => kotCounts()),
+  kotCounts: protectedProcedure.use(featureGate("kot")).query(() => kotCounts()),
 
   // The kitchen only pushes an order forward: new -> accepted -> ready. Going
   // backwards, or touching a voided order, is rejected — two cooks tapping the
   // same ticket must not un-do each other on a screen that repaints every few
   // seconds.
   kotMove: protectedProcedure
+    .use(featureGate("kot"))
     .input(kitchenMoveSchema)
     .mutation(async ({ input }) => {
       const [row] = await db
@@ -420,6 +430,7 @@ export const ordersRouter = router({
               clientId,
               createdAt: saleTime(soldAt),
               status: "open",
+              kitchenStatus: featureOn(store.disabledFeatures, "kot") ? "new" : "ready",
               type,
               source: input.source,
               reference,
@@ -517,7 +528,14 @@ export const ordersRouter = router({
           } else {
             const [o] = await tx
               .insert(orders)
-              .values({ storeId: STORE_ID, number, clientId, createdAt: at, ...settle })
+              .values({
+                storeId: STORE_ID,
+                number,
+                clientId,
+                createdAt: at,
+                kitchenStatus: featureOn(store.disabledFeatures, "kot") ? "new" : "ready",
+                ...settle,
+              })
               .returning({ id: orders.id });
             id = o.id;
           }
@@ -526,7 +544,9 @@ export const ordersRouter = router({
           // (save) deliberately don't deduct, so this fires exactly once.
           // ponytail: admin edits of a paid order don't reconcile stock; add a
           // diff-based deduction if inventory accuracy on edits matters.
-          if (!resettle) await applyRecipeDeductions(tx, totals.lines, ctx.user.id);
+          // Inventory off = no stock to burn.
+          if (!resettle && featureOn(store.disabledFeatures, "inventory"))
+            await applyRecipeDeductions(tx, totals.lines, ctx.user.id);
         });
       } catch (e) {
         if (e instanceof TRPCError) throw e;

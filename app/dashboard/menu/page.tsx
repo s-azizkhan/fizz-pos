@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
+import { featureOn } from "@/lib/store/features";
 import MenuPageClient from "@/components/fizz/menu/MenuPageClient";
 
 export const metadata: Metadata = {
@@ -14,12 +15,14 @@ export default async function MenuPage() {
   const user = await getCurrentUser();
   if (user.role !== "admin" && user.role !== "manager") redirect("/dashboard");
 
-  const [store, categories, orderSettings, ingredients, recipes, hdrs] = await Promise.all([
-    api.store.get(),
+  const store = await api.store.get();
+  // Inventory off = no recipes; skip the reads (the recipe router refuses).
+  const inventory = featureOn(store.disabledFeatures, "inventory");
+  const [categories, orderSettings, ingredients, recipes, hdrs] = await Promise.all([
     api.menu.full(),
     api.menu.orderSettings(),
-    api.recipe.ingredients(),
-    api.recipe.byMenuItem(),
+    inventory ? api.recipe.ingredients() : [],
+    inventory ? api.recipe.byMenuItem() : {},
     headers(),
   ]);
 

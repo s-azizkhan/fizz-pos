@@ -11,6 +11,7 @@ import type { MenuCategoryWithItems } from "@/lib/store/menu";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { OrderSettings, RecipeComponent, Store } from "@/lib/db/schema";
 import { GlobeIcon, LayersIcon, PlusIcon, PrinterIcon, QrIcon } from "@/components/fizz/dashboard/icons";
+import { featureOn } from "@/lib/store/features";
 
 export default function MenuPageClient({
   store,
@@ -27,6 +28,7 @@ export default function MenuPageClient({
   recipes: Record<string, RecipeComponent[]>;
   origin: string;
 }) {
+  const publicMenu = featureOn(store.disabledFeatures, "publicMenu");
   const [isPublicMenuOpen, setIsPublicMenuOpen] = useState(false);
   const [isPublicSectionsOpen, setIsPublicSectionsOpen] = useState(false);
   const [isNewCategoryOpen, setIsNewCategoryOpen] = useState(false);
@@ -58,14 +60,16 @@ export default function MenuPageClient({
           <PlusIcon className="h-4 w-4 shrink-0" />
           New category
         </button>
-        <button
-          onClick={() => setIsPublicMenuOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-fizz border border-fizz bg-fizz/10 px-3 py-3 font-semibold text-fizz transition-colors hover:bg-fizz/20 sm:px-5 sm:py-2.5"
-        >
-          <GlobeIcon className="h-4 w-4 shrink-0" />
-          <span className="sm:hidden">Public menu</span>
-          <span className="hidden sm:inline">Public Menu Settings</span>
-        </button>
+        {publicMenu && (
+          <button
+            onClick={() => setIsPublicMenuOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-fizz border border-fizz bg-fizz/10 px-3 py-3 font-semibold text-fizz transition-colors hover:bg-fizz/20 sm:px-5 sm:py-2.5"
+          >
+            <GlobeIcon className="h-4 w-4 shrink-0" />
+            <span className="sm:hidden">Public menu</span>
+            <span className="hidden sm:inline">Public Menu Settings</span>
+          </button>
+        )}
         <button
           onClick={() => setIsPublicSectionsOpen(true)}
           className="inline-flex items-center justify-center gap-2 rounded-fizz border border-fizz/50 px-3 py-3 font-semibold text-fizz transition-colors hover:border-fizz hover:bg-fizz/10 sm:px-5 sm:py-2.5"
@@ -73,13 +77,15 @@ export default function MenuPageClient({
           <LayersIcon className="h-4 w-4 shrink-0" />
           Menu Sections
         </button>
-        <button
-          onClick={() => setIsQrOpen(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz sm:px-5 sm:py-2.5"
-        >
-          <QrIcon className="h-4 w-4 shrink-0" />
-          Menu QR code
-        </button>
+        {publicMenu && (
+          <button
+            onClick={() => setIsQrOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz sm:px-5 sm:py-2.5"
+          >
+            <QrIcon className="h-4 w-4 shrink-0" />
+            Menu QR code
+          </button>
+        )}
         <button
           onClick={() => setIsExportPdfOpen(true)}
           className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz sm:px-5 sm:py-2.5"
@@ -94,7 +100,7 @@ export default function MenuPageClient({
           key={shapeKey}
           categories={categories}
           currency={store.currency}
-          ingredients={ingredients}
+          ingredients={featureOn(store.disabledFeatures, "inventory") ? ingredients : null}
           recipes={recipes}
         />
       </div>

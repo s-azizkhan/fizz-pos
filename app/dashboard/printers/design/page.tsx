@@ -4,10 +4,12 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { getStore } from "@/lib/store/data";
 import { receiptStore } from "@/lib/store/order-settings";
 import TicketDesigner from "@/components/fizz/printers/TicketDesigner";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Ticket design — Fizz" };
 
 export default async function TicketDesignPage() {
+  await requireFeature("printers");
   const user = await getCurrentUser();
   const [s, store] = await Promise.all([getStore(), receiptStore()]);
 

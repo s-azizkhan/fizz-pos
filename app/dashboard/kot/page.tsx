@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { requireFeature } from "@/lib/store/data";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
 import KotBoard from "@/components/fizz/orders/KotBoard";
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title: "KOT board — Fizz" };
 // of zeroes. The client takes over polling from there.
 export default async function KotPage() {
   await getCurrentUser();
+  await requireFeature("kot");
   const api = await trpc();
   const [newLane, accepted, ready, initialCounts] = await Promise.all([
     api.orders.kot("new"),

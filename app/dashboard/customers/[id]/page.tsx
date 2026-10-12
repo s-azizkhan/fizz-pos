@@ -6,6 +6,7 @@ import { getStore } from "@/lib/store/data";
 import { customerOrders, getCustomer } from "@/lib/store/customers";
 import { formatDateTime, formatMoney } from "@/lib/store/format";
 import { ORDER_SOURCE_LABELS } from "@/lib/db/schema/constants";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Customer — Fizz" };
 
@@ -17,6 +18,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 // One customer and every order linked to them, newest first.
 export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireFeature("customers");
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
   const [store, customer, history] = await Promise.all([

@@ -2,6 +2,8 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { z } from "zod";
 import { getSessionUser } from "@/lib/auth/dal";
+import { getStore } from "@/lib/store/data";
+import { featureOn, type FeatureKey } from "@/lib/store/features";
 
 // cookies() reads the ambient request store, which fetchRequestHandler runs
 // inside — so no req/headers need threading through here.
@@ -62,3 +64,16 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next();
 });
+
+// Server half of the Features switches: a switched-off feature's procedures
+// refuse, not just hide. getStore() is cached, so the check is free per call.
+export const featureGate = (key: FeatureKey) =>
+  t.middleware(async ({ next }) => {
+    if (!featureOn((await getStore()).disabledFeatures, key)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "That feature is switched off in Store settings.",
+      });
+    }
+    return next();
+  });

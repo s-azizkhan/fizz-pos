@@ -1,0 +1,1 @@
+ALTER TABLE "store" ADD COLUMN "disabled_features" text[] DEFAULT '{}'::text[] NOT NULL;

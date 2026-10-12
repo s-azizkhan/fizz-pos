@@ -7,23 +7,28 @@ import { dailySales, dailySaleForm, orders } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { listDailySales, getDailySale } from "@/lib/store/daily-sales";
 import { fromDateInput } from "@/lib/store/date-range";
-import { router, protectedProcedure } from "@/lib/trpc/init";
+import { router, featureGate, protectedProcedure } from "@/lib/trpc/init";
 
 const fizzled = new TRPCError({
   code: "INTERNAL_SERVER_ERROR",
   message: "Something fizzled. Try again.",
 });
 
+// Whole router belongs to one feature; switched off = every call refuses.
+const gate = featureGate("dailySales");
+
 export const dailySalesRouter = router({
   list: protectedProcedure
+    .use(gate)
     .input(z.string().regex(/^\d{4}-\d{2}$/))
     .query(({ input }) => listDailySales(input)),
 
-  byId: protectedProcedure.input(z.uuid()).query(({ input }) => getDailySale(input)),
+  byId: protectedProcedure.use(gate).input(z.uuid()).query(({ input }) => getDailySale(input)),
 
   // Paid POS orders for one day, split to match the form. Card counts as
   // credit — the order enum mirrors the daily-sales split (see order.ts).
   tillTotals: protectedProcedure
+    .use(gate)
     .input(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .query(async ({ input }) => {
       const start = fromDateInput(input);
@@ -49,6 +54,7 @@ export const dailySalesRouter = router({
 
   // Any signed-in user may record; we stamp who keyed it.
   create: protectedProcedure
+    .use(gate)
     .input(dailySaleForm)
     .mutation(async ({ ctx, input }) => {
       try {
@@ -64,6 +70,7 @@ export const dailySalesRouter = router({
 
   // Soft-delete. Admins and managers only.
   delete: protectedProcedure
+    .use(gate)
     .input(z.object({ id: z.uuid("Invalid entry.") }))
     .mutation(async ({ ctx, input }) => {
       if (ctx.user.role !== "admin" && ctx.user.role !== "manager") {

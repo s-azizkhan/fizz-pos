@@ -1,12 +1,11 @@
 import "server-only";
+import { cache } from "react";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   menuCategories,
   menuItems,
   menuItemVariants,
-  orderSettings,
-  store,
   type MenuCategory,
   type MenuItem,
   type MenuItemVariant,
@@ -14,6 +13,10 @@ import {
   type Store,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
+import { featureOn } from "@/lib/store/features";
+import { cached } from "@/lib/store/cache";
+import { getStore } from "@/lib/store/data";
+import { getOrderSettings } from "@/lib/store/order-settings";
 
 export type MenuItemWithVariants = MenuItem & { variants: MenuItemVariant[] };
 export type MenuCategoryWithItems = MenuCategory & {
@@ -26,9 +29,8 @@ const byPrice = (a: { price: string }, b: { price: string }) =>
   Number(a.price) - Number(b.price);
 
 // Assemble the full menu tree (active rows only), ordered by position. Used by
-// both the admin manager and the public renderer. `onlyAvailable` hides
-// unavailable items for the public view.
-async function buildMenu(onlyAvailable: boolean): Promise<MenuCategoryWithItems[]> {
+// the admin manager, POS, printable PDF and (filtered) the public renderer.
+async function buildMenu(): Promise<MenuCategoryWithItems[]> {
   const [cats, items, variants] = await Promise.all([
     db
       .select()
@@ -55,7 +57,6 @@ async function buildMenu(onlyAvailable: boolean): Promise<MenuCategoryWithItems[
 
   const itemsByCat = new Map<string, MenuItemWithVariants[]>();
   for (const it of items) {
-    if (onlyAvailable && !it.available) continue;
     const list = itemsByCat.get(it.categoryId) ?? [];
     list.push({
       ...it,
@@ -67,29 +68,28 @@ async function buildMenu(onlyAvailable: boolean): Promise<MenuCategoryWithItems[
   return cats.map((c) => ({ ...c, items: itemsByCat.get(c.id) ?? [] }));
 }
 
-export async function getFullMenu(): Promise<MenuCategoryWithItems[]> {
-  return buildMenu(false);
-}
+// Cached across requests (tag "menu") — every POS load and every guest on the
+// public menu reads it. Menu mutations call bust("menu").
+export const getFullMenu = cache(cached("menu-tree", "menu", buildMenu));
 
 export type PublicMenu = {
   store: Store;
   categories: MenuCategoryWithItems[];
-  /** null until the café saves ordering settings once. */
+  /** Ordering config; ordering stays off until the café saves it once. */
   ordering: OrderSettings | null;
 };
 
-// Look up a published menu by its public slug. Returns null when missing or
-// unpublished so the route can 404.
+// Look up a published menu by its public slug. Returns null when missing,
+// unpublished or switched off so the route can 404. Single store: the slug
+// must match the one store row. Every read here is cached.
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
-  const [row] = await db
-    .select()
-    .from(store)
-    .where(and(eq(store.menuSlug, slug), eq(store.menuPublished, true)))
-    .limit(1);
-  if (!row) return null;
-  const [categories, [ordering]] = await Promise.all([
-    buildMenu(true).then((cats) => cats.filter((c) => c.items.length > 0)),
-    db.select().from(orderSettings).where(eq(orderSettings.storeId, row.id)).limit(1),
-  ]);
-  return { store: row, categories, ordering: ordering ?? null };
+  const row = await getStore();
+  if (row.menuSlug !== slug || !row.menuPublished || !featureOn(row.disabledFeatures, "publicMenu"))
+    return null;
+  const [menu, ordering] = await Promise.all([getFullMenu(), getOrderSettings()]);
+  // Unavailable items hide from guests; categories left empty drop out.
+  const categories = menu
+    .map((c) => ({ ...c, items: c.items.filter((it) => it.available) }))
+    .filter((c) => c.items.length > 0);
+  return { store: row, categories, ordering };
 }

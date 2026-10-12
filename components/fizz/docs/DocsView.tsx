@@ -8,6 +8,7 @@ import {
   type DocBlock,
   type DocSection,
 } from "@/lib/store/docs-content";
+import { routeOff } from "@/lib/store/features";
 
 function Block({ block }: { block: DocBlock }) {
   switch (block.kind) {
@@ -96,13 +97,15 @@ function Section({ section }: { section: DocSection }) {
 
 // In-app help guide. A searchable, anchored reference for every page and the
 // common workflows. Content lives in lib/store/docs-content.ts.
-export default function DocsView() {
+// `off` = the store's switched-off features; their pages' docs drop out.
+export default function DocsView({ off }: { off: string[] }) {
   const [query, setQuery] = useState("");
+  const all = useMemo(() => DOC_SECTIONS.filter((s) => !s.href || !routeOff(off, s.href)), [off]);
 
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return DOC_SECTIONS;
-    return DOC_SECTIONS.filter((s) => {
+    if (!q) return all;
+    return all.filter((s) => {
       const hay = [
         s.title,
         s.intro,
@@ -119,7 +122,7 @@ export default function DocsView() {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [query]);
+  }, [query, all]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6 sm:py-10">
@@ -189,7 +192,7 @@ export default function DocsView() {
                 On this page
               </p>
               <ul className="mt-3 space-y-1.5">
-                {DOC_SECTIONS.map((s) => (
+                {all.map((s) => (
                   <li key={s.id}>
                     <a
                       href={`#${s.id}`}

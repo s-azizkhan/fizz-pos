@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
 import { navForRole } from "@/components/fizz/dashboard/nav-items";
+import { featureOn } from "@/lib/store/features";
 import DashboardHome from "@/components/fizz/dashboard/DashboardHome";
 import type { UserRole } from "@/lib/db/schema";
 
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
 
   // Managers/owners see insight panels; staff get a floor-focused view.
   const canSeeInsights = user.role === "admin" || user.role === "manager";
-  const quickActions = navForRole(user.role).filter(
+  const quickActions = navForRole(user.role, store.disabledFeatures).filter(
     (i) => i.href !== "/dashboard",
   );
 
@@ -48,6 +49,8 @@ export default async function DashboardPage() {
       openingTime={store.openingTime}
       closingTime={store.closingTime}
       canSeeInsights={canSeeInsights}
+      inventory={featureOn(store.disabledFeatures, "inventory")}
+      analytics={featureOn(store.disabledFeatures, "analytics")}
       snapshot={snapshot}
       quickActions={quickActions.map((a) => ({
         label: a.label,

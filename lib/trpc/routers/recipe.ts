@@ -10,16 +10,19 @@ import {
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { listRecipeIngredients, recipesByMenuItem } from "@/lib/store/recipe";
-import { router, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
+import { router, featureGate, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
+
+// Whole router belongs to one feature; switched off = every call refuses.
+const gate = featureGate("inventory");
 
 export const recipeRouter = router({
-  ingredients: protectedProcedure.query(() => listRecipeIngredients()),
-  byMenuItem: protectedProcedure.query(() => recipesByMenuItem()),
+  ingredients: protectedProcedure.use(gate).query(() => listRecipeIngredients()),
+  byMenuItem: protectedProcedure.use(gate).query(() => recipesByMenuItem()),
 
   // Save a menu item's recipe for one scope (base, or a specific variant). The
   // editor sends the full component list; we replace all rows for that scope so
   // removals stick. Wrapped in a transaction for an atomic swap.
-  save: editorProcedure.input(recipeForm).mutation(async ({ input }) => {
+  save: editorProcedure.use(gate).input(recipeForm).mutation(async ({ input }) => {
     const { menuItemId, variantId, components } = input;
 
     // Reject duplicate ingredients in one scope — the unique constraint would

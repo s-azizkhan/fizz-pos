@@ -11,6 +11,7 @@ import { CURRENCIES } from "@/lib/store/currencies";
 import { COUNTRIES } from "@/lib/store/countries";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { Store } from "@/lib/db/schema";
+import { FEATURES, FEATURE_KEYS, type FeatureKey } from "@/lib/store/features";
 
 
 const inputCls =
@@ -80,6 +81,11 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
   const [ordPrefix, setOrdPrefix] = useState(store.orderPrefix);
   const [ordFmt, setOrdFmt] = useState(store.orderNumberFormat);
   const [ordSeq, setOrdSeq] = useState(store.nextOrderSeq);
+
+  // Switched-off features; sent as JSON in a hidden input.
+  const [off, setOff] = useState<FeatureKey[]>(
+    store.disabledFeatures.filter((k): k is FeatureKey => FEATURE_KEYS.includes(k as FeatureKey)),
+  );
 
   // Live UPI preview: the same code a customer scans, minus the amount.
   const [upiId, setUpiId] = useState(store.upiId ?? "");
@@ -194,6 +200,45 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
         </label>
       </Section>
 
+
+      <section className="rounded-fizz border border-ink-line bg-ink-soft p-7">
+        <h2 className="font-display text-xl font-bold tracking-tight">Features</h2>
+        <p className="mt-1 max-w-[60ch] text-sm text-steam">
+          Switch off what your café doesn&apos;t use — its page, nav tab and
+          controls disappear for everyone. POS, Orders and Menu always stay on.
+        </p>
+        <input type="hidden" name="disabledFeatures" value={JSON.stringify(off)} />
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {FEATURES.map((f) => {
+            const checked = !off.includes(f.key);
+            const blocked = "needs" in f && off.includes(f.needs);
+            return (
+              <label
+                key={f.key}
+                className={`flex cursor-pointer items-start gap-3 rounded-fizz border p-4 transition-colors ${
+                  checked && !blocked ? "border-fizz/40 bg-fizz/5" : "border-ink-line bg-ink"
+                } ${blocked ? "opacity-60" : ""}`}
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={blocked}
+                  onChange={() =>
+                    setOff((o) => (checked ? [...o, f.key] : o.filter((k) => k !== f.key)))
+                  }
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-[#C6F432]"
+                />
+                <span>
+                  <span className="block font-semibold text-cream">{f.label}</span>
+                  <span className="block text-sm text-steam">
+                    {blocked ? "Turn Inventory on first." : f.hint}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
+      </section>
 
       <section className="rounded-fizz border border-ink-line bg-ink-soft p-7">
         <h2 className="font-display text-xl font-bold tracking-tight">

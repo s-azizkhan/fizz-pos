@@ -6,6 +6,7 @@ import { currentMonth } from "@/lib/store/date-range";
 import MonthFilter from "@/components/fizz/MonthFilter";
 import ExpensesTable from "@/components/fizz/ExpensesTable";
 import RecordExpenseModal from "@/components/fizz/RecordExpenseModal";
+import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = {
   title: "Expenses — Fizz",
@@ -16,6 +17,7 @@ export default async function ExpensesPage({
 }: {
   searchParams: Promise<{ month?: string }>;
 }) {
+  await requireFeature("expenses");
   const { month: monthParam } = await searchParams;
   const month = /^\d{4}-\d{2}$/.test(monthParam ?? "") ? monthParam! : currentMonth();
   const api = await trpc();
