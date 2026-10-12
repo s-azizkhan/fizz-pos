@@ -2,6 +2,9 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { DatePicker } from "@/components/fizz/ui/DatePicker";
+import { toDateInput } from "@/lib/store/date-range";
 import { formatMoney } from "@/lib/store/format";
 import type { DailyReport, DayInsight } from "@/lib/store/daily-report";
 import type { Metric, Slice } from "@/lib/store/analytics";
@@ -31,6 +34,9 @@ export default function DailyReportView({
 }) {
   const money = (x: number) => formatMoney(x, currency);
   const a = report.analytics;
+  const router = useRouter();
+  const day = report.isToday ? "today" : "that day";
+  const prevDay = report.isToday ? "yesterday" : "prior day";
 
   // Print-friendly: tag the body so the print stylesheet can hide app chrome.
   useEffect(() => {
@@ -47,13 +53,22 @@ export default function DailyReportView({
             Daily report · {storeName}
           </p>
           <h1 className="mt-2 font-display text-[clamp(24px,4vw,38px)] font-bold tracking-tight">
-            Today
+            {report.isToday ? "Today" : report.dateLabel.split(",")[0]}
           </h1>
           <p className="mt-1 text-steam">{report.dateLabel}</p>
         </div>
-        <div className="report-actions flex gap-2">
+        <div className="report-actions flex flex-wrap gap-2">
+          <div className="w-48">
+            <DatePicker
+              aria-label="Report date"
+              value={report.date}
+              max={toDateInput(new Date())}
+              onChange={(v) => router.push(`/dashboard/report?date=${v}`)}
+              className="flex w-full items-center justify-between gap-3 rounded-fizz border border-ink-line bg-ink-soft px-4 py-2.5 text-sm font-semibold text-cream outline-none transition-colors hover:border-fizz focus-visible:border-fizz focus-visible:ring-2 focus-visible:ring-fizz/40"
+            />
+          </div>
           <Link
-            href="/dashboard/analytics?range=today"
+            href={`/dashboard/analytics?range=custom&from=${report.date}&to=${report.date}`}
             className="rounded-fizz border border-ink-line bg-ink-soft px-4 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
             Full analytics →
@@ -69,13 +84,14 @@ export default function DailyReportView({
 
       {/* Headline KPIs */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Kpi label="Revenue" value={money(a.revenue.value)} metric={a.revenue} primary />
-        <Kpi label="Orders" value={String(a.orders.value)} metric={a.orders} />
-        <Kpi label="Avg order" value={money(a.avgOrder.value)} metric={a.avgOrder} />
+        <Kpi label="Revenue" value={money(a.revenue.value)} metric={a.revenue} vs={prevDay} primary />
+        <Kpi label="Orders" value={String(a.orders.value)} metric={a.orders} vs={prevDay} />
+        <Kpi label="Avg order" value={money(a.avgOrder.value)} metric={a.avgOrder} vs={prevDay} />
         <Kpi
           label="Net profit"
           value={money(a.netProfit.value)}
           metric={a.netProfit}
+          vs={prevDay}
           bad={a.netProfit.value < 0}
         />
       </div>
@@ -119,7 +135,7 @@ export default function DailyReportView({
         <section className="rounded-fizz border border-ink-line bg-ink-soft p-5">
           <h2 className="font-display text-lg font-bold">Cash up</h2>
           <p className="mt-1 text-sm text-steam">
-            What the till should hold from today&apos;s cash sales.
+            What the till should hold from {day}&apos;s cash sales.
           </p>
           <dl className="mt-4 space-y-2 text-sm">
             <Row label="Cash sales" value={money(report.cashSales)} />
@@ -155,6 +171,7 @@ export default function DailyReportView({
         <HourBars
           data={a.trend.map((t) => ({ label: t.label, value: t.value }))}
           money={money}
+          empty={`No sales recorded ${day}.`}
           className="mt-4"
         />
       </section>
@@ -165,9 +182,9 @@ export default function DailyReportView({
         <Panel title="By order type" slices={a.byType} money={money} />
         <Panel title="By category" slices={a.byCategory} money={money} />
         <section className="rounded-fizz border border-ink-line bg-ink-soft p-5">
-          <h2 className="font-display text-lg font-bold">Top items today</h2>
+          <h2 className="font-display text-lg font-bold">Top items {day}</h2>
           {a.topItems.length === 0 ? (
-            <p className="mt-4 text-sm text-steam">No items sold yet.</p>
+            <p className="mt-4 text-sm text-steam">No items sold.</p>
           ) : (
             <ul className="mt-4 space-y-2.5">
               {a.topItems.map((it, i) => (
@@ -211,12 +228,14 @@ function Kpi({
   label,
   value,
   metric,
+  vs,
   primary,
   bad,
 }: {
   label: string;
   value: string;
   metric: Metric;
+  vs: string;
   primary?: boolean;
   bad?: boolean;
 }) {
@@ -239,10 +258,10 @@ function Kpi({
       </p>
       {d ? (
         <p className={`mt-1 text-xs font-semibold ${d.up ? "text-fizz" : "text-[#E2655A]"}`}>
-          {d.up ? "▲" : "▼"} {Math.abs(d.pct)}% vs yesterday
+          {d.up ? "▲" : "▼"} {Math.abs(d.pct)}% vs {vs}
         </p>
       ) : (
-        <p className="mt-1 text-xs text-steam">vs yesterday</p>
+        <p className="mt-1 text-xs text-steam">vs {vs}</p>
       )}
     </div>
   );
@@ -339,15 +358,17 @@ function Panel({
 function HourBars({
   data,
   money,
+  empty,
   className,
 }: {
   data: { label: string; value: number }[];
   money: (x: number) => string;
+  empty: string;
   className?: string;
 }) {
   const max = Math.max(...data.map((d) => d.value), 1);
   if (data.every((d) => d.value === 0)) {
-    return <p className="mt-4 text-sm text-steam">No sales recorded yet today.</p>;
+    return <p className="mt-4 text-sm text-steam">{empty}</p>;
   }
   return (
     <div className={className}>

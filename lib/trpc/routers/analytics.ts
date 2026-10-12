@@ -14,8 +14,13 @@ export const analyticsRouter = router({
     .query(({ input }) => getAnalytics(input.range, input.prev, input.hourly)),
 
   dailyReport: protectedProcedure
-    .input(z.string().min(1))
-    .query(({ input }) => getDailyReport(input)),
+    .input(
+      z.object({
+        currency: z.string().min(1),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      }),
+    )
+    .query(({ input }) => getDailyReport(input.currency, input.date)),
 
   margins: protectedProcedure.query(() => getMargins()),
 

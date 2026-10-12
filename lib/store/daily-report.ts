@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { getAnalytics, type Analytics } from "@/lib/store/analytics";
-import { resolvePreset } from "@/lib/store/date-range";
+import { fromDateInput, resolvePreset, toDateInput } from "@/lib/store/date-range";
 import { listInventory } from "@/lib/store/inventory";
 import { formatMoney } from "@/lib/store/format";
 
@@ -16,7 +16,9 @@ export type DayInsight = {
 };
 
 export type DailyReport = {
-  dateLabel: string; // human label for "today"
+  date: string; // YYYY-MM-DD of the reported day
+  isToday: boolean;
+  dateLabel: string; // human label for the reported day
   analytics: Analytics; // today vs yesterday
   // Cash reconciliation: what should be in the drawer.
   cashSales: number; // settled cash revenue today
@@ -36,12 +38,19 @@ export type DailyReport = {
 
 const r2 = (x: number) => Math.round(x * 100) / 100;
 
-// Compile the end-of-day report for the current trading day, with actionable
-// insights derived from today's numbers compared to yesterday.
-export async function getDailyReport(currency: string): Promise<DailyReport> {
+// Compile the end-of-day report for a trading day (default: today), with
+// actionable insights derived from that day's numbers vs the day before.
+export async function getDailyReport(
+  currency: string,
+  date?: string, // YYYY-MM-DD; omitted = today
+): Promise<DailyReport> {
   const money = (x: number) => formatMoney(x, currency);
-  const today = resolvePreset("today");
-  const yesterday = resolvePreset("yesterday");
+  const anchor = date ? fromDateInput(date) : new Date();
+  const today = resolvePreset("today", anchor);
+  const yesterday = resolvePreset("yesterday", anchor);
+  const isToday = toDateInput(today.start) === toDateInput(new Date());
+  const day = isToday ? "today" : "that day";
+  const prevDay = isToday ? "yesterday" : "the day before";
 
   const [analytics, dayOrders, inventory] = await Promise.all([
     // Hourly trend for a single day.
@@ -108,14 +117,14 @@ export async function getDailyReport(currency: string): Promise<DailyReport> {
     if (pct >= 10)
       insights.push({
         kind: "good",
-        title: `Up ${pct}% on yesterday`,
-        detail: `Today's revenue is ahead of yesterday's same-time total. Keep the momentum.`,
+        title: `Up ${pct}% on ${prevDay}`,
+        detail: `Revenue is ahead of ${prevDay}. Keep the momentum.`,
       });
     else if (pct <= -10)
       insights.push({
         kind: "warn",
-        title: `Down ${Math.abs(pct)}% on yesterday`,
-        detail: `Revenue is behind yesterday. Consider a push on top sellers or a quick promo.`,
+        title: `Down ${Math.abs(pct)}% on ${prevDay}`,
+        detail: `Revenue is behind ${prevDay}. Consider a push on top sellers or a quick promo.`,
         href: "/dashboard/menu",
       });
   }
@@ -150,14 +159,14 @@ export async function getDailyReport(currency: string): Promise<DailyReport> {
     insights.push({
       kind: "good",
       title: `Top seller: ${analytics.topItems[0].name}`,
-      detail: `${analytics.topItems[0].units} sold today. Keep it front-of-mind and well stocked.`,
+      detail: `${analytics.topItems[0].units} sold ${day}. Keep it front-of-mind and well stocked.`,
     });
 
   if (voided > 0)
     insights.push({
       kind: "info",
       title: `${voided} order${voided === 1 ? "" : "s"} voided`,
-      detail: `Voids today. Worth a quick check that nothing's being lost at the till.`,
+      detail: `Voids ${day}. Worth a quick check that nothing's being lost at the till.`,
       href: "/dashboard/orders",
     });
 
@@ -165,18 +174,22 @@ export async function getDailyReport(currency: string): Promise<DailyReport> {
     insights.push({
       kind: "info",
       title: `${money(analytics.discounts.value)} given in discounts`,
-      detail: `Discounts applied today — fine if intentional, worth watching if not.`,
+      detail: `Discounts applied ${day} — fine if intentional, worth watching if not.`,
     });
 
   if (insights.length === 0)
     insights.push({
       kind: "info",
-      title: "Quiet so far",
-      detail: "No sales recorded yet today. Ring your first order at the Till.",
-      href: "/dashboard/till",
+      title: isToday ? "Quiet so far" : "No sales",
+      detail: isToday
+        ? "No sales recorded yet today. Ring your first order at the Till."
+        : "No sales recorded that day.",
+      href: isToday ? "/dashboard/till" : undefined,
     });
 
   return {
+    date: toDateInput(today.start),
+    isToday,
     dateLabel: today.start.toLocaleDateString("en-US", {
       weekday: "long",
       day: "numeric",
