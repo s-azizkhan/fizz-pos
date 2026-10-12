@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   orderItems,
@@ -7,10 +7,12 @@ import {
   type Order,
   type OrderItem,
   type KitchenStatus,
-  type OrderStatus,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { fromDateInput, monthBounds, resolvePreset } from "@/lib/store/date-range";
+import { customersByIds } from "@/lib/store/customers";
+import type { LoadedOrder } from "@/components/fizz/pos/types";
+import type { OrderRow } from "@/components/fizz/orders/types";
 
 export type OrderWithItems = Order & { items: OrderItem[] };
 
@@ -26,34 +28,40 @@ export type KotTicket = Pick<Order, "id" | "number" | "status" | "type" | "refer
   items: KotItem[];
 };
 
-// List orders for the store created in a YYYY-MM month, newest first. Open
-// tabs always show regardless of month — they're still live. Optional status
-// filter (open/paid/void). Items are attached so the orders page can preview lines.
-export async function listOrders(
-  month: string,
-  status?: OrderStatus,
-): Promise<OrderWithItems[]> {
-  const [start, end] = monthBounds(month).map(fromDateInput);
-  const inMonth = and(gte(orders.createdAt, start), lt(orders.createdAt, end));
-  const where = and(
-    eq(orders.storeId, STORE_ID),
-    or(eq(orders.status, "open"), inMonth),
-    status ? eq(orders.status, status) : undefined,
-  );
+// A tab as the POS edits it. Shared by the POS page (online, ?order=) and the
+// Orders page, which ships it on every open tab so the POS can pick the tab up
+// from the device when the network can't.
+export function toLoadedOrder(o: OrderWithItems, customer: LoadedOrder["customer"]): LoadedOrder {
+  return {
+    id: o.id,
+    number: o.number,
+    type: o.type,
+    reference: o.reference,
+    customer,
+    discount: Number(o.discount),
+    fees: {
+      service: Number(o.serviceFee),
+      packaging: Number(o.packagingFee),
+      delivery: Number(o.deliveryFee),
+    },
+    lines: o.items.map((it) => ({
+      key: it.variantId ? `${it.menuItemId}:${it.variantId}` : it.menuItemId ?? it.id,
+      menuItemId: it.menuItemId ?? "",
+      variantId: it.variantId,
+      name: it.name,
+      variantName: it.variantName,
+      unitPrice: Number(it.unitPrice),
+      quantity: it.quantity,
+    })),
+  };
+}
 
-  const rows = await db
-    .select()
-    .from(orders)
-    .where(where)
-    .orderBy(desc(orders.createdAt));
+async function withItems(rows: Order[]): Promise<OrderWithItems[]> {
   if (rows.length === 0) return [];
-
-  const ids = rows.map((o) => o.id);
   const items = await db
     .select()
     .from(orderItems)
-    .where(inArray(orderItems.orderId, ids));
-
+    .where(inArray(orderItems.orderId, rows.map((o) => o.id)));
   const byOrder = new Map<string, OrderItem[]>();
   for (const it of items) {
     const list = byOrder.get(it.orderId) ?? [];
@@ -61,6 +69,82 @@ export async function listOrders(
     byOrder.set(it.orderId, list);
   }
   return rows.map((o) => ({ ...o, items: byOrder.get(o.id) ?? [] }));
+}
+
+// Orders page, one page at a time: every open tab (still live, any month) on
+// the first page, then the month's closed orders newest first. Voided orders
+// only for admins — nobody else is shown them. Rows are client-ready and lean:
+// a busy month used to ship every order with its lines twice.
+export async function listOrders(
+  month: string,
+  opts: { offset: number; limit: number; includeVoid: boolean },
+): Promise<{ rows: OrderRow[]; hasMore: boolean }> {
+  const [start, end] = monthBounds(month).map(fromDateInput);
+  const [open, closed] = await Promise.all([
+    opts.offset === 0
+      ? db
+          .select()
+          .from(orders)
+          .where(and(eq(orders.storeId, STORE_ID), eq(orders.status, "open")))
+          .orderBy(desc(orders.createdAt))
+      : Promise.resolve([]),
+    db
+      .select()
+      .from(orders)
+      .where(
+        and(
+          eq(orders.storeId, STORE_ID),
+          gte(orders.createdAt, start),
+          lt(orders.createdAt, end),
+          ne(orders.status, "open"),
+          opts.includeVoid ? undefined : ne(orders.status, "void"),
+        ),
+      )
+      .orderBy(desc(orders.createdAt))
+      .offset(opts.offset)
+      .limit(opts.limit + 1),
+  ]);
+  const hasMore = closed.length > opts.limit;
+  const [full, people] = await Promise.all([
+    withItems([...open, ...closed.slice(0, opts.limit)]),
+    customersByIds(open.map((o) => o.customerId).filter((id): id is string => !!id)),
+  ]);
+
+  const rows = full.map((o): OrderRow => ({
+    id: o.id,
+    number: o.number,
+    status: o.status,
+    type: o.type,
+    reference: o.reference,
+    total: o.total,
+    paymentMethod: o.paymentMethod,
+    createdAt: o.createdAt.toISOString(),
+    paidAt: o.paidAt ? o.paidAt.toISOString() : null,
+    itemCount: o.items.reduce((n, it) => n + it.quantity, 0),
+    items: o.items.map((it) => ({
+      name: it.name,
+      variantName: it.variantName,
+      quantity: it.quantity,
+      lineTotal: it.lineTotal,
+    })),
+    // What a reprinted receipt needs beyond the lines; header/currency/tax
+    // label are page-wide and sent once.
+    bill:
+      o.status === "paid"
+        ? {
+            subtotal: o.subtotal,
+            discount: o.discount,
+            tax: o.tax,
+            fees: { service: o.serviceFee, packaging: o.packagingFee, delivery: o.deliveryFee },
+            changeDue: o.changeDue,
+          }
+        : null,
+    tab:
+      o.status === "open"
+        ? toLoadedOrder(o, people.find((c) => c.id === o.customerId) ?? null)
+        : null,
+  }));
+  return { rows, hasMore };
 }
 
 // Fetch a single order with its lines, scoped to the store. Null if missing.

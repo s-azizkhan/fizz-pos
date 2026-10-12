@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { formatMoney } from "@/lib/store/format";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTRPC } from "@/lib/trpc/client";
 import { Chip, ChipBar } from "@/components/fizz/ui/controls";
 import { toast } from "@/lib/store/toast";
@@ -11,6 +11,7 @@ import { printToDefault } from "@/lib/print/print-order";
 import { receipt as receiptTicket, type ReceiptData } from "@/lib/print/templates";
 import type { OrderRow, StatusFilter } from "./types";
 import KotTicket from "./KotTicket";
+import { stashTab } from "@/components/fizz/pos/tab-stash";
 import MonthFilter from "@/components/fizz/MonthFilter";
 import { startNav } from "@/components/fizz/NavProgress";
 import { confirmDialog } from "@/components/fizz/ConfirmDialog";
@@ -44,21 +45,74 @@ const FILTERS: { value: StatusFilter; label: string }[] = [
 // admins, who can edit, void or delete an order in any state.
 export default function OrdersClient({
   isAdmin,
-  orders,
+  first,
   month,
   currency,
   storeName,
+  receiptHeader,
+  taxLabel,
 }: {
   isAdmin: boolean;
-  orders: OrderRow[];
+  first: { rows: OrderRow[]; hasMore: boolean };
   month: string;
   currency: string;
   storeName: string;
+  receiptHeader: ReceiptData["store"];
+  taxLabel: string;
 }) {
   const router = useRouter();
   const trpc = useTRPC();
+  const qc = useQueryClient();
   const voidOrder = useMutation(trpc.orders.void.mutationOptions());
   const deleteOrder = useMutation(trpc.orders.delete.mutationOptions());
+
+  // First page comes with the page (and is refreshed by mutations); older
+  // pages are fetched on demand so a busy month isn't one giant download.
+  const [older, setOlder] = useState<{ rows: OrderRow[]; hasMore: boolean } | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const orders = useMemo(() => {
+    const seen = new Set(first.rows.map((o) => o.id));
+    return [...first.rows, ...(older?.rows ?? []).filter((o) => !seen.has(o.id))];
+  }, [first, older]);
+  const hasMore = older ? older.hasMore : first.hasMore;
+
+  async function loadMore() {
+    setLoadingMore(true);
+    try {
+      const offset = orders.filter((o) => o.status !== "open").length;
+      const page = await qc.fetchQuery(trpc.orders.list.queryOptions({ month, offset }));
+      setOlder((prev) => ({ rows: [...(prev?.rows ?? []), ...page.rows], hasMore: page.hasMore }));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't load more orders");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  // Older pages aren't covered by the post-mutation refresh; patch them here.
+  const patchOlder = (id: string, fn: (o: OrderRow) => OrderRow | null) =>
+    setOlder((prev) =>
+      prev && {
+        ...prev,
+        rows: prev.rows.flatMap((o) => (o.id === id ? (fn(o) ?? []) : [o])),
+      },
+    );
+
+  // Rebuilt from the row + the page-wide header, rather than shipped per order.
+  const receiptOf = (o: OrderRow): ReceiptData | null =>
+    o.bill && {
+      store: receiptHeader,
+      currency,
+      orderNumber: o.number,
+      createdAt: o.paidAt ?? o.createdAt,
+      type: o.type,
+      reference: o.reference,
+      lines: o.items,
+      ...o.bill,
+      taxLabel,
+      total: o.total,
+      paymentMethod: o.paymentMethod,
+    };
   const [filter, setFilter] = useState<StatusFilter>("open");
   const [pending, startTransition] = useTransition();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -89,15 +143,12 @@ export default function OrdersClient({
     [orders],
   );
 
-  function edit(id: string) {
+  // Edit and settle both open the tab in the POS (settling reuses its pay
+  // sheet). The tab is stashed first so the POS can open it offline.
+  function openInPos(o: OrderRow) {
+    if (o.tab) stashTab(o.tab);
     startNav();
-    router.push(`/dashboard/pos?order=${id}`);
-  }
-
-  function settle(id: string) {
-    // Reuse the POS's pay flow — opening the tab there gives the full sheet.
-    startNav();
-    router.push(`/dashboard/pos?order=${id}`);
+    router.push(`/dashboard/pos?order=${o.id}`);
   }
 
   async function reprint(r: ReceiptData) {
@@ -132,11 +183,13 @@ export default function OrdersClient({
 
   const doVoid = (id: string) =>
     run(id, { title: "Void this order?", body: "This cannot be undone.", confirmLabel: "Void" }, "Order voided", () =>
-      voidOrder.mutateAsync(id),
+      voidOrder.mutateAsync(id).then(() =>
+        patchOlder(id, (o) => (isAdmin ? { ...o, status: "void" } : null)),
+      ),
     );
   const doDelete = (id: string) =>
     run(id, { title: "Delete this order?", body: "Gone for good — it vanishes from sales and reports.", confirmLabel: "Delete" }, "Order deleted", () =>
-      deleteOrder.mutateAsync(id),
+      deleteOrder.mutateAsync(id).then(() => patchOlder(id, () => null)),
     );
 
   return (
@@ -270,7 +323,7 @@ export default function OrdersClient({
               {(o.status === "open" || isAdmin) && (
                 <div className="mt-4 flex gap-2">
                   <button
-                    onClick={() => edit(o.id)}
+                    onClick={() => openInPos(o)}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz border border-ink-line bg-ink px-3 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
                   >
                     <PencilIcon className="h-4 w-4" />
@@ -278,7 +331,7 @@ export default function OrdersClient({
                   </button>
                   {o.status === "open" && (
                     <button
-                      onClick={() => settle(o.id)}
+                      onClick={() => openInPos(o)}
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02]"
                     >
                       <CashIcon className="h-4 w-4" />
@@ -316,9 +369,9 @@ export default function OrdersClient({
                 <ChefIcon className="h-4 w-4" />
                 {o.status === "open" ? "Print KOT" : "Reprint KOT"}
               </button>
-              {o.receipt && (
+              {o.bill && (
                 <button
-                  onClick={() => reprint(o.receipt!)}
+                  onClick={() => reprint(receiptOf(o)!)}
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
                 >
                   <ReceiptIcon className="h-4 w-4" />
@@ -327,6 +380,18 @@ export default function OrdersClient({
               )}
             </article>
           ))}
+        </div>
+      )}
+
+      {hasMore && (
+        <div className="mt-6 flex justify-center">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="rounded-fizz border border-ink-line bg-ink-soft px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz disabled:opacity-60"
+          >
+            {loadingMore ? "Loading…" : "Load older orders"}
+          </button>
         </div>
       )}
 

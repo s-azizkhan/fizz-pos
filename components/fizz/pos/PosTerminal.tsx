@@ -31,12 +31,35 @@ import { kot as kotTicket, receipt as receiptTicket } from "@/lib/print/template
 import { usePrinter } from "@/lib/store/printer";
 import KeyboardHints from "./KeyboardHints";
 import type { Customer } from "./CustomerFields";
+import { stashedTab } from "./tab-stash";
 
 // The point-of-sale terminal. Keyboard-first: a global search captures typing,
 // arrow/number keys add items, and the ticket lives on the right. Built for a
 // counter rush — every common action has a shortcut. When `loaded` is set the
 // terminal is editing an existing open tab (revisited from the orders page).
-export default function PosTerminal({
+//
+// Offline: the Orders page navigates here with ?order=, and the worker answers
+// with its cached POS — rendered with no tab (`requestedOrderId` null even
+// though the URL names one). That mismatch is the tell: pick the tab up from
+// the device instead. A live render that names the order but returns no tab
+// means it isn't editable any more — never second-guess that.
+type Props = Parameters<typeof Terminal>[0] & { requestedOrderId: string | null };
+
+export default function PosTerminal({ requestedOrderId, ...props }: Props) {
+  const [stash, setStash] = useState<LoadedOrder | null>(null);
+  useEffect(() => {
+    if (props.loaded || requestedOrderId) return;
+    const id = new URLSearchParams(location.search).get("order");
+    // Client-only source (sessionStorage), so it can't be read during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (id) setStash(stashedTab(id));
+  }, [props.loaded, requestedOrderId]);
+  const loaded = props.loaded ?? stash;
+  // Remount on pickup: every piece of terminal state seeds from `loaded`.
+  return <Terminal key={loaded?.id ?? "new"} {...props} loaded={loaded} />;
+}
+
+function Terminal({
   categories,
   storeName,
   currency,
@@ -205,9 +228,12 @@ export default function PosTerminal({
     cart.add(item, null);
   }
 
-  // Network down on a brand-new order: bank it on the device, still fire the
-  // kitchen ticket, and keep ringing. Edits to an existing tab stay online-only
-  // — the tab lives on the server and may have changed under us.
+  // Network down: bank the sale (or tab update) on the device, still fire the
+  // kitchen ticket, and keep ringing. Replays are safe: clientId dedupes a new
+  // sale, and an existing tab is re-checked server-side — if someone settled it
+  // elsewhere meanwhile, the replay is rejected and flagged in the outbox.
+  // ponytail: a queued tab update is last-write-wins against edits made on
+  // another device in the meantime.
   function queueOffline(
     sale: Parameters<typeof outbox.add>[0],
     fresh: ReturnType<typeof kotDelta>,
@@ -221,11 +247,12 @@ export default function PosTerminal({
         kotTicket(
           {
             storeName,
-            orderNumber: `OFF-${sale.input.clientId.slice(0, 4).toUpperCase()}`,
+            // An existing tab keeps its number; a new sale gets its real one on sync.
+            orderNumber: editingNumber ?? `OFF-${sale.input.clientId.slice(0, 4).toUpperCase()}`,
             type: orderType,
             reference: reference || null,
             createdAt: new Date(),
-            addOn: false,
+            addOn: !!editingId,
             items: fresh,
           },
           cfg,
@@ -278,7 +305,7 @@ export default function PosTerminal({
       }
       resetTerminal();
     } catch (e) {
-      if (!editingId && isNetworkError(e)) return queueOffline({ kind: "save", input: tab }, fresh);
+      if (isNetworkError(e)) return queueOffline({ kind: "save", input: tab }, fresh);
       toast.error(e instanceof Error ? e.message : "Couldn't save the tab");
     }
   }
@@ -431,7 +458,7 @@ export default function PosTerminal({
       }
       resetTerminal();
     } catch (e) {
-      if (!editingId && isNetworkError(e)) {
+      if (isNetworkError(e)) {
         queueOffline({ kind: "checkout", input: sale }, fresh);
         return;
       }

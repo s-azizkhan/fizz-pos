@@ -1,5 +1,5 @@
 import type { OrderStatus, OrderPaymentMethod, OrderType } from "@/lib/db/schema";
-import type { ReceiptData } from "@/lib/print/templates";
+import type { LoadedOrder } from "@/components/fizz/pos/types";
 
 export type OrderRowLine = {
   name: string;
@@ -21,7 +21,16 @@ export type OrderRow = {
   paidAt: string | null;
   itemCount: number;
   items: OrderRowLine[];
-  receipt: ReceiptData | null; // paid orders only, for reprints
+  // Paid orders only: the money a reprinted receipt needs beyond the lines.
+  bill: {
+    subtotal: string;
+    discount: string;
+    tax: string;
+    fees: { service: string; packaging: string; delivery: string };
+    changeDue: string | null;
+  } | null;
+  // Open tabs only: everything the POS needs to edit/settle it from the device.
+  tab: LoadedOrder | null;
 };
 
 export type StatusFilter = "open" | "paid" | "void" | "all";

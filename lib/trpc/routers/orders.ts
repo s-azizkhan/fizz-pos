@@ -10,7 +10,6 @@ import {
   saveOrderSchema,
   orderItems,
   orders,
-  orderStatus,
 } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { computeTotals, r2 } from "@/lib/store/totals";
@@ -113,15 +112,21 @@ function bumpPaths() {
   revalidatePath("/dashboard/kot");
 }
 
+// Closed orders per page on the Orders screen; open tabs always come whole.
+const ORDERS_PAGE = 60;
+
 export const ordersRouter = router({
   list: protectedProcedure
     .input(
       z.object({
         month: z.string().regex(/^\d{4}-\d{2}$/),
-        status: z.enum(orderStatus.enumValues).optional(),
+        offset: z.number().int().min(0).default(0),
+        limit: z.number().int().min(1).max(200).default(ORDERS_PAGE),
       }),
     )
-    .query(({ input }) => listOrders(input.month, input.status)),
+    .query(({ ctx, input }) =>
+      listOrders(input.month, { ...input, includeVoid: ctx.user.role === "admin" }),
+    ),
 
   byId: protectedProcedure.input(z.uuid()).query(({ input }) => getOrder(input)),
 

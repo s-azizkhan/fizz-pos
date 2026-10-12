@@ -79,6 +79,14 @@ export async function customerBook() {
     .limit(5000);
 }
 
+export async function customersByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+  return db
+    .select({ id: customers.id, name: customers.name, phone: customers.phone })
+    .from(customers)
+    .where(and(eq(customers.storeId, STORE_ID), inArray(customers.id, ids)));
+}
+
 export async function getCustomer(id: string) {
   const [c] = await db
     .select({ id: customers.id, name: customers.name, phone: customers.phone })

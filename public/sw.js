@@ -196,8 +196,15 @@ async function networkFirst(event) {
   // Keep the worker alive so a late response still lands in the cache.
   event.waitUntil(network.then(() => {}, () => {}));
   // The last good copy of this exact page still hydrates correctly, because
-  // the URL matches what React expects.
-  const cached = caches.match(request, MATCH_OPTS);
+  // the URL matches what React expects. The POS is the one exception: a tab
+  // opened as /dashboard/pos?order=… falls back to the plain warmed POS, which
+  // then picks the tab up from the device (see PosTerminal).
+  const url = new URL(request.url);
+  const cached = caches
+    .match(request, MATCH_OPTS)
+    .then((hit) =>
+      hit ?? (url.pathname === "/dashboard/pos" ? caches.match(url.origin + url.pathname, MATCH_OPTS) : undefined),
+    );
   try {
     return await Promise.race([
       network,
@@ -227,7 +234,9 @@ async function rscWithEscape(request) {
   if (!hung) return network;
   const page = new URL(request.url);
   page.searchParams.delete("_rsc");
-  const cached = await caches.match(page.toString(), MATCH_OPTS);
+  const cached =
+    (await caches.match(page.toString(), MATCH_OPTS)) ??
+    (page.pathname === "/dashboard/pos" && (await caches.match(page.origin + page.pathname, MATCH_OPTS)));
   return cached ? Response.error() : network;
 }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { trpc } from "@/lib/trpc/server";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getCustomer } from "@/lib/store/customers";
+import { toLoadedOrder } from "@/lib/store/orders";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
 
@@ -48,28 +49,7 @@ export default async function TillPage({
   // order is still editable. Paid/void orders are read-only, except for admins.
   const loaded: LoadedOrder | null =
     order && (order.status === "open" || user.role === "admin")
-      ? {
-          id: order.id,
-          number: order.number,
-          type: order.type,
-          reference: order.reference,
-          customer: order.customerId ? await getCustomer(order.customerId) : null,
-          discount: Number(order.discount),
-          fees: {
-            service: Number(order.serviceFee),
-            packaging: Number(order.packagingFee),
-            delivery: Number(order.deliveryFee),
-          },
-          lines: order.items.map((it) => ({
-            key: it.variantId ? `${it.menuItemId}:${it.variantId}` : it.menuItemId ?? it.id,
-            menuItemId: it.menuItemId ?? "",
-            variantId: it.variantId,
-            name: it.name,
-            variantName: it.variantName,
-            unitPrice: Number(it.unitPrice),
-            quantity: it.quantity,
-          })),
-        }
+      ? toLoadedOrder(order, order.customerId ? await getCustomer(order.customerId) : null)
       : null;
 
   return (
@@ -88,6 +68,7 @@ export default async function TillPage({
           : null
       }
       loaded={loaded}
+      requestedOrderId={orderId ?? null}
     />
   );
 }
