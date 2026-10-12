@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   checkoutSchema,
@@ -10,6 +10,8 @@ import {
   saveOrderSchema,
   webOrderSchema,
   type WebOrderInput,
+  normalisePhone,
+  customers,
   orderItems,
   orders,
 } from "@/lib/db/schema";
@@ -154,9 +156,9 @@ export const ordersRouter = router({
   // Lands as an open tab flagged webPending: on the Orders page, on the KOT
   // board straight away. Prices come from the live menu,
   // never the client; the customer is linked by phone.
-  // ponytail: no rate limit — the item/qty caps bound one order, but web
-  // orders now hit the KOT board unreviewed. Add per-IP throttling
-  // (Upstash / a table) if prank orders ever become a nuisance.
+  // Rate limit: DB-backed, no extra infra. Per phone and store-wide pending.
+  // ponytail: no per-IP limit (a rotating phone number dodges the per-phone
+  // cap; the pending cap still bounds the damage). Add Upstash if it matters.
   placeWeb: publicProcedure.input(webOrderSchema).mutation(async ({ input }) => {
     const menu = await getPublicMenu(input.slug);
     const cfg = menu?.ordering;
@@ -201,6 +203,32 @@ export const ordersRouter = router({
 
     const dup = await byClientId(input.clientId);
     if (dup) return receipt(dup.number);
+
+    const phone = normalisePhone(input.phone);
+    const [[recent], [pending]] = await Promise.all([
+      db
+        .select({ n: count() })
+        .from(orders)
+        .innerJoin(customers, eq(orders.customerId, customers.id))
+        .where(
+          and(
+            eq(orders.storeId, STORE_ID),
+            eq(orders.source, "web"),
+            eq(customers.phone, phone ?? ""),
+            gte(orders.createdAt, sql`now() - interval '10 minutes'`),
+          ),
+        ),
+      db
+        .select({ n: count() })
+        .from(orders)
+        .where(and(eq(orders.storeId, STORE_ID), eq(orders.webPending, true), eq(orders.status, "open"))),
+    ]);
+    if (recent.n >= 3 || pending.n >= 25) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: "Too many orders right now. Give it a few minutes, or call the café.",
+      });
+    }
 
     // Delivery needs the address on the ticket; otherwise the note usually
     // carries the table number. The full note also travels in the WhatsApp.
@@ -273,6 +301,27 @@ export const ordersRouter = router({
 
   openCount: protectedProcedure.query(() => openOrderCount()),
   webPending: protectedProcedure.query(() => pendingWebOrders()),
+
+  // Staff OK a guest's web order: it drops into the KOT "new" lane.
+  acceptWeb: protectedProcedure.input(z.uuid()).mutation(async ({ input }) => {
+    const done = await db
+      .update(orders)
+      .set({ webPending: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(orders.id, input),
+          eq(orders.storeId, STORE_ID),
+          eq(orders.webPending, true),
+          eq(orders.status, "open"),
+        ),
+      )
+      .returning({ id: orders.id });
+    if (done.length === 0) {
+      throw new TRPCError({ code: "CONFLICT", message: "Already accepted or gone." });
+    }
+    bumpPaths();
+    return { ok: true as const };
+  }),
 
   // --- Kitchen board -------------------------------------------------------
   // Polled on an interval by the KOT screen, so keep both of these cheap.

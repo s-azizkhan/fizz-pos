@@ -1,6 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import RingAlarm from "./RingAlarm";
 
@@ -15,6 +17,9 @@ const POLL_MS = 15_000;
 
 export default function WebOrderAlarm() {
   const trpc = useTRPC();
+  const qc = useQueryClient();
+  const router = useRouter();
+  const accept = useMutation(trpc.orders.acceptWeb.mutationOptions());
   const { data } = useQuery({
     ...trpc.orders.webPending.queryOptions(),
     refetchInterval: POLL_MS,
@@ -27,6 +32,16 @@ export default function WebOrderAlarm() {
       storageKey="fizz-web-acked"
       label="New web order"
       href="/dashboard/orders"
+      onAccept={(id) =>
+        accept
+          .mutateAsync(id)
+          .then(() => toast.success("Sent to KOT"))
+          .catch((e) => toast.error(e instanceof Error ? e.message : "Something fizzled"))
+          .finally(() => {
+            void qc.invalidateQueries({ queryKey: trpc.orders.webPending.queryKey() });
+            router.refresh();
+          })
+      }
     />
   );
 }

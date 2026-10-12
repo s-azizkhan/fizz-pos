@@ -386,3 +386,12 @@ export function PencilIcon({ className }: P) {
     </Svg>
   );
 }
+
+export function WhatsAppIcon({ className }: P) {
+  return (
+    <Svg name="whatsapp" className={className}>
+      <path d="M3 21l1.65-4.9A9 9 0 1 1 8 19.4L3 21z" />
+      <path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.5-2-1-.8.7c-.9-.4-1.6-1.1-2-2l.7-.8-1-2L9 9.5z" />
+    </Svg>
+  );
+}

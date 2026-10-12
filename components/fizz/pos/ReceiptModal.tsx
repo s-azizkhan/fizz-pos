@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { FEE_FIELDS } from "./FeesModal";
+import { PrinterIcon, WhatsAppIcon } from "@/components/fizz/dashboard/icons";
 
 // Success confirmation after a sale. Shows the order number and, for cash, the
 // change owed in big type. Enter / Escape / click dismisses to start the next.
@@ -109,8 +110,9 @@ export default function ReceiptModal({
         {onPrint && (
           <button
             onClick={onPrint}
-            className="mt-6 w-full rounded-fizz border border-ink-line px-4 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-fizz border border-ink-line px-4 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
           >
+            <PrinterIcon className="h-5 w-5" />
             Print receipt
           </button>
         )}
@@ -121,8 +123,9 @@ export default function ReceiptModal({
             target="_blank"
             rel="noopener"
             onClick={(e) => e.stopPropagation()}
-            className={`${onPrint ? "mt-3" : "mt-6"} block w-full rounded-fizz border border-ink-line px-4 py-3 text-center font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz`}
+            className={`${onPrint ? "mt-3" : "mt-6"} flex w-full items-center justify-center gap-2 rounded-fizz border border-ink-line px-4 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz`}
           >
+            <WhatsAppIcon className="h-5 w-5" />
             Share on WhatsApp
           </a>
         )}

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   orderItems,
@@ -198,6 +198,8 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
       and(
         eq(orders.storeId, STORE_ID),
         ne(orders.status, "void"),
+        // Guest web orders wait for staff to accept them (or pay) before the kitchen sees them.
+        or(eq(orders.webPending, false), eq(orders.status, "paid")),
         eq(orders.kitchenStatus, lane),
         inCurrentMonth(),
       ),
@@ -239,6 +241,8 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
       and(
         eq(orders.storeId, STORE_ID),
         ne(orders.status, "void"),
+        // Guest web orders wait for staff to accept them (or pay) before the kitchen sees them.
+        or(eq(orders.webPending, false), eq(orders.status, "paid")),
         inCurrentMonth(),
       ),
     )

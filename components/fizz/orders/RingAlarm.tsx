@@ -92,6 +92,7 @@ export default function RingAlarm({
   label,
   href,
   position = "top",
+  onAccept,
 }: {
   /** What's waiting. Ringing = any item this device hasn't stopped yet. */
   items: { id: string; number: string }[];
@@ -101,6 +102,8 @@ export default function RingAlarm({
   /** Where "Open" goes; omit when the items are already on screen. */
   href?: string;
   position?: "top" | "bottom";
+  /** Shows an Accept button that handles the first ringing item. */
+  onAccept?: (id: string) => void | Promise<unknown>;
 }) {
   const [acked, setAcked] = useState<string[] | null>(null);
   useEffect(() => {
@@ -147,9 +150,19 @@ export default function RingAlarm({
           Open
         </Link>
       )}
+      {onAccept && (
+        <button
+          onClick={() => void onAccept(first.id)}
+          className="shrink-0 rounded-fizz bg-fizz px-4 py-2 text-sm font-bold text-ink transition-transform hover:scale-105"
+        >
+          Accept
+        </button>
+      )}
       <button
         onClick={stop}
-        className="shrink-0 rounded-fizz bg-fizz px-4 py-2 text-sm font-bold text-ink transition-transform hover:scale-105"
+        className={`shrink-0 rounded-fizz px-4 py-2 text-sm font-bold transition-transform hover:scale-105 ${
+          onAccept ? "border border-ink-line text-cream" : "bg-fizz text-ink"
+        }`}
       >
         Stop
       </button>

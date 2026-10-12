@@ -17,7 +17,7 @@ import { orderShareText, waLink } from "@/lib/store/whatsapp";
 import MonthFilter from "@/components/fizz/MonthFilter";
 import { startNav } from "@/components/fizz/NavProgress";
 import { confirmDialog } from "@/components/fizz/ConfirmDialog";
-import { CashIcon, ChefIcon, CloseIcon, PencilIcon, ReceiptIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
+import { CashIcon, ChefIcon, CloseIcon, PencilIcon, ReceiptIcon, TrashIcon, WhatsAppIcon } from "@/components/fizz/dashboard/icons";
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine in",
@@ -69,6 +69,7 @@ export default function OrdersClient({
   const qc = useQueryClient();
   const voidOrder = useMutation(trpc.orders.void.mutationOptions());
   const deleteOrder = useMutation(trpc.orders.delete.mutationOptions());
+  const acceptWeb = useMutation(trpc.orders.acceptWeb.mutationOptions());
 
   // First page comes with the page (and is refreshed by mutations); older
   // pages are fetched on demand so a busy month isn't one giant download.
@@ -185,6 +186,21 @@ export default function OrdersClient({
     });
   }
 
+  const doAccept = (id: string) => {
+    setBusyId(id);
+    startTransition(async () => {
+      try {
+        await acceptWeb.mutateAsync(id);
+        toast.success("Sent to KOT");
+        void qc.invalidateQueries({ queryKey: trpc.orders.webPending.queryKey() });
+        router.refresh();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Something fizzled");
+      } finally {
+        setBusyId(null);
+      }
+    });
+  };
   const doVoid = (id: string) =>
     run(id, { title: "Void this order?", body: "This cannot be undone.", confirmLabel: "Void" }, "Order voided", () =>
       voidOrder.mutateAsync(id).then(() =>
@@ -328,7 +344,17 @@ export default function OrdersClient({
 
               {/* Actions */}
               {(o.status === "open" || isAdmin) && (
-                <div className="mt-4 flex gap-2">
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {o.tab?.webPending && (
+                    <button
+                      onClick={() => doAccept(o.id)}
+                      disabled={pending && busyId === o.id}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02] disabled:opacity-60"
+                    >
+                      <ChefIcon className="h-4 w-4" />
+                      Accept &amp; send to KOT
+                    </button>
+                  )}
                   <button
                     onClick={() => openInPos(o)}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz border border-ink-line bg-ink px-3 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
@@ -395,6 +421,7 @@ export default function OrdersClient({
                   rel="noopener"
                   className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
                 >
+                  <WhatsAppIcon className="h-4 w-4" />
                   Share on WhatsApp
                 </a>
               )}
