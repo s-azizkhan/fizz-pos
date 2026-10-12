@@ -246,6 +246,29 @@ const BACKDROPS = [
   },
 ] as const;
 
+const QR_PREFS_KEY = "fizz-menu-qr";
+
+// Read once as initial state. Safe on the server (throws → {}) and on
+// hydration: the modal renders nothing until opened.
+type QrPrefs = Partial<{
+  frameKey: string;
+  headline: string;
+  footer: string | null;
+  radius: number;
+  qrSize: number;
+  backdropKey: string;
+  bg: string;
+  qrDark: string;
+}>;
+
+function loadPrefs(): QrPrefs {
+  try {
+    return JSON.parse(localStorage.getItem(QR_PREFS_KEY) ?? "{}") ?? {};
+  } catch {
+    return {};
+  }
+}
+
 // WCAG relative luminance — a QR under ~3:1 against its tile stops scanning
 // reliably, so a picked color that kills the code gets called out.
 function lum(hex: string): number {
@@ -276,22 +299,37 @@ export default function MenuQrModal({
   isOpen: boolean;
   onClose: () => void;
 }) {
-  const [frameKey, setFrameKey] = useState<string>(FRAMES[0].key);
-  const [headline, setHeadline] = useState("Scan for our menu");
+  const [saved] = useState(loadPrefs);
+  const [frameKey, setFrameKey] = useState<string>(saved.frameKey ?? FRAMES[0].key);
+  const [headline, setHeadline] = useState<string>(saved.headline ?? "Scan for our menu");
+  // null = show the menu link; any string = the café's own footer line.
+  const [footer, setFooter] = useState<string | null>(saved.footer ?? null);
   const [busy, setBusy] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
-  const [radius, setRadius] = useState(28);
-  const [qrSize, setQrSize] = useState(220);
-  const [backdropKey, setBackdropKey] = useState<string>("bubbles");
+  const [radius, setRadius] = useState<number>(saved.radius ?? 28);
+  const [qrSize, setQrSize] = useState<number>(saved.qrSize ?? 220);
+  const [backdropKey, setBackdropKey] = useState<string>(saved.backdropKey ?? "bubbles");
   // Colors start from the frame and then belong to the user — picking a new
   // frame reseeds them, editing them wins until then.
-  const [bg, setBg] = useState<string>(FRAMES[0].bg);
-  const [qrDark, setQrDark] = useState<string>(FRAMES[0].dark);
+  const [bg, setBg] = useState<string>(saved.bg ?? FRAMES[0].bg);
+  const [qrDark, setQrDark] = useState<string>(saved.qrDark ?? FRAMES[0].dark);
   const [copied, setCopied] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // The QR design survives reloads — save every change.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        QR_PREFS_KEY,
+        JSON.stringify({ frameKey, headline, footer, radius, qrSize, backdropKey, bg, qrDark }),
+      );
+    } catch {}
+  }, [frameKey, headline, footer, radius, qrSize, backdropKey, bg, qrDark]);
+
   const frame = FRAMES.find((f) => f.key === frameKey) ?? FRAMES[0];
   const backdrop = BACKDROPS.find((b) => b.key === backdropKey) ?? BACKDROPS[0];
+  const linkText = url.replace(/^https?:\/\//, "");
+  const footerText = footer ?? linkText;
   const scannable = contrast(qrDark, frame.light) >= 3;
   const backdropCss = backdrop.css(`color-mix(in srgb, ${frame.ink} 10%, transparent)`);
 
@@ -447,7 +485,7 @@ export default function MenuQrModal({
               </div>
 
               <div style={{ fontSize: 11, color: frame.muted, wordBreak: "break-all" }}>
-                {url.replace(/^https?:\/\//, "")}
+                {footerText}
                 <div
                   className="font-wordmark"
                   style={{ marginTop: 8, fontSize: 12, color: frame.accent, fontWeight: 700 }}
@@ -477,6 +515,20 @@ export default function MenuQrModal({
                 placeholder="Scan for our menu"
                 className="w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
               />
+            </ControlSection>
+
+            <ControlSection label="Footer">
+              <input
+                value={footerText}
+                onChange={(e) => setFooter(e.target.value.slice(0, 60))}
+                placeholder="Free wifi: fizz-guest"
+                className="w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+              />
+              {footer !== null && (
+                <Chip active={false} onClick={() => setFooter(null)}>
+                  Use menu link
+                </Chip>
+              )}
             </ControlSection>
 
             <ControlSection label="Frame">
