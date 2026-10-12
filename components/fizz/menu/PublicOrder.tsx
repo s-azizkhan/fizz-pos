@@ -287,6 +287,15 @@ export function FloatingCart({
     });
   }, [setPlaced]);
 
+  // Prefill name/phone from the last order on this device.
+  useEffect(() => {
+    try {
+      const c = JSON.parse(localStorage.getItem("fizz-customer") ?? "{}");
+      if (typeof c.name === "string") setName(c.name);
+      if (typeof c.phone === "string") setPhone(c.phone);
+    } catch {}
+  }, []);
+
   // Sheet open = page behind must not scroll.
   useEffect(() => {
     if (!open && !statusOpen) return;
@@ -312,6 +321,9 @@ export function FloatingCart({
   const send = async () => {
     if (blocked) return;
     setError(null);
+    try {
+      localStorage.setItem("fizz-customer", JSON.stringify({ name: name.trim(), phone: phone.trim() }));
+    } catch {}
     const id = (clientId.current ??= crypto.randomUUID());
     const win = window.open("", "_blank");
     const details = {
