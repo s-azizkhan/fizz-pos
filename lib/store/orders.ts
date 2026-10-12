@@ -37,6 +37,8 @@ export function toLoadedOrder(o: OrderWithItems, customer: LoadedOrder["customer
     number: o.number,
     type: o.type,
     reference: o.reference,
+    webPending: o.webPending,
+    source: o.source,
     customer,
     discount: Number(o.discount),
     fees: {
@@ -107,7 +109,9 @@ export async function listOrders(
   const hasMore = closed.length > opts.limit;
   const [full, people] = await Promise.all([
     withItems([...open, ...closed.slice(0, opts.limit)]),
-    customersByIds(open.map((o) => o.customerId).filter((id): id is string => !!id)),
+    customersByIds(
+      [...open, ...closed].map((o) => o.customerId).filter((id): id is string => !!id),
+    ),
   ]);
 
   const rows = full.map((o): OrderRow => ({
@@ -115,12 +119,14 @@ export async function listOrders(
     number: o.number,
     status: o.status,
     type: o.type,
+    source: o.source,
     reference: o.reference,
     total: o.total,
     paymentMethod: o.paymentMethod,
     createdAt: o.createdAt.toISOString(),
     paidAt: o.paidAt ? o.paidAt.toISOString() : null,
     itemCount: o.items.reduce((n, it) => n + it.quantity, 0),
+    customer: people.find((c) => c.id === o.customerId) ?? null,
     items: o.items.map((it) => ({
       name: it.name,
       variantName: it.variantName,
@@ -191,6 +197,8 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
       and(
         eq(orders.storeId, STORE_ID),
         ne(orders.status, "void"),
+        // Guest web orders wait for staff before the kitchen sees them.
+        eq(orders.webPending, false),
         eq(orders.kitchenStatus, lane),
         inCurrentMonth(),
       ),
@@ -229,7 +237,12 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
     })
     .from(orders)
     .where(
-      and(eq(orders.storeId, STORE_ID), ne(orders.status, "void"), inCurrentMonth()),
+      and(
+        eq(orders.storeId, STORE_ID),
+        ne(orders.status, "void"),
+        eq(orders.webPending, false),
+        inCurrentMonth(),
+      ),
     )
     .groupBy(orders.kitchenStatus);
 

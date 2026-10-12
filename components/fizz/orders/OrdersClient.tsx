@@ -12,6 +12,8 @@ import { receipt as receiptTicket, type ReceiptData } from "@/lib/print/template
 import type { OrderRow, StatusFilter } from "./types";
 import KotTicket from "./KotTicket";
 import { stashTab } from "@/components/fizz/pos/tab-stash";
+import { ORDER_SOURCE_LABELS } from "@/lib/db/schema/constants";
+import { orderShareText, waLink } from "@/lib/store/whatsapp";
 import MonthFilter from "@/components/fizz/MonthFilter";
 import { startNav } from "@/components/fizz/NavProgress";
 import { confirmDialog } from "@/components/fizz/ConfirmDialog";
@@ -51,6 +53,7 @@ export default function OrdersClient({
   storeName,
   receiptHeader,
   taxLabel,
+  cafeWhatsapp,
 }: {
   isAdmin: boolean;
   first: { rows: OrderRow[]; hasMore: boolean };
@@ -59,6 +62,7 @@ export default function OrdersClient({
   storeName: string;
   receiptHeader: ReceiptData["store"];
   taxLabel: string;
+  cafeWhatsapp: string | null;
 }) {
   const router = useRouter();
   const trpc = useTRPC();
@@ -274,6 +278,9 @@ export default function OrdersClient({
                   </p>
                   <p className="text-xs text-steam">
                     {TYPE_LABEL[o.type]}
+                    {o.source !== "counter" && (
+                      <span className="text-bubble"> · {ORDER_SOURCE_LABELS[o.source]}</span>
+                    )}
                     {o.reference ? ` · ${o.reference}` : ""}
                   </p>
                 </div>
@@ -284,7 +291,7 @@ export default function OrdersClient({
                       : "border-ink-line bg-ink text-steam"
                   }`}
                 >
-                  {o.status === "open" ? "Open" : o.status === "paid" ? "Paid" : "Void"}
+                  {o.tab?.webPending ? "New web order" : o.status === "open" ? "Open" : o.status === "paid" ? "Paid" : "Void"}
                 </span>
               </div>
 
@@ -369,6 +376,28 @@ export default function OrdersClient({
                 <ChefIcon className="h-4 w-4" />
                 {o.status === "open" ? "Print KOT" : "Reprint KOT"}
               </button>
+              {o.customer?.phone && o.status !== "void" && (
+                <a
+                  href={waLink(
+                    o.customer.phone,
+                    cafeWhatsapp,
+                    orderShareText({
+                      storeName,
+                      orderNumber: o.number,
+                      customerName: o.customer.name,
+                      lines: o.items,
+                      total: o.total,
+                      paid: o.status === "paid",
+                      currency,
+                    }),
+                  )}
+                  target="_blank"
+                  rel="noopener"
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
+                >
+                  Share on WhatsApp
+                </a>
+              )}
               {o.bill && (
                 <button
                   onClick={() => reprint(receiptOf(o)!)}

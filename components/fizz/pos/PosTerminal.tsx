@@ -31,7 +31,9 @@ import { kot as kotTicket, receipt as receiptTicket } from "@/lib/print/template
 import { usePrinter } from "@/lib/store/printer";
 import KeyboardHints from "./KeyboardHints";
 import type { Customer } from "./CustomerFields";
+import type { OrderSource } from "@/lib/db/schema/constants";
 import { stashedTab } from "./tab-stash";
+import { orderShareText, waLink } from "@/lib/store/whatsapp";
 
 // The point-of-sale terminal. Keyboard-first: a global search captures typing,
 // arrow/number keys add items, and the ticket lives on the right. Built for a
@@ -65,6 +67,7 @@ function Terminal({
   currency,
   tax,
   upi,
+  cafeWhatsapp,
   loaded,
 }: {
   categories: PosCategory[];
@@ -72,6 +75,8 @@ function Terminal({
   currency: string;
   tax: TaxConfig;
   upi: UpiConfig | null;
+  /** The café's WhatsApp number; lends its country code to customer links. */
+  cafeWhatsapp: string | null;
   loaded: LoadedOrder | null;
 }) {
   const router = useRouter();
@@ -98,6 +103,7 @@ function Terminal({
   const [activeCat, setActiveCat] = useState<string>(categories[0]?.id ?? "");
   const [orderType, setOrderType] = useState<OrderType>(loaded?.type ?? "dine_in");
   const [reference, setReference] = useState(loaded?.reference ?? "");
+  const [source, setSource] = useState<OrderSource>(loaded?.source ?? "counter");
   const [customer, setCustomer] = useState<Customer>({
     id: loaded?.customer?.id ?? null,
     name: loaded?.customer?.name ?? "",
@@ -119,8 +125,13 @@ function Terminal({
   const [variantFor, setVariantFor] = useState<PosItem | null>(null);
   // Payment + receipt flow.
   const [payOpen, setPayOpen] = useState(false);
+  // The customer rides along so the receipt can offer "Share on WhatsApp"
+  // after the terminal itself has been reset for the next order.
   const [receipt, setReceipt] = useState<
-    inferRouterOutputs<AppRouter>["orders"]["checkout"] | null
+    | (inferRouterOutputs<AppRouter>["orders"]["checkout"] & {
+        customer: { name: string; phone: string } | null;
+      })
+    | null
   >(null);
   // Mobile-only: the ticket lives in a slide-up sheet behind a bottom bar.
   const [cartOpen, setCartOpen] = useState(false);
@@ -132,6 +143,10 @@ function Terminal({
   // the active chip through every section it passes.
   const jumpingRef = useRef(false);
   const money = (n: number | string) => formatMoney(n, currency);
+
+  // What the kitchen already has a ticket for: a tab's lines as loaded — none
+  // for a guest web order nobody has accepted yet.
+  const kitchenHasSeen = loaded && !loaded.webPending ? loaded.lines : [];
 
   // Build the line payload from the cart for either save or checkout.
   const linePayload = () =>
@@ -148,6 +163,7 @@ function Terminal({
   function resetTerminal() {
     cart.clear();
     setReference("");
+    setSource("counter");
     setCustomer({ id: null, name: "", phone: "" });
     setTicketKey((k) => k + 1);
     setOrderType("dine_in");
@@ -252,7 +268,7 @@ function Terminal({
             type: orderType,
             reference: reference || null,
             createdAt: new Date(),
-            addOn: !!editingId,
+            addOn: kitchenHasSeen.length > 0,
             items: fresh,
           },
           cfg,
@@ -267,11 +283,12 @@ function Terminal({
   async function handleSave() {
     if (cart.lines.length === 0 || saveTab.isPending) return;
     // Only what the kitchen hasn't seen: the cart minus the tab as loaded.
-    const fresh = kotDelta(cart.lines, loaded?.lines ?? []);
+    const fresh = kotDelta(cart.lines, kitchenHasSeen);
     const tab = {
       orderId: editingId ?? undefined,
       type: orderType,
       reference,
+      source,
       customerId: customer.id,
       customerName: customer.name,
       customerPhone: customer.phone,
@@ -296,7 +313,7 @@ function Terminal({
               type: orderType,
               reference: reference || null,
               createdAt: new Date(),
-              addOn: !!loaded,
+              addOn: kitchenHasSeen.length > 0,
               items: fresh,
             },
             cfg,
@@ -414,11 +431,12 @@ function Terminal({
     // numbers, and deducts stock twice. handleSave has always had this; this
     // path never did.
     if (cart.lines.length === 0 || settle.isPending) return;
-    const fresh = kotDelta(cart.lines, loaded?.lines ?? []);
+    const fresh = kotDelta(cart.lines, kitchenHasSeen);
     const sale = {
       orderId: editingId ?? undefined,
       type: orderType,
       reference,
+      source,
       customerId: customer.id,
       customerName: customer.name,
       customerPhone: customer.phone,
@@ -434,7 +452,10 @@ function Terminal({
     try {
       const res = await settle.mutateAsync(sale);
       setPayOpen(false);
-      setReceipt(res);
+      setReceipt({
+        ...res,
+        customer: customer.phone ? { name: customer.name, phone: customer.phone } : null,
+      });
       toast.success("Order settled");
       refreshBook();
       // Receipt first (the customer is waiting), then the kitchen's lines.
@@ -449,7 +470,7 @@ function Terminal({
               type: res.type,
               reference: res.reference,
               createdAt: res.createdAt,
-              addOn: !!loaded,
+              addOn: kitchenHasSeen.length > 0,
               items: fresh,
             },
             cfg,
@@ -573,6 +594,8 @@ function Terminal({
             onOrderType={changeOrderType}
             reference={reference}
             onReference={setReference}
+            source={source}
+            onSource={setSource}
             customer={customer}
             onCustomer={setCustomer}
             fees={fees}
@@ -654,6 +677,23 @@ function Terminal({
           changeDue={receipt.changeDue ? money(receipt.changeDue) : null}
           onClose={() => setReceipt(null)}
           onPrint={hasPrinter ? () => printReceipt(receipt) : undefined}
+          shareHref={
+            receipt.customer
+              ? waLink(
+                  receipt.customer.phone,
+                  cafeWhatsapp,
+                  orderShareText({
+                    storeName,
+                    orderNumber: receipt.orderNumber,
+                    customerName: receipt.customer.name || null,
+                    lines: receipt.lines,
+                    total: receipt.total,
+                    paid: true,
+                    currency,
+                  }),
+                )
+              : undefined
+          }
         />
       )}
 

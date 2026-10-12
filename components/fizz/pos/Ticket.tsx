@@ -3,6 +3,7 @@
 import { FEE_FIELDS, feesTotal } from "./FeesModal";
 import type { CartLine, OrderFees, OrderType } from "./types";
 import CustomerFields, { type Customer } from "./CustomerFields";
+import { ORDER_SOURCES, ORDER_SOURCE_LABELS, type OrderSource } from "@/lib/db/schema/constants";
 import { TrashIcon, MinusIcon } from "@/components/fizz/dashboard/icons";
 
 const ORDER_TYPES: { value: OrderType; label: string; hint: string }[] = [
@@ -24,6 +25,8 @@ export default function Ticket({
   onReference,
   customer,
   onCustomer,
+  source,
+  onSource,
   fees,
   onOpenFees,
   editingNumber,
@@ -46,6 +49,8 @@ export default function Ticket({
   onReference: (v: string) => void;
   customer: Customer;
   onCustomer: (c: Customer) => void;
+  source: OrderSource;
+  onSource: (s: OrderSource) => void;
   fees: OrderFees;
   onOpenFees: () => void;
   editingNumber: string | null;
@@ -116,8 +121,25 @@ export default function Ticket({
           />
         )}
 
-        {/* Fees + customer — compact chips; tap to open. */}
+        {/* Source, fees + customer — compact chips; tap to open. */}
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {/* Native select: one tap, the OS picker on touch. */}
+          <select
+            value={source}
+            onChange={(e) => onSource(e.target.value as OrderSource)}
+            aria-label="Order source"
+            className={`rounded-full border px-3 py-1 text-xs outline-none transition-colors focus:ring-2 focus:ring-fizz/40 ${
+              source === "counter"
+                ? "border-ink-line bg-ink-soft text-steam hover:border-fizz"
+                : "border-fizz/50 bg-fizz/10 text-fizz"
+            }`}
+          >
+            {ORDER_SOURCES.map((s) => (
+              <option key={s} value={s} className="bg-ink text-cream">
+                {ORDER_SOURCE_LABELS[s]}
+              </option>
+            ))}
+          </select>
           <button
             onClick={onOpenFees}
             className="rounded-full border border-ink-line bg-ink-soft px-3 py-1 text-xs text-steam transition-colors hover:border-fizz hover:text-fizz"

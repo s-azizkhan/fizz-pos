@@ -158,6 +158,8 @@ export default async function PublicMenuPage({
                             {ordering && (
                               <AddToCart
                                 itemKey={item.id}
+                                itemId={item.id}
+                                variantId={null}
                                 name={item.name}
                                 price={item.price}
                                 accent={accent}
@@ -177,6 +179,8 @@ export default async function PublicMenuPage({
                                 {ordering && (
                                   <AddToCart
                                     itemKey={v.id}
+                                    itemId={item.id}
+                                    variantId={v.id}
                                     name={`${item.name} (${v.name})`}
                                     price={v.price}
                                     accent={accent}
@@ -206,6 +210,7 @@ export default async function PublicMenuPage({
 
       {ordering && (
         <FloatingCart
+          slug={slug}
           storeName={store.name}
           whatsapp={cfg!.whatsapp!}
           currency={store.currency}

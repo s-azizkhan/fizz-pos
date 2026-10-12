@@ -16,6 +16,7 @@ export default function ReceiptModal({
   changeDue,
   onClose,
   onPrint,
+  shareHref,
 }: {
   orderNumber: string;
   subtotal: string;
@@ -28,6 +29,8 @@ export default function ReceiptModal({
   onClose: () => void;
   // Set when this device has a Bluetooth printer; reprints the receipt.
   onPrint?: () => void;
+  // Set when the order has a customer phone: wa.me link with their order.
+  shareHref?: string;
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -112,9 +115,21 @@ export default function ReceiptModal({
           </button>
         )}
 
+        {shareHref && (
+          <a
+            href={shareHref}
+            target="_blank"
+            rel="noopener"
+            onClick={(e) => e.stopPropagation()}
+            className={`${onPrint ? "mt-3" : "mt-6"} block w-full rounded-fizz border border-ink-line px-4 py-3 text-center font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz`}
+          >
+            Share on WhatsApp
+          </a>
+        )}
+
         <button
           onClick={onClose}
-          className={`${onPrint ? "mt-3" : "mt-6"} w-full rounded-fizz bg-fizz px-4 py-3 font-display font-bold text-ink transition-transform hover:scale-[1.02]`}
+          className={`${onPrint || shareHref ? "mt-3" : "mt-6"} w-full rounded-fizz bg-fizz px-4 py-3 font-display font-bold text-ink transition-transform hover:scale-[1.02]`}
         >
           New order
           <kbd className="ml-2 rounded bg-ink/20 px-1.5 py-0.5 text-xs">↵</kbd>

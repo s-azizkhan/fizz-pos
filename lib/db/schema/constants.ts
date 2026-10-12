@@ -75,3 +75,19 @@ export const MENU_ICON_SUGGESTIONS = [
 // Public menu page text sizes. Constrained to keep the public renderer simple.
 export const MENU_FONT_SCALES = ["sm", "md", "lg"] as const;
 export type MenuFontScale = (typeof MENU_FONT_SCALES)[number];
+
+// Where an order came from. `counter` (walk-in at the POS) is the default;
+// `web` is set by the public menu; the rest are picked at the POS so the café
+// can see which channel actually sells.
+export const ORDER_SOURCES = ["counter", "phone", "whatsapp", "web", "zomato", "swiggy", "other"] as const;
+export type OrderSource = (typeof ORDER_SOURCES)[number];
+
+export const ORDER_SOURCE_LABELS: Record<OrderSource, string> = {
+  counter: "Counter",
+  phone: "Phone",
+  whatsapp: "WhatsApp",
+  web: "Web menu",
+  zomato: "Zomato",
+  swiggy: "Swiggy",
+  other: "Other",
+};

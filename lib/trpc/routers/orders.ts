@@ -8,6 +8,8 @@ import {
   kitchenMoveSchema,
   kitchenStatus,
   saveOrderSchema,
+  webOrderSchema,
+  type WebOrderInput,
   orderItems,
   orders,
 } from "@/lib/db/schema";
@@ -24,7 +26,8 @@ import { nextOrderNumber, getStore } from "@/lib/store/data";
 import { receiptStore } from "@/lib/store/order-settings";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
 import { resolveCustomer } from "@/lib/store/customers";
-import { router, protectedProcedure, adminProcedure } from "@/lib/trpc/init";
+import { getPublicMenu } from "@/lib/store/menu";
+import { router, protectedProcedure, adminProcedure, publicProcedure } from "@/lib/trpc/init";
 
 // The money columns every write shares, derived from computeTotals.
 function moneyColumns(t: ReturnType<typeof computeTotals>) {
@@ -83,7 +86,7 @@ async function requireOpen(orderId: string, role: string) {
 async function byClientId(clientId: string | undefined) {
   if (!clientId) return undefined;
   const [row] = await db
-    .select({ id: orders.id, number: orders.number, paidAt: orders.paidAt })
+    .select({ id: orders.id, number: orders.number, paidAt: orders.paidAt, total: orders.total })
     .from(orders)
     .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, clientId)))
     .limit(1);
@@ -112,10 +115,130 @@ function bumpPaths() {
   revalidatePath("/dashboard/kot");
 }
 
+const WEB_TYPE = { "Dine-in": "dine_in", Takeaway: "takeaway", Delivery: "delivery" } as const;
+
+// Price a guest's cart from the live public menu. Anything unavailable, gone,
+// or not on the menu rejects the whole order rather than guessing.
+function priceWebCart(
+  menu: NonNullable<Awaited<ReturnType<typeof getPublicMenu>>>,
+  items: WebOrderInput["items"],
+) {
+  const byId = new Map(menu.categories.flatMap((c) => c.items).map((it) => [it.id, it]));
+  return items.map((l) => {
+    const item = byId.get(l.menuItemId);
+    const variant = l.variantId ? item?.variants.find((v) => v.id === l.variantId) : null;
+    // Items with sizes are only orderable by size, same as the menu renders.
+    if (!item || (l.variantId ? !variant : item.variants.length > 0)) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Something in your order just came off the menu. Refresh and try again.",
+      });
+    }
+    return {
+      menuItemId: item.id,
+      variantId: variant?.id ?? null,
+      name: item.name,
+      variantName: variant?.name ?? null,
+      unitPrice: Number(variant?.price ?? item.price),
+      quantity: l.quantity,
+    };
+  });
+}
+
 // Closed orders per page on the Orders screen; open tabs always come whole.
 const ORDERS_PAGE = 60;
 
 export const ordersRouter = router({
+  // A guest's order from the public menu (/m/[slug]). PUBLIC — no session.
+  // Lands as an open tab flagged webPending: on the Orders page, off the KOT
+  // board until staff open it in the POS. Prices come from the live menu,
+  // never the client; the customer is linked by phone.
+  // ponytail: no rate limit — the item/qty caps bound one order, and staff
+  // review every web order before the kitchen sees it. Add per-IP throttling
+  // (Upstash / a table) if prank orders ever become a nuisance.
+  placeWeb: publicProcedure.input(webOrderSchema).mutation(async ({ input }) => {
+    const menu = await getPublicMenu(input.slug);
+    const cfg = menu?.ordering;
+    const modeOn = cfg && { "Dine-in": cfg.dineIn, Takeaway: cfg.takeaway, Delivery: cfg.delivery }[input.mode];
+    if (!menu || !cfg?.ordering || !cfg.whatsapp || !modeOn) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Online ordering is off right now." });
+    }
+    const type = WEB_TYPE[input.mode];
+    if (type === "delivery" && input.address.length < 8) {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Add a delivery address." });
+    }
+
+    const lines = priceWebCart(menu, input.items);
+    const units = lines.reduce((n, l) => n + l.quantity, 0);
+    // Same fee rules the guest saw: packaging per unit off-premise, delivery flat.
+    const totals = computeTotals(
+      lines,
+      0,
+      { rate: Number(menu.store.taxRate), inclusive: menu.store.taxInclusive },
+      {
+        service: 0,
+        packaging: type === "dine_in" ? 0 : Number(cfg.packagingFee) * units,
+        delivery: Number(cfg.deliveryFee),
+      },
+      type,
+    );
+    const receipt = (orderNumber: string) => ({
+      orderNumber,
+      lines: totals.lines.map((l) => ({
+        name: l.variantName ? `${l.name} (${l.variantName})` : l.name,
+        quantity: l.quantity,
+        lineTotal: l.lineTotal.toFixed(2),
+      })),
+      subtotal: totals.subtotal.toFixed(2),
+      tax: totals.taxAmount.toFixed(2),
+      taxLabel: menu.store.taxLabel,
+      taxInclusive: menu.store.taxInclusive,
+      packaging: totals.packaging.toFixed(2),
+      delivery: totals.delivery.toFixed(2),
+      total: totals.total.toFixed(2),
+    });
+
+    const dup = await byClientId(input.clientId);
+    if (dup) return receipt(dup.number);
+
+    // Delivery needs the address on the ticket; otherwise the note usually
+    // carries the table number. The full note also travels in the WhatsApp.
+    const reference =
+      [type === "delivery" ? input.address : "", input.note].filter(Boolean).join(" · ").slice(0, 300) ||
+      null;
+    const number = await nextOrderNumber();
+    try {
+      await db.transaction(async (tx) => {
+        const [o] = await tx
+          .insert(orders)
+          .values({
+            storeId: STORE_ID,
+            number,
+            clientId: input.clientId,
+            status: "open",
+            webPending: true,
+            source: "web",
+            type,
+            reference,
+            customerId: await resolveCustomer(tx, {
+              customerName: input.name,
+              customerPhone: input.phone,
+            }),
+            ...moneyColumns(totals),
+          })
+          .returning({ id: orders.id });
+        await writeItems(tx, o.id, totals.lines);
+      });
+    } catch {
+      // A double tap lost the race on the clientId unique index — same order.
+      const won = await byClientId(input.clientId);
+      if (won) return receipt(won.number);
+      throw fizzled("Something fizzled placing your order. Try again.");
+    }
+    bumpPaths();
+    return receipt(number);
+  }),
+
   list: protectedProcedure
     .input(
       z.object({
@@ -197,6 +320,8 @@ export const ordersRouter = router({
               .set({
                 type,
                 reference,
+                webPending: false,
+                source: input.source,
                 customerId: await resolveCustomer(tx, input),
                 ...moneyColumns(totals),
                 servedBy: ctx.user.id,
@@ -228,6 +353,7 @@ export const ordersRouter = router({
               createdAt: saleTime(soldAt),
               status: "open",
               type,
+              source: input.source,
               reference,
               customerId: await resolveCustomer(tx, input),
               ...moneyColumns(totals),
@@ -305,6 +431,8 @@ export const ordersRouter = router({
             status: "paid" as const,
             type,
             reference,
+            webPending: false,
+                source: input.source,
             customerId: await resolveCustomer(tx, input),
             ...moneyColumns(totals),
             paymentMethod,

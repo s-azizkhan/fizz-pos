@@ -1,5 +1,6 @@
 import type { OrderStatus, OrderPaymentMethod, OrderType } from "@/lib/db/schema";
 import type { LoadedOrder } from "@/components/fizz/pos/types";
+import type { OrderSource } from "@/lib/db/schema/constants";
 
 export type OrderRowLine = {
   name: string;
@@ -14,6 +15,7 @@ export type OrderRow = {
   number: string;
   status: OrderStatus;
   type: OrderType;
+  source: OrderSource;
   reference: string | null;
   total: string;
   paymentMethod: OrderPaymentMethod | null;
@@ -21,6 +23,8 @@ export type OrderRow = {
   paidAt: string | null;
   itemCount: number;
   items: OrderRowLine[];
+  // Linked customer, for "Share on WhatsApp".
+  customer: { name: string | null; phone: string | null } | null;
   // Paid orders only: the money a reprinted receipt needs beyond the lines.
   bill: {
     subtotal: string;

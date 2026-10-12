@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
-import { receiptStore } from "@/lib/store/order-settings";
+import { getOrderSettings, receiptStore } from "@/lib/store/order-settings";
 import { currentMonth } from "@/lib/store/date-range";
 import OrdersClient from "@/components/fizz/orders/OrdersClient";
 
@@ -15,11 +15,12 @@ export default async function OrdersPage({
   const { month: monthParam } = await searchParams;
   const month = /^\d{4}-\d{2}$/.test(monthParam ?? "") ? monthParam! : currentMonth();
   const api = await trpc();
-  const [user, store, first, header] = await Promise.all([
+  const [user, store, first, header, ordering] = await Promise.all([
     getCurrentUser(),
     api.store.get(),
     api.orders.list({ month }),
     receiptStore(),
+    getOrderSettings(),
   ]);
 
   return (
@@ -34,6 +35,7 @@ export default async function OrdersPage({
       // Page-wide receipt bits, sent once rather than on every paid order.
       receiptHeader={header}
       taxLabel={store.taxLabel}
+      cafeWhatsapp={ordering.whatsapp}
     />
   );
 }

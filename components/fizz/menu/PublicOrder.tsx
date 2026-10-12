@@ -1,14 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { create } from "zustand";
+import { useMutation } from "@tanstack/react-query";
 import { formatMoney } from "@/lib/store/format";
+import { useTRPC } from "@/lib/trpc/client";
+import { isNetworkError } from "@/lib/store/outbox";
 
 // Cart for the public menu. Module-level zustand store so the per-item add
 // buttons (rendered inside the server page) and the floating cart share state
 // without threading a provider through the server tree.
 // ponytail: not persisted — a café menu cart is a one-sitting thing.
-export type CartLine = { key: string; name: string; price: number; qty: number };
+export type CartLine = {
+  key: string;
+  itemId: string;
+  variantId: string | null;
+  name: string;
+  price: number;
+  qty: number;
+};
 
 type CartState = {
   lines: CartLine[];
@@ -53,48 +63,58 @@ const count = (lines: CartLine[]) => lines.reduce((n, l) => n + l.qty, 0);
 // The message a visitor sends. Plain text — WhatsApp renders *bold*.
 const RULE = "--------------------------";
 
+// What the message itemises. Built from the server's priced order when it
+// landed (the source of truth), else from the cart as a fallback.
+export type Bill = {
+  lines: { name: string; quantity: number; amount: number }[];
+  packaging: number;
+  delivery: number;
+  // Shown only when added on top (not when prices already include it).
+  tax: { label: string; amount: number } | null;
+  total: number;
+};
+
 export function orderMessage({
-  lines,
+  orderNumber,
+  bill,
   currency,
   mode,
   name,
+  phone,
   note,
   address,
-  deliveryFee,
-  packagingFee,
 }: {
-  lines: CartLine[];
+  orderNumber: string | null;
+  bill: Bill;
   currency: string;
   mode: string;
   name: string;
+  phone: string;
   note: string;
   address: string;
-  deliveryFee: number;
-  packagingFee: number;
 }): string {
   // Whole amounts read cleaner without ".00" in a chat message.
   const m = (n: number) => formatMoney(n, currency).replace(/\.00$/, "");
-  const units = count(lines);
-  const packaging = packagingFee * units;
 
   const out = [
-    `*NEW ORDER: ${mode.toUpperCase()}*`,
+    orderNumber ? `*NEW ORDER #${orderNumber}: ${mode.toUpperCase()}*` : `*NEW ORDER: ${mode.toUpperCase()}*`,
     RULE,
     // Bold on the parts the café acts on: what, how many, how much.
-    ...lines.map((l) => `• *${l.name}* [x${l.qty}] = *${m(l.price * l.qty)}*`),
+    ...bill.lines.map((l) => `• *${l.name}* [x${l.quantity}] = *${m(l.amount)}*`),
     RULE,
   ];
-  if (packaging > 0) out.push(`Packaging (${m(packagingFee)} x ${units}): ${m(packaging)}`);
-  if (deliveryFee > 0) out.push(`Delivery: ${m(deliveryFee)}`);
-  if (packaging > 0 || deliveryFee > 0) out.push(RULE);
+  if (bill.packaging > 0) out.push(`Packaging: ${m(bill.packaging)}`);
+  if (bill.delivery > 0) out.push(`Delivery: ${m(bill.delivery)}`);
+  if (bill.tax) out.push(`${bill.tax.label}: ${m(bill.tax.amount)}`);
+  if (bill.packaging > 0 || bill.delivery > 0 || bill.tax) out.push(RULE);
   out.push(
-    `*TOTAL BILL: ${m(total(lines) + packaging + deliveryFee)}*`,
+    `*TOTAL BILL: ${m(bill.total)}*`,
     `*SERVICE:* ${mode}`,
     "",
     "*MY DETAILS:*",
   );
   if (address.trim()) out.push(`*Address:* ${address.trim()}`);
-  out.push(`*Name:* ${name.trim()}`);
+  out.push(`*Name:* ${name.trim()}`, `*Phone:* ${phone.trim()}`);
   if (note.trim()) out.push(`*Note:* ${note.trim()}`);
   return out.join("\n");
 }
@@ -102,11 +122,15 @@ export function orderMessage({
 // ---- Per-item control: a "+" that becomes a stepper once in the cart ------
 export function AddToCart({
   itemKey,
+  itemId,
+  variantId,
   name,
   price,
   accent,
 }: {
   itemKey: string;
+  itemId: string;
+  variantId: string | null;
   name: string;
   price: string | number;
   accent: string;
@@ -120,7 +144,7 @@ export function AddToCart({
       <button
         type="button"
         aria-label={`Add ${name}`}
-        onClick={() => add({ key: itemKey, name, price: Number(price) })}
+        onClick={() => add({ key: itemKey, itemId, variantId, name, price: Number(price) })}
         className="grid size-8 shrink-0 place-items-center rounded-full border text-[1em] font-bold leading-none transition-transform hover:scale-110 active:scale-95"
         style={{ borderColor: accent, color: accent }}
       >
@@ -157,6 +181,7 @@ export function AddToCart({
 
 // ---- Floating cart pill + order sheet -------------------------------------
 export function FloatingCart({
+  slug,
   storeName,
   whatsapp,
   currency,
@@ -165,6 +190,7 @@ export function FloatingCart({
   deliveryFee,
   packagingFee,
 }: {
+  slug: string;
   storeName: string;
   whatsapp: string;
   currency: string;
@@ -177,6 +203,14 @@ export function FloatingCart({
   const { lines, open, setOpen, clear } = useCart();
   const [mode, setMode] = useState<string>(modes[0]);
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const trpc = useTRPC();
+  const place = useMutation(
+    trpc.orders.placeWeb.mutationOptions({ meta: { silentError: true, noRefresh: true } }),
+  );
+  // One id per cart: a retry after a dropped connection is the same order.
+  const clientId = useRef<string | null>(null);
   const [note, setNote] = useState("");
   const [address, setAddress] = useState("");
   const [sent, setSent] = useState(false);
@@ -186,8 +220,16 @@ export function FloatingCart({
   // Packaging is charged on anything leaving the café, not on dine-in.
   const packaging = mode === "Dine-in" ? 0 : packagingFee * n;
   const due = total(lines) + packaging + fee;
-  // An address is the one thing a delivery order can't be sent without.
-  const blocked = isDelivery && address.trim().length < 8;
+  // The café needs to know who and how to reach them; delivery needs where.
+  const missing =
+    !name.trim()
+      ? "Add your name"
+      : phone.replace(/\D/g, "").length < 8
+        ? "Add your phone number"
+        : isDelivery && address.trim().length < 8
+          ? "Add a delivery address"
+          : null;
+  const blocked = !!missing || place.isPending;
 
   // Sheet open = page behind must not scroll.
   useEffect(() => {
@@ -208,19 +250,70 @@ export function FloatingCart({
 
   if (!n && !sent) return null;
 
-  const send = () => {
+  // Save the order first (that's where the number comes from), then open
+  // WhatsApp with it typed out. The tab is opened up front, inside the tap —
+  // after an await, mobile browsers treat window.open as a popup and block it.
+  const send = async () => {
     if (blocked) return;
-    const text = orderMessage({
-      lines,
-      currency,
+    setError(null);
+    clientId.current ??= crypto.randomUUID();
+    const win = window.open("", "_blank");
+    const details = {
       mode,
       name,
+      phone,
       note,
       address: isDelivery ? address : "",
-      deliveryFee: fee,
-      packagingFee: mode === "Dine-in" ? 0 : packagingFee,
-    });
-    window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+      currency,
+    };
+    let text: string;
+    try {
+      const r = await place.mutateAsync({
+        slug,
+        clientId: clientId.current,
+        mode: mode as "Dine-in" | "Takeaway" | "Delivery",
+        name,
+        phone,
+        address: details.address,
+        note,
+        items: lines.map((l) => ({ menuItemId: l.itemId, variantId: l.variantId, quantity: l.qty })),
+      });
+      text = orderMessage({
+        ...details,
+        orderNumber: r.orderNumber,
+        bill: {
+          lines: r.lines.map((l) => ({ name: l.name, quantity: l.quantity, amount: Number(l.lineTotal) })),
+          packaging: Number(r.packaging),
+          delivery: Number(r.delivery),
+          tax: !r.taxInclusive && Number(r.tax) > 0 ? { label: r.taxLabel, amount: Number(r.tax) } : null,
+          total: Number(r.total),
+        },
+      });
+    } catch (e) {
+      // The café refused it (ordering off, item gone): say why, send nothing.
+      if (!isNetworkError(e)) {
+        win?.close();
+        setError(e instanceof Error ? e.message : "Something fizzled. Try again.");
+        return;
+      }
+      // Weak signal: don't strand the guest — send the order without a number
+      // and the café keys it in from the chat, the way it always worked.
+      text = orderMessage({
+        ...details,
+        orderNumber: null,
+        bill: {
+          lines: lines.map((l) => ({ name: l.name, quantity: l.qty, amount: l.price * l.qty })),
+          packaging,
+          delivery: fee,
+          tax: null,
+          total: due,
+        },
+      });
+    }
+    const url = `https://wa.me/${whatsapp}?text=${encodeURIComponent(text)}`;
+    if (win) win.location.href = url;
+    else window.location.href = url;
+    clientId.current = null;
     setSent(true);
     clear();
   };
@@ -302,7 +395,7 @@ export function FloatingCart({
                       <p className="text-[0.8em] text-[var(--m-muted)]">{formatMoney(l.price, currency)} each</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <AddToCart itemKey={l.key} name={l.name} price={l.price} accent={accent} />
+                      <AddToCart itemKey={l.key} itemId={l.itemId} variantId={l.variantId} name={l.name} price={l.price} accent={accent} />
                       <span className="w-16 shrink-0 text-right text-[0.95em] font-semibold tabular-nums">
                         {formatMoney(l.price * l.qty, currency)}
                       </span>
@@ -347,7 +440,21 @@ export function FloatingCart({
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your name"
                   aria-label="Your name"
+                  autoComplete="name"
                   maxLength={60}
+                  required
+                  className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
+                />
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\- ]/g, ""))}
+                  placeholder="Phone number"
+                  aria-label="Phone number"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={20}
+                  required
                   className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
                 />
                 <textarea
@@ -394,10 +501,15 @@ export function FloatingCart({
                 className="mt-4 w-full rounded-[var(--m-radius)] py-3.5 text-[1em] font-bold transition-transform hover:scale-[1.02] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ backgroundColor: accent, color: contrastOn(accent) }}
               >
-                {blocked ? "Add a delivery address" : "Send order on WhatsApp"}
+                {place.isPending ? "Placing order…" : (missing ?? "Send order on WhatsApp")}
               </button>
+              {error && (
+                <p role="alert" className="mt-3 text-center text-[0.85em] text-[#E2655A]">
+                  {error}
+                </p>
+              )}
               <p className="mt-3 text-center text-[0.75em] text-[var(--m-muted)]">
-                Opens WhatsApp with your order typed out. Hit send — we&apos;ll confirm there.
+                We save your order, then open WhatsApp with it typed out. Hit send — we&apos;ll confirm there.
               </p>
             </div>
           </div>

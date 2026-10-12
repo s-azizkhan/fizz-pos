@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   numeric,
@@ -12,6 +13,7 @@ import { z } from "zod";
 import { users } from "./user";
 import { store } from "./store";
 import { customers } from "./customer";
+import { ORDER_SOURCES } from "./constants";
 
 // How a finished order was paid. Mirrors the daily-sales split so totals
 // reconcile across the two surfaces.
@@ -30,6 +32,9 @@ export type OrderType = (typeof orderType.enumValues)[number];
 // `paid` = settled and closed; `void` = cancelled.
 export const orderStatus = pgEnum("order_status", ["open", "paid", "void"]);
 export type OrderStatus = (typeof orderStatus.enumValues)[number];
+
+// Where the order came from — values and labels in ./constants (client-safe).
+export const orderSource = pgEnum("order_source", ORDER_SOURCES);
 
 // What the KITCHEN has done with the order, tracked separately from payment —
 // a paid order still has to be cooked, and a dine-in tab is cooked long before
@@ -58,8 +63,13 @@ export const orders = pgTable("orders", {
   // when you want cook-time analytics.
   kitchenStatus: kitchenStatus("kitchen_status").notNull().default("new"),
   type: orderType("type").notNull().default("dine_in"),
+  source: orderSource("source").notNull().default("counter"),
   // Optional table / tab label keyed at the POS.
   reference: text("reference"),
+  // Placed by a guest from the public menu and not yet looked at by staff.
+  // Kept off the KOT board until someone opens it in the POS and saves or
+  // settles it — anyone with the menu link can place one.
+  webPending: boolean("web_pending").notNull().default(false),
   // Optional link to the café's customer book (lib/db/schema/customer.ts).
   customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
@@ -153,6 +163,8 @@ export type OrderFees = z.infer<typeof feesSchema>;
 // resolved server-side into the customer book (works offline, no id yet).
 const optText = (max: number) =>
   z.string().trim().max(max).optional().or(z.literal("")).transform((v) => v || null);
+const sourceField = { source: z.enum(ORDER_SOURCES).default("counter") };
+
 const customerFields = {
   customerId: z.uuid().nullable().optional(),
   customerName: optText(80),
@@ -171,7 +183,7 @@ export const checkoutSchema = z.object({
   reference: z
     .string()
     .trim()
-    .max(60)
+    .max(300)
     .optional()
     .or(z.literal(""))
     .transform((v) => v || null),
@@ -181,6 +193,7 @@ export const checkoutSchema = z.object({
   tendered: money.optional(),
   items: z.array(lineSchema).min(1, "Add at least one item"),
   ...customerFields,
+  ...sourceField,
   ...offlineFields,
 });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
@@ -193,7 +206,7 @@ export const saveOrderSchema = z.object({
   reference: z
     .string()
     .trim()
-    .max(60)
+    .max(300)
     .optional()
     .or(z.literal(""))
     .transform((v) => v || null),
@@ -201,9 +214,40 @@ export const saveOrderSchema = z.object({
   fees: feesSchema,
   items: z.array(lineSchema).min(1, "Add at least one item"),
   ...customerFields,
+  ...sourceField,
   ...offlineFields,
 });
 export type SaveOrderInput = z.infer<typeof saveOrderSchema>;
+
+// A guest's order from the public menu. Prices are NOT accepted — the server
+// looks every line up on the live menu. Name + phone are required so the café
+// can call back; the caps keep a prank cart from burying the Orders page.
+export const WEB_ORDER_MODES = ["Dine-in", "Takeaway", "Delivery"] as const;
+export const webOrderSchema = z.object({
+  slug: z.string().min(1).max(80),
+  // Idempotency: a double tap or a retried request is one order.
+  clientId: z.uuid(),
+  mode: z.enum(WEB_ORDER_MODES),
+  name: z.string().trim().min(1, "Add your name").max(60),
+  phone: z
+    .string()
+    .trim()
+    .max(20)
+    .refine((v) => v.replace(/\D/g, "").length >= 8, "Add a phone number we can call"),
+  address: z.string().trim().max(300).optional().default(""),
+  note: z.string().trim().max(300).optional().default(""),
+  items: z
+    .array(
+      z.object({
+        menuItemId: z.uuid(),
+        variantId: z.uuid().nullable(),
+        quantity: z.number().int().min(1).max(20),
+      }),
+    )
+    .min(1, "Your cart is empty")
+    .max(30),
+});
+export type WebOrderInput = z.infer<typeof webOrderSchema>;
 
 // The kitchen only ever moves an order forward a lane.
 export const kitchenMoveSchema = z.object({

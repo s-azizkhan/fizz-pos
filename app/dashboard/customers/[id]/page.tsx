@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getStore } from "@/lib/store/data";
 import { customerOrders, getCustomer } from "@/lib/store/customers";
 import { formatDateTime, formatMoney } from "@/lib/store/format";
+import { ORDER_SOURCE_LABELS } from "@/lib/db/schema/constants";
 
 export const metadata: Metadata = { title: "Customer — Fizz" };
 
@@ -67,6 +68,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
                   <p className="font-display text-lg font-bold text-cream">{o.number}</p>
                   <p className="text-xs text-steam">
                     {formatDateTime(o.paidAt ?? o.createdAt)} · {TYPE_LABEL[o.type]}
+                    {o.source !== "counter" ? ` · ${ORDER_SOURCE_LABELS[o.source]}` : ""}
                     {o.reference ? ` · ${o.reference}` : ""}
                   </p>
                 </div>

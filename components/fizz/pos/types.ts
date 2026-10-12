@@ -1,4 +1,5 @@
 // Client-safe POS data shapes (prices as numbers, variants inlined).
+import type { OrderSource } from "@/lib/db/schema/constants";
 
 export type PosVariant = {
   id: string;
@@ -61,6 +62,10 @@ export type LoadedOrder = {
   number: string;
   type: OrderType;
   reference: string | null;
+  // A guest's web order the kitchen hasn't seen yet — its first save sends
+  // every line to the KOT, not just the additions.
+  webPending: boolean;
+  source: OrderSource;
   customer: { id: string; name: string | null; phone: string | null } | null;
   discount: number;
   fees: OrderFees;

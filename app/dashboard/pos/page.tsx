@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc/server";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getCustomer } from "@/lib/store/customers";
 import { toLoadedOrder } from "@/lib/store/orders";
+import { getOrderSettings } from "@/lib/store/order-settings";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
 
@@ -15,11 +16,12 @@ export default async function TillPage({
 }) {
   const api = await trpc();
   const { order: orderId } = await searchParams;
-  const [user, store, menu, order] = await Promise.all([
+  const [user, store, menu, order, ordering] = await Promise.all([
     getCurrentUser(),
     api.store.get(),
     api.menu.full(),
     orderId ? api.orders.byId(orderId) : Promise.resolve(null),
+    getOrderSettings(),
   ]);
 
   // Flatten to a client-safe shape: only available categories/items, prices as
@@ -67,6 +69,7 @@ export default async function TillPage({
           ? { vpa: store.upiId, name: store.upiName || store.name }
           : null
       }
+      cafeWhatsapp={ordering.whatsapp}
       loaded={loaded}
       requestedOrderId={orderId ?? null}
     />
