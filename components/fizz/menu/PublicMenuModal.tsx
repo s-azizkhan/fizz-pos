@@ -57,6 +57,16 @@ export default function PublicMenuModal({
   // Phone: the preview is a full-screen overlay behind this flag. Desktop: a
   // column beside the form, always on.
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Tabs hide sections with the `hidden` attribute (not unmount) so every
+  // field still submits with the one form.
+  type Tab = "link" | "look" | "welcome" | "ordering";
+  const [tab, setTab] = useState<Tab>("link");
+  const TABS: { key: Tab; label: string; badge?: string }[] = [
+    { key: "link", label: "Link", badge: published ? "Live" : "Draft" },
+    { key: "look", label: "Look" },
+    { key: "welcome", label: "Welcome screen", badge: welcome.on ? "On" : undefined },
+    { key: "ordering", label: "Ordering", badge: ordering ? "On" : undefined },
+  ];
   const waDigits = whatsapp.replace(/\D/g, "");
   const preview = (
     <Welcome
@@ -74,21 +84,44 @@ export default function PublicMenuModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:p-4">
-      <div className={`flex h-dvh w-full flex-col bg-ink sm:h-auto sm:max-h-[90vh] sm:rounded-fizz sm:shadow-lg ${welcome.on ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
-        <div className="flex items-start justify-between gap-4 p-5 pb-0 sm:p-8 sm:pb-0">
-          <div>
-            <h2 className="font-display text-2xl font-bold tracking-tight">Public menu</h2>
-            <p className="mt-1 text-sm text-steam">
-              A shareable, view-only menu with your café branding.
-            </p>
+      <div className={`flex h-dvh w-full flex-col overflow-hidden bg-ink sm:h-[90vh] sm:rounded-fizz sm:border sm:border-ink-line sm:shadow-lg ${welcome.on ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
+        <div className="shrink-0 border-b border-ink-line px-5 pt-5 sm:px-8 sm:pt-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="font-display text-2xl font-bold tracking-tight">Public menu</h2>
+              <p className="mt-1 text-sm text-steam">Your café on a link: menu, welcome screen, web orders.</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="shrink-0 rounded-full border border-ink-line p-2 text-steam transition-colors hover:border-fizz hover:text-fizz"
+              aria-label="Close modal"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="shrink-0 rounded-full p-1 text-steam hover:text-fizz"
-            aria-label="Close modal"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
+          <div role="tablist" className="-mx-5 mt-4 flex gap-1 overflow-x-auto px-5 no-scrollbar sm:-mx-8 sm:px-8">
+            {TABS.map((t) => {
+              const on = tab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => setTab(t.key)}
+                  className={`relative shrink-0 whitespace-nowrap px-3 pb-3 pt-1 text-sm font-semibold transition-colors ${on ? "text-cream" : "text-steam hover:text-cream"}`}
+                >
+                  {t.label}
+                  {t.badge && (
+                    <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${t.badge === "Draft" ? "bg-ink-soft text-steam" : "bg-fizz/15 text-fizz"}`}>
+                      {t.badge}
+                    </span>
+                  )}
+                  {on && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-fizz" />}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <form
@@ -96,9 +129,18 @@ export default function PublicMenuModal({
           e.preventDefault();
           save.mutate(fields(e.currentTarget));
         }} className="flex min-h-0 flex-1 flex-col">
-          <div className={`min-h-0 flex-1 ${welcome.on ? "lg:grid lg:grid-cols-[1fr_360px]" : ""}`}>
-          <div className="min-h-0 overflow-y-auto p-5 sm:p-8 lg:h-full">
-          <div className="grid gap-5 sm:grid-cols-2">
+          <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-8">
+
+          {/* ---- Link & publish ---- */}
+          <div hidden={tab !== "link"} className="grid gap-5 sm:grid-cols-2 [&[hidden]]:hidden">
+            <label className="flex items-center gap-3 rounded-fizz border border-ink-line bg-ink-soft p-4 sm:col-span-2">
+              <input type="checkbox" name="menuPublished" value="true" checked={published} onChange={(e) => setPublished(e.target.checked)} className="h-5 w-5 accent-[#C6F432]" />
+              <span className="text-sm text-cream">
+                Publish menu
+                <span className="block text-xs text-steam">Off = the link shows “not found”. Nothing else changes.</span>
+              </span>
+            </label>
             <label className="flex flex-col gap-2 sm:col-span-2">
               <span className={labelCls}>Menu link</span>
               <div className="flex items-center gap-2">
@@ -121,8 +163,12 @@ export default function PublicMenuModal({
             <label className="flex flex-col gap-2 sm:col-span-2">
               <span className={labelCls}>Tagline</span>
               <input name="menuTagline" defaultValue={store.menuTagline ?? ""} placeholder="Pour-overs, pastries, good mornings." className={inputCls} />
+              <span className="text-xs text-steam">Under your name on the menu, the welcome screen and in search results.</span>
             </label>
+          </div>
 
+          {/* ---- Look ---- */}
+          <div hidden={tab !== "look"} className="grid gap-5 sm:grid-cols-2 [&[hidden]]:hidden">
             <div className="flex flex-col gap-2 sm:col-span-2">
               <span className={labelCls}>Theme</span>
               <p className="text-xs text-steam">
@@ -188,19 +234,21 @@ export default function PublicMenuModal({
               </div>
             </label>
 
-            <label className="flex items-center gap-3 pt-7">
-              <input type="checkbox" name="menuPublished" value="true" checked={published} onChange={(e) => setPublished(e.target.checked)} className="h-5 w-5 accent-[#C6F432]" />
-              <span className="text-sm text-cream">Publish menu (make it public)</span>
-            </label>
+          </div>
 
+          {/* ---- Welcome screen ---- */}
+          <div hidden={tab !== "welcome"} className="grid gap-5 sm:grid-cols-2 [&[hidden]]:hidden">
             <WelcomeEditor
               value={welcome}
               onChange={setWelcome}
               hasPhone={!!store.phone}
               hasWhatsapp={waDigits.length >= 8}
             />
+          </div>
 
-            <label className="flex items-center gap-3 sm:col-span-2">
+          {/* ---- Ordering ---- */}
+          <div hidden={tab !== "ordering"} className="grid gap-5 sm:grid-cols-2 [&[hidden]]:hidden">
+            <label className="flex items-center gap-3 rounded-fizz border border-ink-line bg-ink-soft p-4 sm:col-span-2">
               <input type="checkbox" name="ordering" value="true" checked={ordering} onChange={(e) => setOrdering(e.target.checked)} className="h-5 w-5 accent-[#C6F432]" />
               <span className="text-sm text-cream">
                 Accept orders from public menu
@@ -268,19 +316,19 @@ export default function PublicMenuModal({
           </div>
           </div>
 
-          {/* Live preview — desktop column. Scaled phone so it fits without scrolling. */}
+          {/* Live preview — desktop column, scrolls on its own. */}
           {welcome.on && (
-            <aside className="hidden min-h-0 border-l border-ink-line bg-ink-soft/40 p-5 lg:flex lg:flex-col">
+            <aside className="hidden w-[360px] shrink-0 flex-col overflow-y-auto border-l border-ink-line bg-ink-soft/40 p-5 lg:flex">
               <span className={labelCls}>Live preview</span>
               <p className="mt-1 text-xs text-steam">What a guest sees scanning table 5. Updates as you type.</p>
-              <div className="mt-4 flex min-h-0 flex-1 items-start justify-center overflow-hidden">
+              <div className="mt-4 flex justify-center">
                 <PhoneFrame>{preview}</PhoneFrame>
               </div>
             </aside>
           )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 border-t border-ink-line px-5 py-4 sm:gap-4 sm:px-8 sm:py-6">
+          <div className="flex shrink-0 flex-wrap items-center gap-3 border-t border-ink-line px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:gap-4 sm:px-8 sm:py-4">
             {welcome.on && (
               <button
                 type="button"
@@ -293,7 +341,7 @@ export default function PublicMenuModal({
             )}
             <button type="submit" disabled={save.isPending} className="inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
               <CheckIcon className="h-4 w-4 shrink-0" />
-              {save.isPending ? "Saving…" : "Save menu settings"}
+              {save.isPending ? "Saving…" : "Save"}
             </button>
             {saved && <span className="text-sm font-semibold text-fizz">Saved ●</span>}
             {save.error && <span className="text-sm text-[#E2655A]">{save.error.message}</span>}
@@ -336,9 +384,11 @@ export default function PublicMenuModal({
 // on its own so long card lists stay reachable.
 function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="origin-top scale-[0.78] xl:scale-[0.85]">
+    <div className="h-[593px] w-[304px] xl:h-[646px] xl:w-[332px]">
+      <div className="origin-top-left scale-[0.78] xl:scale-[0.85]">
       <div className="h-[760px] w-[390px] overflow-hidden rounded-[40px] border-[6px] border-ink-line bg-ink shadow-lg">
         <div data-wl-scroller className="h-full overflow-y-auto no-scrollbar">{children}</div>
+      </div>
       </div>
     </div>
   );

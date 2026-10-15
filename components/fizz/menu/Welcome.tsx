@@ -2,6 +2,7 @@ import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
 import { DEFAULT_WELCOME, type WelcomeConfig, type WelcomeCard } from "@/lib/store/welcome";
 import { WifiCard, CardShell, CardIcon, SocialIcon, ParallaxDriver } from "./WelcomeCards";
 import Lottie from "./Lottie";
+import ShareButton from "./ShareButton";
 
 // The welcome screen at /m/[slug]: cover, name, table badge, a stack of cards
 // (menu, review, Wi-Fi, call, WhatsApp, custom), socials. Plain props (no
@@ -113,6 +114,13 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
         <span className={`h-1.5 w-1.5 rounded-full ${status.open ? "bg-[#4ADE80]" : "bg-[#F87171]"}`} />
         {status.label}
       </span>
+      <ShareButton
+        title={store.name}
+        text={store.menuTagline ? `${store.name} — ${store.menuTagline}` : `${store.name} menu`}
+        path={`/m/${slug}`}
+        accent={accent}
+        glass={L !== "minimal"}
+      />
     </span>
   );
   // Cover art: photo, or the accent wash + cup when there's none.
