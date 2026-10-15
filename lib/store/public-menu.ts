@@ -54,7 +54,7 @@ export async function menuMetadata(
   const origin = await siteOrigin();
   const title = opts.title ?? `${store.name} — Menu${store.city ? ` · ${store.city}` : ""}`;
   const description = menuDescription(menu);
-  const image = store.menuWelcome?.coverUrl || (store.logoUrl ? `${origin}/api/logo` : null);
+  const image = absolute(origin, store.menuWelcome?.coverUrl) ?? (store.logoUrl ? `${origin}/api/logo` : null);
   return {
     metadataBase: new URL(origin),
     title,
@@ -118,7 +118,7 @@ export async function menuJsonLd(slug: string, menu: PublicMenu): Promise<Record
     name: store.name,
     url,
     description: menuDescription(menu),
-    image: store.menuWelcome?.coverUrl || (store.logoUrl ? `${origin}/api/logo` : undefined),
+    image: absolute(origin, store.menuWelcome?.coverUrl) ?? (store.logoUrl ? `${origin}/api/logo` : undefined),
     logo: store.logoUrl ? `${origin}/api/logo` : undefined,
     telephone: store.phone ?? undefined,
     email: store.email ?? undefined,
@@ -169,4 +169,10 @@ function priceRange(menu: PublicMenu): string | undefined {
   if (!prices.length) return undefined;
   const cur = menu.store.currency;
   return `${formatMoney(Math.min(...prices), cur)} – ${formatMoney(Math.max(...prices), cur)}`;
+}
+
+// Our own /api/img/… paths become absolute for crawlers; https stays as is.
+function absolute(origin: string, u: string | undefined): string | null {
+  if (!u) return null;
+  return u.startsWith("/") ? `${origin}${u}` : u;
 }

@@ -7,6 +7,7 @@ import { ORDER_PARTS, TEXT_SIZES, type Block } from "@/lib/print/templates";
 import { MENU_FONT_SCALES } from "./constants";
 import { FEATURE_KEYS } from "@/lib/store/features";
 import { welcomeConfig, type WelcomeConfig } from "@/lib/store/welcome";
+import { IMG_PATH } from "./image";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -112,8 +113,8 @@ export const storeSettingsForm = z.object({
     .or(z.literal(""))
     .transform((v) => v || null)
     .refine(
-      (v) => v === null || /^https:\/\/\S+$/.test(v),
-      "Paste a full image URL over https",
+      (v) => v === null || /^https:\/\/\S+$/.test(v) || IMG_PATH.test(v),
+      "Upload an image or paste a full https URL",
     ),
   website: optionalText(160),
   addressLine1: optionalText(160),

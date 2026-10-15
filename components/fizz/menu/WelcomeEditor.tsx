@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CARD_KINDS, CARD_PRESETS, LAYOUTS, newCard, type CardKind, type WelcomeCard, type WelcomeConfig } from "@/lib/store/welcome";
 import { applyOrder, useDragSort } from "./useDragSort";
+import ImageField from "@/components/fizz/ui/ImageField";
 import { CardIcon } from "./WelcomeCards";
 import { EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
 
@@ -94,16 +95,16 @@ export default function WelcomeEditor({
             <span className="text-xs text-steam">{LAYOUTS.find((l) => l.key === (cfg.layout ?? "cover"))?.blurb}</span>
           </div>
 
-          <label className="flex flex-col gap-2">
-            <span className={labelCls}>Cover image URL</span>
-            <input
+          <div className="flex flex-col gap-2">
+            <span className={labelCls}>Cover image</span>
+            <ImageField
+              kind="cover"
               value={cfg.coverUrl ?? ""}
-              onChange={(e) => patch({ coverUrl: e.target.value })}
-              placeholder="https://… (your storefront, the oven, the bar)"
-              className={inputCls}
+              onChange={(v) => patch({ coverUrl: v })}
+              maxEdge={1600}
+              hint="Landscape works best — your storefront, the oven, the bar. Blank = a wash of your accent color."
             />
-            <span className="text-xs text-steam">Landscape works best. Blank = a wash of your accent color.</span>
-          </label>
+          </div>
 
           <label className="flex flex-col gap-2">
             <span className={labelCls}>Hero animation (Lottie)</span>

@@ -13,3 +13,4 @@ export * from "./customer";
 export * from "./order";
 export * from "./recipe";
 export * from "./orderSettings";
+export * from "./image";

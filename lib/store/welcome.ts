@@ -9,6 +9,8 @@ export const CARD_KINDS = ["menu", "review", "wifi", "call", "whatsapp", "games"
 export type CardKind = (typeof CARD_KINDS)[number];
 
 const url = z.string().trim().max(500).regex(/^https?:\/\/\S+$/, "Paste a full link (https://…)");
+// Cover: an upload of ours (/api/img/<id>) or any https image.
+const imageUrl = z.string().trim().max(500).regex(/^(https?:\/\/\S+|\/api\/img\/[0-9a-f-]{36})$/, "Upload an image or paste a full link");
 
 export const welcomeCard = z.object({
   id: z.string().min(1).max(40),
@@ -39,7 +41,7 @@ export const LAYOUT_KEYS = LAYOUTS.map((l) => l.key) as [LayoutKey, ...LayoutKey
 export const welcomeConfig = z.object({
   on: z.boolean().default(false),
   layout: z.enum(LAYOUT_KEYS).default("cover"),
-  coverUrl: z.union([url, z.literal("")]).optional(),
+  coverUrl: z.union([imageUrl, z.literal("")]).optional(),
   // Optional Lottie played over the hero (on top of the cover or the cup art).
   heroLottie: z.union([url, z.literal("")]).optional(),
   cards: z.array(welcomeCard).max(12, "That's a lot of cards"),

@@ -1,5 +1,7 @@
 "use client";
 
+import ImageField from "@/components/fizz/ui/ImageField";
+
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
@@ -104,6 +106,8 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
     date: now,
   });
 
+  const [logo, setLogo] = useState(store.logoUrl ?? "");
+
   return (
     <form
         onSubmit={(e) => {
@@ -116,7 +120,10 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
         <Field label="Email" name="email" type="email" defaultValue={store.email} placeholder="hello@cafe.com" />
         <Field label="Phone" name="phone" defaultValue={store.phone} placeholder="+1 555 0100" />
         <Field label="Instagram" name="instagram" defaultValue={store.instagram} placeholder="@yourcafe" />
-        <Field label="Logo URL" name="logoUrl" defaultValue={store.logoUrl} placeholder="https://.../logo.png" />
+        <div className="flex flex-col gap-2">
+          <span className={labelCls}>Logo</span>
+          <ImageField kind="logo" name="logoUrl" value={logo} onChange={setLogo} maxEdge={512} aspect="square" hint="Square works best. PNG keeps transparency." />
+        </div>
         <Field label="Website" name="website" defaultValue={store.website} placeholder="yourcafe.com" />
         <Field label="Address line 1" name="addressLine1" defaultValue={store.addressLine1} />
         <Field label="Address line 2" name="addressLine2" defaultValue={store.addressLine2} />

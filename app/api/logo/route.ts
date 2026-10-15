@@ -1,3 +1,6 @@
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { images } from "@/lib/db/schema";
 import { getStore } from "@/lib/store/data";
 
 // Same-origin proxy for the store logo. The logo lives on an arbitrary host
@@ -27,6 +30,16 @@ export async function GET() {
   const store = await getStore();
   const raw = store.logoUrl;
   if (!raw) return new Response("No logo", { status: 404 });
+
+  // Uploaded logo: ours, served from the DB. No fetch, no SSRF surface.
+  const own = raw.match(/^\/api\/img\/([0-9a-f-]{36})$/);
+  if (own) {
+    const [img] = await db.select().from(images).where(eq(images.id, own[1])).limit(1);
+    if (!img) return new Response("No logo", { status: 404 });
+    return new Response(new Uint8Array(img.data), {
+      headers: { "content-type": img.mime, "cache-control": "public, max-age=3600", "x-content-type-options": "nosniff" },
+    });
+  }
 
   let url: URL;
   try {
