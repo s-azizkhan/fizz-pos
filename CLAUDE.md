@@ -32,7 +32,10 @@ Every row belongs to a `store`. Users and invites carry `store_id`; menu items/v
 - **Caches** are per store: tags `store:<id>` / `menu:<id>` via `storeTag()` / `menuTag()` in `lib/store/cache.ts`; writers `bust()` their own store's tag.
 - `STORE_ID` in `lib/store/constants.ts` is the legacy first store, used only by the seeder and the backfill migration.
 
-Signup (`/signup`, `auth.signup`) creates a store + its admin; `/onboarding` is the owner's first-run wizard (`store.onboardedAt`); managers/staff join via invite links (`/join/[token]`) and inherit the invite's store. `scripts/check-tenancy.mts` asserts two stores can't see each other.
+### Plans & billing (offline)
+Plans live in `lib/store/plans.ts` (Free "Chai" / Pro / Counter; INR paise; 14-day Pro trial on signup). `planStatus(store)` is pure and clock-based; `withPlan()` in `lib/store/data.ts` merges plan-locked features into `disabledFeatures` on every cached read, so `featureOn`/nav/`featureGate` need no plan awareness. Seats are checked in `team.invite`, own-domain in `menu.updateAppearance`. No payment provider: the owner requests a plan on `/dashboard/billing` (row in `payments`, status `requested`, quotes an `FZ-` reference when paying by UPI/bank), and a Fizz operator confirms it on `/dashboard/platform`, which activates the plan. Operators = emails in `PLATFORM_ADMIN_EMAILS`; optional `PLATFORM_UPI_ID`/`PLATFORM_UPI_NAME` render a pay-to QR. Time columns added for this are `timestamptz` — older `timestamp` columns store the writer's local wall-clock, so never compare them to the clock; use `withTimezone: true` for new time columns.
+
+Signup (`/signup`, `auth.signup`) creates a store + its admin; `/onboarding` is the owner's first-run wizard (`store.onboardedAt`); managers/staff join via invite links (`/join/[token]`) and inherit the invite's store. `scripts/check-tenancy.mts` asserts two stores can't see each other; `scripts/check-billing.mts` walks trial → lapsed → request → confirm.
 
 ### Auth (two-layer)
 - `proxy.ts` is the Next 16 middleware (renamed from `middleware.ts`). It does an **optimistic** check only — verifies the JWT signature with no DB hit, redirecting `/dashboard/*` ↔ `/login`. Must stay Edge-compatible: no `next/headers`, no `server-only` imports.

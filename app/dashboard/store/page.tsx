@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { loadStore } from "@/lib/store/data";
 import StoreSettingsForm from "@/components/fizz/StoreSettingsForm";
+import { planLocks, planStatus } from "@/lib/store/plans";
 
 export const metadata: Metadata = {
   title: "Store settings — Fizz",
@@ -29,7 +30,7 @@ export default async function StorePage() {
         </p>
 
       <div className="mt-10">
-        <StoreSettingsForm store={store} />
+        <StoreSettingsForm store={store} locked={planLocks(planStatus(store).plan)} />
       </div>
     </div>
   );

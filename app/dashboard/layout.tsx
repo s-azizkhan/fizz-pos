@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
+import { isPlatformAdmin } from "@/lib/auth/platform";
 import { getStore } from "@/lib/store/data";
 import { featureOn } from "@/lib/store/features";
 import DashboardShell from "@/components/fizz/dashboard/DashboardShell";
@@ -17,7 +18,7 @@ export default async function DashboardLayout({
   if (user.role === "admin" && !store.onboardedAt) redirect("/onboarding");
   const on = (k: Parameters<typeof featureOn>[1]) => featureOn(store.disabledFeatures, k);
   return (
-    <DashboardShell user={{ name: user.name, role: user.role }} off={store.disabledFeatures}>
+    <DashboardShell user={{ name: user.name, role: user.role, platform: isPlatformAdmin(user.email) }} off={store.disabledFeatures}>
       {on("printers") && <TicketLayoutSync initial={store.ticketLayouts ?? {}} />}
       <PrinterKeepAlive on={on("printers")} />
       {on("publicMenu") && <WebOrderAlarm kot={on("kot")} />}

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -13,6 +13,8 @@ import {
 import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
 import { router, adminProcedure, publicProcedure } from "@/lib/trpc/init";
+import { getStore } from "@/lib/store/data";
+import { planByKey, planStatus } from "@/lib/store/plans";
 
 const INVITE_TTL_DAYS = 7;
 
@@ -72,6 +74,22 @@ export const teamRouter = router({
           code: "CONFLICT",
           message: "That email is already on the team.",
         });
+      }
+
+      // Seats: members + outstanding invites must fit the plan.
+      const { plan } = planStatus(await getStore());
+      const seats = planByKey(plan).team;
+      if (seats !== null) {
+        const [[m], [p]] = await Promise.all([
+          db.select({ n: count() }).from(users).where(eq(users.storeId, ctx.user.storeId)),
+          db.select({ n: count() }).from(invites).where(and(eq(invites.storeId, ctx.user.storeId), live())),
+        ]);
+        if (m.n + p.n >= seats) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `Your ${planByKey(plan).name} plan seats ${seats}. Upgrade in Billing to add more.`,
+          });
+        }
       }
 
       const token = randomBytes(32).toString("base64url");

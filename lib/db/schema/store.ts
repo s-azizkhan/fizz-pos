@@ -81,7 +81,15 @@ export const store = pgTable("store", {
   disabledFeatures: text("disabled_features").array().notNull().default(sql`'{}'::text[]`),
   // Set when the owner finishes (or skips) the first-run wizard at /onboarding.
   // null = a fresh counter; the dashboard sends admins to the wizard first.
-  onboardedAt: timestamp("onboarded_at"),
+  // timestamptz, unlike the older columns: these are compared against the
+  // clock, so a naive timestamp (stored in the writer's local wall time)
+  // would be hours off. New time columns should follow suit.
+  onboardedAt: timestamp("onboarded_at", { withTimezone: true }),
+  // Billing (lib/store/plans.ts). `plan` is the last PAID plan; it counts only
+  // while planExpiresAt is in the future. Every signup gets a Pro trial.
+  plan: text("plan").notNull().default("free"),
+  planExpiresAt: timestamp("plan_expires_at", { withTimezone: true }),
+  trialEndsAt: timestamp("trial_ends_at", { withTimezone: true }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

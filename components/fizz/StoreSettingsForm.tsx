@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import ImageField from "@/components/fizz/ui/ImageField";
 
 import { useState } from "react";
@@ -69,7 +70,7 @@ function Section({
   );
 }
 
-export default function StoreSettingsForm({ store }: { store: Store }) {
+export default function StoreSettingsForm({ store, locked = [] }: { store: Store; locked?: FeatureKey[] }) {
   const trpc = useTRPC();
   const save = useMutation(
     trpc.store.update.mutationOptions({ onSuccess: () => toast.success("Settings saved") }),
@@ -217,8 +218,9 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
         <input type="hidden" name="disabledFeatures" value={JSON.stringify(off)} />
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           {FEATURES.map((f) => {
-            const checked = !off.includes(f.key);
-            const blocked = "needs" in f && off.includes(f.needs);
+            const lock = locked.includes(f.key);
+            const checked = !lock && !off.includes(f.key);
+            const blocked = lock || ("needs" in f && off.includes(f.needs));
             return (
               <label
                 key={f.key}
@@ -236,9 +238,16 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
                   className="mt-0.5 h-5 w-5 shrink-0 accent-[#C6F432]"
                 />
                 <span>
-                  <span className="block font-semibold text-cream">{f.label}</span>
+                  <span className="block font-semibold text-cream">
+                    {f.label}
+                    {lock && (
+                      <Link href="/dashboard/billing" className="ml-2 rounded-full border border-fizz/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-fizz">
+                        Pro
+                      </Link>
+                    )}
+                  </span>
                   <span className="block text-sm text-steam">
-                    {blocked ? "Turn Inventory on first." : f.hint}
+                    {lock ? "Comes with Pro. Upgrade in Billing." : blocked ? "Turn Inventory on first." : f.hint}
                   </span>
                 </span>
               </label>

@@ -13,7 +13,7 @@ export default function DashboardShell({
   off,
   children,
 }: {
-  user: { name: string; role: UserRole };
+  user: { name: string; role: UserRole; platform?: boolean };
   off: string[];
   children: React.ReactNode;
 }) {

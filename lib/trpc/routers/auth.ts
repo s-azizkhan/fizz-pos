@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { store, users, loginForm, signupForm } from "@/lib/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
+import { TRIAL_DAYS } from "@/lib/store/plans";
 import { createSession, deleteSession } from "@/lib/auth/session";
 import { router, publicProcedure, protectedProcedure } from "@/lib/trpc/init";
 
@@ -46,7 +47,10 @@ export const authRouter = router({
     }
     const passwordHash = await hashPassword(input.password);
     const user = await db.transaction(async (tx) => {
-      const [s] = await tx.insert(store).values({ name: input.storeName }).returning({ id: store.id });
+      const [s] = await tx
+        .insert(store)
+        .values({ name: input.storeName, trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86_400_000) })
+        .returning({ id: store.id });
       const [created] = await tx
         .insert(users)
         .values({ storeId: s.id, email: input.email, name: input.name, passwordHash, role: "admin" })

@@ -25,6 +25,8 @@ export type NavItem = {
   icon: (p: { className?: string }) => React.ReactNode;
   roles: UserRole[];
   blurb: string;
+  /** Fizz operators only (PLATFORM_ADMIN_EMAILS), on top of the role check. */
+  platform?: boolean;
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -43,10 +45,12 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Team", href: "/dashboard/team", icon: UsersIcon, roles: ["admin"], blurb: "Add staff, set permissions." },
   { label: "Printers", href: "/dashboard/printers", icon: PrinterIcon, roles: ["admin", "manager", "staff"], blurb: "Pair a Bluetooth or USB receipt printer." },
   { label: "Store settings", href: "/dashboard/store", icon: GearIcon, roles: ["admin"], blurb: "Profile, hours, invoice numbering." },
+  { label: "Billing", href: "/dashboard/billing", icon: WalletIcon, roles: ["admin"], blurb: "Your plan, trial and payments." },
+  { label: "Platform", href: "/dashboard/platform", icon: GridIcon, roles: ["admin", "manager", "staff"], blurb: "Every counter, plans, payment requests.", platform: true },
   { label: "Help & docs", href: "/dashboard/docs", icon: HelpIcon, roles: ["admin", "manager", "staff"], blurb: "How every page works, step by step." },
 ];
 
 // `off` = the store's switched-off features; their pages drop out of every nav.
-export function navForRole(role: UserRole, off: readonly string[] = []): NavItem[] {
-  return NAV_ITEMS.filter((i) => i.roles.includes(role) && !routeOff(off, i.href));
+export function navForRole(role: UserRole, off: readonly string[] = [], platform = false): NavItem[] {
+  return NAV_ITEMS.filter((i) => i.roles.includes(role) && (!i.platform || platform) && !routeOff(off, i.href));
 }

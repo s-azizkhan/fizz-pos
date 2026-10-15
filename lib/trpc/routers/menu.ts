@@ -18,6 +18,7 @@ import { getFullMenu, getPublicMenu } from "@/lib/store/menu";
 import { getOrderSettings } from "@/lib/store/order-settings";
 import { bust, menuTag, storeTag } from "@/lib/store/cache";
 import { getStore } from "@/lib/store/data";
+import { planByKey, planStatus } from "@/lib/store/plans";
 import { addDomain, removeDomain, domainStatus, vercelEnabled } from "@/lib/vercel";
 import {
   router,
@@ -108,7 +109,11 @@ export const menuRouter = router({
       } = input;
       // Store domain changed: register the new one with Vercel before saving so
       // a failed call leaves the old domain in place.
-      const prev = (await getStore()).menuDomain;
+      const current = await getStore();
+      const prev = current.menuDomain;
+      if (appearance.menuDomain && appearance.menuDomain !== prev && !planByKey(planStatus(current).plan).domain) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Your own domain comes with the Counter plan. Upgrade in Billing." });
+      }
       if (appearance.menuDomain !== prev) {
         try {
           if (appearance.menuDomain) await addDomain(appearance.menuDomain);

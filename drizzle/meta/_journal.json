@@ -176,6 +176,20 @@
       "when": 1792094710959,
       "tag": "0024_multi_tenant_users",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792096178883,
+      "tag": "0025_billing_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792096516684,
+      "tag": "0026_billing_timestamptz",
+      "breakpoints": true
     }
   ]
 }

@@ -22,7 +22,7 @@ export default function BottomNav({
   user,
   off,
 }: {
-  user: { name: string; role: UserRole };
+  user: { name: string; role: UserRole; platform?: boolean };
   off: string[];
 }) {
   const pathname = usePathname();
@@ -40,7 +40,7 @@ export default function BottomNav({
     }),
   );
   const swipe = useSwipeDismiss(closeMore);
-  const items = navForRole(user.role, off);
+  const items = navForRole(user.role, off, user.platform);
   const tabs = items.slice(0, TAB_COUNT);
   const rest = items.slice(TAB_COUNT);
   const moreActive = rest.some((i) => isActive(pathname, i.href));

@@ -1,6 +1,7 @@
 import { router } from "@/lib/trpc/init";
 import { analyticsRouter } from "@/lib/trpc/routers/analytics";
 import { authRouter } from "@/lib/trpc/routers/auth";
+import { billingRouter } from "@/lib/trpc/routers/billing";
 import { customersRouter } from "@/lib/trpc/routers/customers";
 import { dailySalesRouter } from "@/lib/trpc/routers/dailySales";
 import { expensesRouter } from "@/lib/trpc/routers/expenses";
@@ -14,6 +15,7 @@ import { storeRouter } from "@/lib/trpc/routers/store";
 export const appRouter = router({
   analytics: analyticsRouter,
   auth: authRouter,
+  billing: billingRouter,
   customers: customersRouter,
   dailySales: dailySalesRouter,
   expenses: expensesRouter,

@@ -8,6 +8,16 @@ import { formatDocNumber } from "@/lib/store/format";
 import { featureOn, type FeatureKey } from "@/lib/store/features";
 import { cached, storeTag } from "@/lib/store/cache";
 import { currentStoreId } from "@/lib/auth/dal";
+import { planLocks, planStatus } from "@/lib/store/plans";
+
+// Plan-locked features are forced off on top of the café's own switches, so
+// every featureOn()/nav/featureGate check downstream needs no plan awareness.
+// Applied AFTER the cache read: entitlement depends on the clock.
+export function withPlan<T extends Pick<Store, "plan" | "planExpiresAt" | "trialEndsAt" | "disabledFeatures">>(row: T): T {
+  const locks = planLocks(planStatus(row).plan);
+  if (!locks.length) return row;
+  return { ...row, disabledFeatures: [...new Set([...row.disabledFeatures, ...locks])] };
+}
 
 // One store row, UNCACHED — use where the counters must be exact (Store
 // settings edits nextOrderSeq/nextInvoiceSeq, which every sale bumps without
@@ -21,8 +31,8 @@ export async function loadStore(storeId: string): Promise<Store> {
 // Cached across requests (tag store:<id>), memoized per render. Writers call
 // bust(storeTag(id)). The seq counters in it may lag — claim numbers with
 // nextOrderNumber().
-export const getStoreById = cache((storeId: string) =>
-  cached(`store-row:${storeId}`, storeTag(storeId), () => loadStore(storeId))(),
+export const getStoreById = cache(async (storeId: string) =>
+  withPlan(await cached(`store-row:${storeId}`, storeTag(storeId), () => loadStore(storeId))()),
 );
 
 // The signed-in user's store: what every dashboard page, layout and feature

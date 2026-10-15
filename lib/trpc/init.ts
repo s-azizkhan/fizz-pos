@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSessionUser } from "@/lib/auth/dal";
 import { getStore } from "@/lib/store/data";
 import { featureOn, type FeatureKey } from "@/lib/store/features";
+import { isPlatformAdmin } from "@/lib/auth/platform";
 
 // cookies() reads the ambient request store, which fetchRequestHandler runs
 // inside — so no req/headers need threading through here.
@@ -61,6 +62,14 @@ export const editorProcedure = protectedProcedure.use(({ ctx, next }) => {
 export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Admins only." });
+  }
+  return next();
+});
+
+// Fizz operators only (PLATFORM_ADMIN_EMAILS): confirm payments, set plans.
+export const platformProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (!isPlatformAdmin(ctx.user.email)) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Fizz operators only." });
   }
   return next();
 });

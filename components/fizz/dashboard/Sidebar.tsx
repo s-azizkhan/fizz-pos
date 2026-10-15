@@ -18,7 +18,7 @@ const ROLE_LABEL: Record<UserRole, string> = {
 export default function Sidebar({
   user,
 }: {
-  user: { name: string; role: UserRole };
+  user: { name: string; role: UserRole; platform?: boolean };
 }) {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUi();
@@ -34,7 +34,7 @@ export default function Sidebar({
       onSuccess: ({ redirectTo }) => location.assign(redirectTo),
     }),
   );
-  const items = navForRole(user.role);
+  const items = navForRole(user.role, [], user.platform);
   const collapsed = sidebarCollapsed;
 
   // Desktop only — mobile navigates via the bottom tab bar (BottomNav).

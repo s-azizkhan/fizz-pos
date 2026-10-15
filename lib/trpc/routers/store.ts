@@ -6,6 +6,7 @@ import { onboardingForm, store, storeSettingsForm, ticketLayoutInput } from "@/l
 import { getStore } from "@/lib/store/data";
 import { bust, storeTag } from "@/lib/store/cache";
 import { router, adminProcedure, featureGate, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
+import { planLocks, planStatus } from "@/lib/store/plans";
 
 export const storeRouter = router({
   get: protectedProcedure.query(() => getStore()),
@@ -51,10 +52,14 @@ export const storeRouter = router({
           message: "Only admins can edit store settings.",
         });
       }
+      // Locked features show as off in the form; drop them so upgrading
+      // later switches them straight on instead of needing a second visit.
+      const locks = planLocks(planStatus(await getStore()).plan);
+      const disabledFeatures = input.disabledFeatures.filter((k) => !locks.includes(k));
       try {
         await db
           .update(store)
-          .set({ ...input, updatedAt: new Date() })
+          .set({ ...input, disabledFeatures, updatedAt: new Date() })
           .where(eq(store.id, ctx.user.storeId));
       } catch {
         throw new TRPCError({
