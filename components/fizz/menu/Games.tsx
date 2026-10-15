@@ -1,46 +1,34 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Confetti } from "./WelcomeCards";
+import { useEffect, useRef, useState, type ComponentType } from "react";
+import { best, boardStyle, Overlay, saveBest } from "./games/shared";
+import Snake from "./games/Snake";
+import TwentyFortyEight from "./games/TwentyFortyEight";
+import Flap from "./games/Flap";
 
-// Two pocket games for the wait, painted with the menu theme vars. No deps:
-// Bean Drop is a canvas loop, Latte Match is a DOM grid. Best scores live in
-// localStorage on the guest's phone.
+// Pocket games for the wait, painted with the menu theme vars. No deps. Best
+// scores live in localStorage on the guest's phone.
 
-const GAMES = [
-  { key: "beans", name: "Bean Drop", blurb: "Catch the beans. Miss three and the cup's cold." },
-  { key: "match", name: "Latte Match", blurb: "Flip the cards, find the pairs, beat the clock." },
-] as const;
-
-function best(key: string): number {
-  try {
-    return Number(localStorage.getItem(`fizz-game-${key}`) ?? 0) || 0;
-  } catch {
-    return 0;
-  }
-}
-function saveBest(key: string, v: number, lowerIsBetter = false) {
-  const b = best(key);
-  if (!b || (lowerIsBetter ? v < b : v > b)) {
-    try {
-      localStorage.setItem(`fizz-game-${key}`, String(v));
-    } catch {}
-    return true;
-  }
-  return false;
-}
+const GAMES: { key: string; name: string; blurb: string; Game: ComponentType<{ accent: string }> }[] = [
+  { key: "snake", name: "Snake", blurb: "Eat beans, grow, don't bite yourself.", Game: Snake },
+  { key: "2048", name: "2048", blurb: "Slide and merge. Get to 2048.", Game: TwentyFortyEight },
+  { key: "flap", name: "Steam Hop", blurb: "Tap to hop the bean through the steam.", Game: Flap },
+  { key: "beans", name: "Bean Drop", blurb: "Catch the beans. Miss three and the cup's cold.", Game: BeanDrop },
+  { key: "match", name: "Latte Match", blurb: "Flip the cards, find the pairs, beat the clock.", Game: LatteMatch },
+];
 
 export default function Games({ accent }: { accent: string }) {
-  const [game, setGame] = useState<(typeof GAMES)[number]["key"]>("beans");
+  const [game, setGame] = useState("snake");
+  const cur = GAMES.find((g) => g.key === game)!;
   return (
     <div className="mt-5 flex flex-col gap-4">
-      <div className="flex gap-2">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
         {GAMES.map((g) => (
           <button
             key={g.key}
             type="button"
             onClick={() => setGame(g.key)}
-            className="rounded-full border px-4 py-2 text-[13px] font-bold transition-transform active:scale-95"
+            className="shrink-0 rounded-full border px-4 py-2 text-[13px] font-bold transition-transform active:scale-95"
             style={
               game === g.key
                 ? { backgroundColor: accent, borderColor: accent, color: "var(--m-bg)" }
@@ -51,8 +39,8 @@ export default function Games({ accent }: { accent: string }) {
           </button>
         ))}
       </div>
-      <p className="text-[13px] text-[var(--m-muted)]">{GAMES.find((g) => g.key === game)!.blurb}</p>
-      {game === "beans" ? <BeanDrop key="beans" accent={accent} /> : <LatteMatch key="match" accent={accent} />}
+      <p className="text-[13px] text-[var(--m-muted)]">{cur.blurb}</p>
+      <cur.Game key={cur.key} accent={accent} />
     </div>
   );
 }
@@ -182,35 +170,23 @@ function BeanDrop({ accent }: { accent: string }) {
   }, [state, accent]);
 
   return (
-    <div
-      className="relative overflow-hidden border"
-      style={{ borderRadius: "var(--m-radius)", borderColor: "var(--m-line)", backgroundColor: "var(--m-surface)" }}
-    >
+    <div className="relative overflow-hidden border" style={boardStyle}>
       <canvas ref={canvasRef} className="block h-[420px] w-full touch-none" />
       {state !== "play" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--m-bg)]/70 p-6 text-center backdrop-blur-sm">
-          {burst > 0 && <Confetti key={burst} accent={accent} />}
-          {state === "over" && (
-            <>
-              <p className="text-[13px] uppercase tracking-[0.18em] text-[var(--m-muted)]">Cup&apos;s cold</p>
-              <p className="text-[44px] font-bold leading-none">{score}</p>
-            </>
-          )}
-          {bestScore > 0 && <p className="text-[13px] text-[var(--m-muted)]">Best on this phone: {bestScore}</p>}
-          <button
-            type="button"
-            onClick={() => {
-              setScore(0);
-              setBestScore(best("beans"));
-              setState("play");
-            }}
-            className="rounded-full px-6 py-3 text-[15px] font-bold transition-transform active:scale-95"
-            style={{ backgroundColor: accent, color: "var(--m-bg)" }}
-          >
-            {state === "over" ? "Again" : "Start"}
-          </button>
-          <p className="text-[12px] text-[var(--m-muted)]">Drag to move the cup.</p>
-        </div>
+        <Overlay
+          accent={accent}
+          burst={burst}
+          title={state === "over" ? "Cup's cold" : undefined}
+          big={state === "over" ? score : undefined}
+          bestLabel={bestScore > 0 ? `Best on this phone: ${bestScore}` : null}
+          cta={state === "over" ? "Again" : "Start"}
+          hint="Drag to move the cup."
+          onStart={() => {
+            setScore(0);
+            setBestScore(best("beans"));
+            setState("play");
+          }}
+        />
       )}
     </div>
   );
@@ -273,10 +249,7 @@ function LatteMatch({ accent }: { accent: string }) {
   };
 
   return (
-    <div
-      className="relative overflow-hidden border p-4"
-      style={{ borderRadius: "var(--m-radius)", borderColor: "var(--m-line)", backgroundColor: "var(--m-surface)" }}
-    >
+    <div className="relative overflow-hidden border p-4" style={boardStyle}>
       <div className="flex items-center justify-between text-[13px] text-[var(--m-muted)]">
         <span>Moves: <b className="text-[var(--m-text)]">{moves}</b></span>
         <span>{Math.floor(secs / 60)}:{String(secs % 60).padStart(2, "0")}</span>
@@ -316,23 +289,14 @@ function LatteMatch({ accent }: { accent: string }) {
         })}
       </div>
       {(!cards || won) && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--m-bg)]/70 p-6 text-center backdrop-blur-sm">
-          {burst > 0 && <Confetti key={burst} accent={accent} />}
-          {won && (
-            <>
-              <p className="text-[13px] uppercase tracking-[0.18em] text-[var(--m-muted)]">All paired</p>
-              <p className="text-[44px] font-bold leading-none">{moves} moves</p>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={start}
-            className="rounded-full px-6 py-3 text-[15px] font-bold transition-transform active:scale-95"
-            style={{ backgroundColor: accent, color: "var(--m-bg)" }}
-          >
-            {won ? "Again" : "Deal"}
-          </button>
-        </div>
+        <Overlay
+          accent={accent}
+          burst={burst}
+          title={won ? "All paired" : undefined}
+          big={won ? `${moves} moves` : undefined}
+          cta={won ? "Again" : "Deal"}
+          onStart={start}
+        />
       )}
     </div>
   );
