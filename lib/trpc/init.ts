@@ -68,7 +68,7 @@ export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 // Fizz operators only (PLATFORM_ADMIN_EMAILS): confirm payments, set plans.
 export const platformProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (!isPlatformAdmin(ctx.user.email)) {
+  if (!isPlatformAdmin(ctx.user)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "Fizz operators only." });
   }
   return next();

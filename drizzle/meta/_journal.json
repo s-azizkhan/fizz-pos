@@ -190,6 +190,13 @@
       "when": 1792096516684,
       "tag": "0026_billing_timestamptz",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1792096609170,
+      "tag": "0027_users_platform_admin",
+      "breakpoints": true
     }
   ]
 }

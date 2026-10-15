@@ -1,7 +1,7 @@
 // Plans + offline billing over HTTP against a running dev server. Signs up a
 // counter, walks trial → lapsed → requested → confirmed, and checks every
-// gate the plan controls. Confirmation runs as the seeded admin, who must be
-// in PLATFORM_ADMIN_EMAILS (npm run db:seed sets them up; .env lists them).
+// gate the plan controls. Confirmation runs as the seeded admin, whom
+// npm run db:seed marks is_platform_admin.
 //   npm run dev   # in another shell
 //   npx tsx --env-file=.env scripts/check-billing.mts
 import assert from "node:assert/strict";
@@ -85,7 +85,7 @@ const login = await call("auth.login", { email: process.env.ADMIN_EMAIL || "admi
 assert.ok(login.ok, "seeded admin signs in");
 const op = sessionFrom(login.res);
 const board = (await query("billing.stores", undefined, op));
-assert.ok(!board.error, `platform list: ${board.error?.message} (is ADMIN_EMAIL in PLATFORM_ADMIN_EMAILS?)`);
+assert.ok(!board.error, `platform list: ${board.error?.message} (run npm run db:seed to flag the admin as operator)`);
 assert.equal(board.data[0].request?.reference, r2.data.reference, "waiting request sorts first");
 
 const paid = await call("billing.confirm", { id: r2.data.id, note: "UPI 4123" }, op);

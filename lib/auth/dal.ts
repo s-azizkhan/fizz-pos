@@ -31,6 +31,7 @@ export const getSessionUser = cache(async () => {
       email: users.email,
       name: users.name,
       role: users.role,
+      isPlatformAdmin: users.isPlatformAdmin,
     })
     .from(users)
     .where(eq(users.id, session.userId))

@@ -18,7 +18,7 @@ export default async function DashboardLayout({
   if (user.role === "admin" && !store.onboardedAt) redirect("/onboarding");
   const on = (k: Parameters<typeof featureOn>[1]) => featureOn(store.disabledFeatures, k);
   return (
-    <DashboardShell user={{ name: user.name, role: user.role, platform: isPlatformAdmin(user.email) }} off={store.disabledFeatures}>
+    <DashboardShell user={{ name: user.name, role: user.role, platform: isPlatformAdmin(user) }} off={store.disabledFeatures}>
       {on("printers") && <TicketLayoutSync initial={store.ticketLayouts ?? {}} />}
       <PrinterKeepAlive on={on("printers")} />
       {on("publicMenu") && <WebOrderAlarm kot={on("kot")} />}

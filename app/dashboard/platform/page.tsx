@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Platform — Fizz" };
 // Fizz operators: every counter, who's waiting on a payment, flip plans.
 export default async function PlatformPage() {
   const user = await getCurrentUser();
-  if (!isPlatformAdmin(user.email)) redirect("/dashboard");
+  if (!isPlatformAdmin(user)) redirect("/dashboard");
   const stores = await (await trpc()).billing.stores();
 
   return (

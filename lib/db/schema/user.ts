@@ -1,4 +1,4 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { store } from "./store";
@@ -19,6 +19,11 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").notNull().default("staff"),
+  // Fizz operator: confirms payments, sets plans across every store. Never
+  // settable from the app — only the seeder (npm run db:seed) or SQL flips it.
+  // A DB flag, not an email allowlist: emails are unverified, so a list in env
+  // could be claimed by whoever registers that address first.
+  isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

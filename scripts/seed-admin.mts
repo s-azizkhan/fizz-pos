@@ -1,4 +1,6 @@
-// Seed/promote the admin user. Run: npm run db:seed
+// Seed/promote the admin user — the store's admin AND a Fizz operator
+// (is_platform_admin), who confirms offline payments on /dashboard/platform.
+// Run: npm run db:seed
 import { eq } from "drizzle-orm";
 import { db } from "../lib/db";
 import { store } from "../lib/db/schema/store";
@@ -25,8 +27,8 @@ await db.insert(store).values({ id: STORE_ID }).onConflictDoNothing();
 const passwordHash = await hashPassword(password);
 const [row] = await db
   .insert(users)
-  .values({ storeId: STORE_ID, email, name, passwordHash, role: "admin" })
-  .onConflictDoUpdate({ target: users.email, set: { passwordHash, role: "admin", name } })
+  .values({ storeId: STORE_ID, email, name, passwordHash, role: "admin", isPlatformAdmin: true })
+  .onConflictDoUpdate({ target: users.email, set: { passwordHash, role: "admin", name, isPlatformAdmin: true } })
   .returning();
 
 console.log(`admin ready: ${row.email} (${row.role})`);
