@@ -180,14 +180,11 @@ function ItemForm({
             <span className="text-steam"> · food cost {priceN > 0 ? ((costN / priceN) * 100).toFixed(0) : 0}%</span>
           </div>
         )}
-        <label className="flex flex-col gap-2 sm:col-span-2">
-          <span className={labelCls}>Diet</span>
-          <select value={diet} onChange={(e) => setDiet(e.target.value)} className={inputCls}>
-            <option value="">No tag</option>
-            <option value="veg">Veg</option>
-            <option value="nonveg">Non-Veg</option>
-          </select>
-        </label>
+        <div className="flex flex-col gap-2 sm:col-span-2">
+          <span className={labelCls}>Diet tag</span>
+          <DietPicker value={diet} onChange={setDiet} />
+          <span className="text-xs text-steam">Shows the green / red mark on the public menu and lets guests filter by it.</span>
+        </div>
         <label className="flex items-center gap-3 sm:col-span-2">
           <input type="checkbox" checked={available} onChange={(e) => setAvailable(e.target.checked)} className="h-5 w-5 accent-[#C6F432]" />
           <span className="text-sm text-cream">Available</span>
@@ -230,6 +227,7 @@ function ItemRow({
   const [recipeOpen, setRecipeOpen] = useState(false);
   const trpc = useTRPC();
   const toggle = useMutation(trpc.menu.toggleAvailable.mutationOptions());
+  const setDiet = useMutation(trpc.menu.setDiet.mutationOptions());
   // Failure toasts come from the global MutationCache handler.
   const del = useMutation(
     trpc.menu.deleteItem.mutationOptions({
@@ -258,6 +256,16 @@ function ItemRow({
         <div className="flex items-center gap-2">
           <button {...grip} className={`${gripCls} -my-1 -ml-1 p-1`}>
             <GripIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDiet.mutate({ id: item.id, diet: nextDiet(item.diet) })}
+            disabled={setDiet.isPending}
+            title={`Diet: ${dietLabel(item.diet)} — tap to change`}
+            aria-label={`Diet tag: ${dietLabel(item.diet)}. Tap to change.`}
+            className="shrink-0 rounded-sm p-0.5 hover:scale-110 disabled:opacity-60"
+          >
+            <DietDot diet={item.diet} />
           </button>
           <span className="min-w-0 break-words font-semibold text-cream">{item.name}</span>
           {!item.available && (
@@ -511,6 +519,53 @@ export default function MenuManager({
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+// ---- Diet tag ---------------------------------------------------------------
+// Indian packaged-food mark: dot in a square. Grey dashed = untagged.
+function DietDot({ diet, size = 14 }: { diet: string | null; size?: number }) {
+  const color = diet === "veg" ? "#2E7D32" : diet === "nonveg" ? "#B3261E" : null;
+  return (
+    <span
+      className={`inline-flex items-center justify-center rounded-[2px] border-[1.5px] align-middle ${color ? "" : "border-dashed border-ink-line"}`}
+      style={{ width: size, height: size, ...(color ? { borderColor: color, color } : {}) }}
+      aria-hidden
+    >
+      {color && <span className="rounded-full bg-current" style={{ width: size * 0.5, height: size * 0.5 }} />}
+    </span>
+  );
+}
+const dietLabel = (d: string | null) => (d === "veg" ? "Veg" : d === "nonveg" ? "Non-veg" : "No tag");
+const nextDiet = (d: string | null): "veg" | "nonveg" | null => (d === "veg" ? "nonveg" : d === "nonveg" ? null : "veg");
+
+function DietPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const opts: { v: string; label: string }[] = [
+    { v: "", label: "No tag" },
+    { v: "veg", label: "Veg" },
+    { v: "nonveg", label: "Non-veg" },
+  ];
+  return (
+    <div className="flex gap-2" role="radiogroup" aria-label="Diet tag">
+      {opts.map((o) => {
+        const on = value === o.v;
+        return (
+          <button
+            key={o.v}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(o.v)}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+              on ? "border-fizz bg-fizz/10 text-cream" : "border-ink-line text-steam hover:border-fizz hover:text-cream"
+            }`}
+          >
+            <DietDot diet={o.v || null} />
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

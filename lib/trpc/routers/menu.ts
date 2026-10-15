@@ -339,6 +339,22 @@ export const menuRouter = router({
       return { ok: true as const };
     }),
 
+  // Tag veg / non-veg / none from the row, no full editor.
+  setDiet: editorProcedure
+    .input(z.object({ id: z.uuid("Invalid item."), diet: z.enum(["veg", "nonveg"]).nullable() }))
+    .mutation(async ({ input }) => {
+      try {
+        await db
+          .update(menuItems)
+          .set({ diet: input.diet, updatedAt: new Date() })
+          .where(and(eq(menuItems.id, input.id), isNull(menuItems.deletedAt)));
+      } catch {
+        throw fizzled;
+      }
+      bump();
+      return { ok: true as const };
+    }),
+
   // Toggle availability without opening the full editor.
   toggleAvailable: editorProcedure
     .input(idInput("Invalid item."))
