@@ -26,8 +26,19 @@ export const welcomeCard = z.object({
 });
 export type WelcomeCard = z.infer<typeof welcomeCard>;
 
+// Page templates. Same cards, different composition.
+export const LAYOUTS = [
+  { key: "cover", name: "Cover", blurb: "Photo card up top, stacked cards." },
+  { key: "poster", name: "Poster", blurb: "Full-bleed photo, glass cards over it." },
+  { key: "minimal", name: "Minimal", blurb: "No photo. Big mark, quiet list." },
+  { key: "tiles", name: "Tiles", blurb: "Wide photo, two-column tiles." },
+] as const;
+export type LayoutKey = (typeof LAYOUTS)[number]["key"];
+export const LAYOUT_KEYS = LAYOUTS.map((l) => l.key) as [LayoutKey, ...LayoutKey[]];
+
 export const welcomeConfig = z.object({
   on: z.boolean().default(false),
+  layout: z.enum(LAYOUT_KEYS).default("cover"),
   coverUrl: z.union([url, z.literal("")]).optional(),
   // Optional Lottie played over the hero (on top of the cover or the cup art).
   heroLottie: z.union([url, z.literal("")]).optional(),
@@ -55,6 +66,7 @@ export function newCard(kind: CardKind, id = crypto.randomUUID().slice(0, 8)): W
 
 export const DEFAULT_WELCOME: WelcomeConfig = {
   on: false,
+  layout: "cover",
   cards: [newCard("menu", "m1"), newCard("review", "r1"), newCard("wifi", "w1")],
   socials: [],
 };

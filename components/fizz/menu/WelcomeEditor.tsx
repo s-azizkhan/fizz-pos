@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CARD_KINDS, CARD_PRESETS, newCard, type CardKind, type WelcomeCard, type WelcomeConfig } from "@/lib/store/welcome";
+import { CARD_KINDS, CARD_PRESETS, LAYOUTS, newCard, type CardKind, type WelcomeCard, type WelcomeConfig } from "@/lib/store/welcome";
 import { applyOrder, useDragSort } from "./useDragSort";
 import { CardIcon } from "./WelcomeCards";
 import { EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
@@ -68,6 +68,32 @@ export default function WelcomeEditor({
 
       {cfg.on && (
         <div className="flex flex-col gap-5 rounded-fizz border border-ink-line bg-ink-soft p-5">
+          <div className="flex flex-col gap-2">
+            <span className={labelCls}>Template</span>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {LAYOUTS.map((l) => {
+                const on = (cfg.layout ?? "cover") === l.key;
+                return (
+                  <button
+                    key={l.key}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => patch({ layout: l.key })}
+                    title={l.blurb}
+                    className={`overflow-hidden rounded-fizz border text-left transition-transform hover:scale-[1.03] ${on ? "border-fizz ring-2 ring-fizz/40" : "border-ink-line"}`}
+                  >
+                    <LayoutSketch layout={l.key} />
+                    <span className="flex items-center justify-between gap-2 bg-ink px-3 py-2">
+                      <span className="text-xs font-semibold text-cream">{l.name}</span>
+                      {on && <span className="text-xs font-bold text-fizz">●</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <span className="text-xs text-steam">{LAYOUTS.find((l) => l.key === (cfg.layout ?? "cover"))?.blurb}</span>
+          </div>
+
           <label className="flex flex-col gap-2">
             <span className={labelCls}>Cover image URL</span>
             <input
@@ -225,5 +251,50 @@ export default function WelcomeEditor({
         </div>
       )}
     </div>
+  );
+}
+
+// Tiny wireframe of each template, drawn in brand tokens.
+function LayoutSketch({ layout }: { layout: string }) {
+  const bar = (w: string) => <span className={`block h-1.5 rounded-full bg-ink-line ${w}`} />;
+  const card = (k: number, primary = false) => (
+    <span key={k} className={`block h-3 rounded-[3px] ${primary ? "bg-fizz/60" : "bg-ink-line"}`} />
+  );
+  return (
+    <span className="flex h-20 flex-col gap-1 bg-ink-soft p-2">
+      {layout === "cover" && (
+        <>
+          <span className="block h-7 rounded-[4px] bg-fizz/30" />
+          {card(1, true)}
+          {card(2)}
+          {card(3)}
+        </>
+      )}
+      {layout === "poster" && (
+        <span className="relative block h-full rounded-[4px] bg-fizz/30 p-1.5">
+          <span className="mx-auto mb-1 block h-3 w-3 rounded-full bg-cream/70" />
+          <span className="flex flex-col gap-1">{[card(1, true), card(2), card(3)].map((c, i) => <span key={i} className="opacity-70">{c}</span>)}</span>
+        </span>
+      )}
+      {layout === "minimal" && (
+        <>
+          <span className="mx-auto block h-5 w-5 rounded-full border-2 border-fizz" />
+          {bar("mx-auto w-10")}
+          {bar("w-full")}
+          {bar("w-full")}
+          {bar("w-full")}
+        </>
+      )}
+      {layout === "tiles" && (
+        <>
+          <span className="block h-5 rounded-[4px] bg-fizz/30" />
+          {card(1, true)}
+          <span className="grid grid-cols-2 gap-1">
+            <span className="block h-5 rounded-[3px] bg-ink-line" />
+            <span className="block h-5 rounded-[3px] bg-ink-line" />
+          </span>
+        </>
+      )}
+    </span>
   );
 }

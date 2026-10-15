@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import type { CardKind, WelcomeCard } from "@/lib/store/welcome";
+import type { CardKind, LayoutKey, WelcomeCard } from "@/lib/store/welcome";
+
+/** How a card is drawn: stacked card (cover), glass over a photo (poster),
+ *  hairline row (minimal), or a vertical tile (tiles). */
+export type CardVariant = LayoutKey;
 import Lottie from "./Lottie";
 
 // Card + icon primitives for the welcome screen. Client file because the
@@ -18,6 +22,7 @@ export function CardShell({
   subtitle,
   trailing,
   lottie,
+  variant = "cover",
 }: {
   href?: string;
   onClick?: () => void;
@@ -30,28 +35,48 @@ export function CardShell({
   trailing?: ReactNode;
   /** Lottie URL; replaces the line icon when set. */
   lottie?: string;
+  variant?: CardVariant;
 }) {
-  const cls = `wl-card ${primary ? "wl-primary" : ""} flex w-full items-center gap-4 border p-4 text-left`;
-  const style = {
-    borderRadius: "var(--m-radius)",
-    background: primary
-      ? `linear-gradient(135deg, ${accent}2E, ${accent}14)`
-      : "linear-gradient(180deg, color-mix(in oklab, var(--m-surface) 92%, white), var(--m-surface))",
-    borderColor: primary ? `${accent}66` : "var(--m-line)",
-  };
+  const tile = variant === "tiles";
+  const row = variant === "minimal";
+  const glass = variant === "poster";
+  const cls = [
+    "wl-card",
+    primary ? "wl-primary" : "",
+    "flex w-full text-left",
+    tile ? "flex-col items-start gap-2.5 border p-3.5" : row ? "items-center gap-3 border-b px-1 py-3.5" : "items-center gap-4 border p-4",
+    glass ? "text-white backdrop-blur-md" : "",
+  ].join(" ");
+  const style: React.CSSProperties = row
+    ? { borderColor: "var(--m-line)" }
+    : glass
+      ? {
+          borderRadius: "var(--m-radius)",
+          background: primary ? `linear-gradient(135deg, ${accent}66, ${accent}2E)` : "rgba(255,255,255,0.10)",
+          borderColor: primary ? `${accent}99` : "rgba(255,255,255,0.18)",
+        }
+      : {
+          borderRadius: "var(--m-radius)",
+          background: primary
+            ? `linear-gradient(135deg, ${accent}2E, ${accent}14)`
+            : "linear-gradient(180deg, color-mix(in oklab, var(--m-surface) 92%, white), var(--m-surface))",
+          borderColor: primary ? `${accent}66` : "var(--m-line)",
+        };
+  const iconBox = row ? "h-10 w-10" : tile ? "h-11 w-11" : "h-[52px] w-[52px]";
+  const muted = glass ? "text-white/70" : "text-[var(--m-muted)]";
   const inner = (
     <>
       <span
-        className="wl-tile flex h-14 w-14 shrink-0 items-center justify-center"
-        style={{ borderRadius: "calc(var(--m-radius) - 4px)", backgroundColor: `${accent}26`, color: accent }}
+        className={`wl-tile flex ${iconBox} shrink-0 items-center justify-center`}
+        style={{ borderRadius: row ? "9999px" : "calc(var(--m-radius) - 4px)", backgroundColor: glass ? "rgba(255,255,255,0.14)" : `${accent}26`, color: glass && !primary ? "#fff" : accent }}
       >
-        {lottie ? <Lottie src={lottie} className="h-12 w-12" fallback={icon} /> : icon}
+        {lottie ? <Lottie src={lottie} className={tile ? "h-10 w-10" : "h-12 w-12"} fallback={icon} /> : icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[17px] font-bold leading-tight tracking-[-0.01em]">{title}</span>
-        {subtitle && <span className="mt-1 block truncate text-[13px] leading-none text-[var(--m-muted)]">{subtitle}</span>}
+        <span className={`block truncate font-bold leading-tight tracking-[-0.01em] ${row || tile ? "text-[16px]" : "text-[17px]"}`}>{title}</span>
+        {subtitle && <span className={`mt-1 block truncate text-[13px] leading-none ${muted}`}>{subtitle}</span>}
       </span>
-      <span className="wl-chev shrink-0 text-[var(--m-muted)]">{trailing ?? <Chevron />}</span>
+      {!tile && <span className={`wl-chev shrink-0 ${muted}`}>{trailing ?? <Chevron />}</span>}
     </>
   );
   if (onClick) {
@@ -69,7 +94,20 @@ export function CardShell({
 }
 
 // Tap to reveal the network + password; copy with one more tap.
-export function WifiCard({ card, accent, index }: { card: WelcomeCard; accent: string; index: number }) {
+export function WifiCard({
+  card,
+  accent,
+  index,
+  variant = "cover",
+  span,
+}: {
+  card: WelcomeCard;
+  accent: string;
+  index: number;
+  variant?: CardVariant;
+  /** Tiles layout: this card takes the full row. */
+  span?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   // One burst per copy; pieces clean themselves up after the animation.
@@ -83,10 +121,11 @@ export function WifiCard({ card, accent, index }: { card: WelcomeCard; accent: s
     } catch {}
   };
   return (
-    <li className="wl-in" style={{ "--i": index } as React.CSSProperties}>
+    <li className={`wl-in ${span ? "col-span-2" : ""}`} style={{ "--i": index } as React.CSSProperties}>
       <CardShell
         onClick={() => setOpen((v) => !v)}
         accent={accent}
+        variant={variant}
         icon={<CardIcon kind="wifi" />}
         lottie={card.lottie || undefined}
         title={card.title}
@@ -95,8 +134,12 @@ export function WifiCard({ card, accent, index }: { card: WelcomeCard; accent: s
       />
       {open && (
         <div
-          className="wl-in mt-2 flex items-center justify-between gap-3 border px-4 py-3"
-          style={{ borderRadius: "var(--m-radius)", borderColor: "var(--m-line)", backgroundColor: "var(--m-surface)" }}
+          className={`wl-in mt-2 flex items-center justify-between gap-3 border px-4 py-3 ${variant === "poster" ? "text-white backdrop-blur-md" : ""}`}
+          style={
+            variant === "poster"
+              ? { borderRadius: "var(--m-radius)", borderColor: "rgba(255,255,255,0.18)", backgroundColor: "rgba(255,255,255,0.10)" }
+              : { borderRadius: "var(--m-radius)", borderColor: "var(--m-line)", backgroundColor: "var(--m-surface)" }
+          }
         >
           <span className="min-w-0">
             <span className="block text-[11px] uppercase tracking-[0.18em] text-[var(--m-muted)]">Password</span>
