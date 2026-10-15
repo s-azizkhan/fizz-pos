@@ -1,0 +1,201 @@
+"use client";
+
+import { useState } from "react";
+import { CARD_KINDS, CARD_PRESETS, DEFAULT_WELCOME, newCard, type CardKind, type WelcomeCard, type WelcomeConfig } from "@/lib/store/welcome";
+import { applyOrder, useDragSort } from "./useDragSort";
+import { CardIcon } from "./WelcomeCards";
+import { EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
+
+const inputCls =
+  "w-full rounded-fizz border border-ink-line bg-ink px-3 py-2 text-sm text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
+const labelCls = "text-xs font-semibold uppercase tracking-[0.18em] text-fizz";
+
+// Admin editor for the welcome screen. Holds the config in state and ships it
+// as one hidden JSON field (`menuWelcome`) with the rest of the modal's form.
+// Hints under each card say what the public page needs to show it.
+export default function WelcomeEditor({
+  initial,
+  hasPhone,
+  hasWhatsapp,
+}: {
+  initial: WelcomeConfig | null;
+  hasPhone: boolean;
+  hasWhatsapp: boolean;
+}) {
+  const [cfg, setCfg] = useState<WelcomeConfig>(initial ?? DEFAULT_WELCOME);
+  const [socials, setSocials] = useState(cfg.socials.join("\n"));
+  const patch = (p: Partial<WelcomeConfig>) => setCfg((c) => ({ ...c, ...p }));
+  const patchCard = (id: string, p: Partial<WelcomeCard>) =>
+    patch({ cards: cfg.cards.map((c) => (c.id === id ? { ...c, ...p } : c)) });
+  const sort = useDragSort("welcome-cards", cfg.cards.map((c) => c.id), (ids) =>
+    patch({ cards: applyOrder(cfg.cards, ids) }),
+  );
+  const shown = applyOrder(cfg.cards, sort.order);
+  const out: WelcomeConfig = {
+    ...cfg,
+    socials: socials.split(/\s+/).map((s) => s.trim()).filter(Boolean),
+  };
+
+  const badLink = (u: string | undefined) => !!u && !/^https?:\/\/\S+$/.test(u);
+  const needs = (c: WelcomeCard): string | null => {
+    if ((c.kind === "review" || c.kind === "link") && badLink(c.href)) return "Link must start with https://";
+    if (c.kind === "call" && !hasPhone) return "Add a phone number in Store settings to show this.";
+    if (c.kind === "whatsapp" && !hasWhatsapp) return "Add a WhatsApp number below to show this.";
+    if (c.kind === "wifi" && !c.ssid) return "Needs a network name to show.";
+    if ((c.kind === "review" || c.kind === "link") && !c.href) return "Needs a link to show.";
+    return null;
+  };
+
+  return (
+    <div className="flex flex-col gap-5 sm:col-span-2">
+      <input type="hidden" name="menuWelcome" value={JSON.stringify(out)} />
+      <label className="flex items-center gap-3">
+        <input
+          type="checkbox"
+          checked={cfg.on}
+          onChange={(e) => patch({ on: e.target.checked })}
+          className="h-5 w-5 accent-[#C6F432]"
+        />
+        <span className="text-sm text-cream">
+          Welcome screen before the menu
+          <span className="block text-xs text-steam">
+            Cover, your name, a table badge and tappable cards. Menu stays at /menu.
+          </span>
+        </span>
+      </label>
+
+      {cfg.on && (
+        <div className="flex flex-col gap-5 rounded-fizz border border-ink-line bg-ink-soft p-5">
+          <label className="flex flex-col gap-2">
+            <span className={labelCls}>Cover image URL</span>
+            <input
+              value={cfg.coverUrl ?? ""}
+              onChange={(e) => patch({ coverUrl: e.target.value })}
+              placeholder="https://… (your storefront, the oven, the bar)"
+              className={inputCls}
+            />
+            <span className="text-xs text-steam">Landscape works best. Blank = a wash of your accent color.</span>
+          </label>
+
+          <div className="flex flex-col gap-2">
+            <span className={labelCls}>Cards</span>
+            <p className="text-xs text-steam">Drag to reorder. The first card is the highlighted one.</p>
+            <div className="flex flex-col gap-2">
+              {shown.map((c) => {
+                const why = needs(c);
+                return (
+                  <div
+                    key={c.id}
+                    data-sort="welcome-cards"
+                    data-id={c.id}
+                    className={`rounded-fizz border border-ink-line bg-ink p-3 ${sort.dragId === c.id ? "opacity-70 ring-2 ring-fizz/40" : ""} ${c.on ? "" : "opacity-60"}`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <button {...sort.handle(c.id)} className="shrink-0 cursor-grab touch-none rounded p-1 text-steam hover:text-fizz">
+                        <GripIcon className="h-4 w-4" />
+                      </button>
+                      <span className="shrink-0 text-fizz [&>svg]:h-5 [&>svg]:w-5">
+                        <CardIcon kind={c.kind} />
+                      </span>
+                      <span className="w-20 shrink-0 text-xs font-semibold uppercase tracking-[0.12em] text-steam">
+                        {CARD_PRESETS[c.kind].label}
+                      </span>
+                      <div className="ml-auto flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => patchCard(c.id, { on: !c.on })}
+                          aria-label={c.on ? "Hide card" : "Show card"}
+                          className="rounded p-1 text-steam hover:text-fizz"
+                        >
+                          {c.on ? <EyeIcon className="h-4 w-4" /> : <EyeOffIcon className="h-4 w-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => patch({ cards: cfg.cards.filter((x) => x.id !== c.id) })}
+                          aria-label="Remove card"
+                          className="rounded p-1 text-steam hover:text-[#E2655A]"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <input
+                        value={c.title}
+                        onChange={(e) => patchCard(c.id, { title: e.target.value.slice(0, 40) })}
+                        placeholder="Title"
+                        className={inputCls}
+                      />
+                      <input
+                        value={c.subtitle}
+                        onChange={(e) => patchCard(c.id, { subtitle: e.target.value.slice(0, 60) })}
+                        placeholder="Subtitle"
+                        className={inputCls}
+                      />
+                      {(c.kind === "review" || c.kind === "link") && (
+                        <input
+                          value={c.href ?? ""}
+                          onChange={(e) => patchCard(c.id, { href: e.target.value })}
+                          placeholder={c.kind === "review" ? "https://g.page/r/…/review" : "https://…"}
+                          inputMode="url"
+                          className={`${inputCls} sm:col-span-2`}
+                        />
+                      )}
+                      {c.kind === "wifi" && (
+                        <>
+                          <input
+                            value={c.ssid ?? ""}
+                            onChange={(e) => patchCard(c.id, { ssid: e.target.value.slice(0, 60) })}
+                            placeholder="Network name"
+                            className={inputCls}
+                          />
+                          <input
+                            value={c.password ?? ""}
+                            onChange={(e) => patchCard(c.id, { password: e.target.value.slice(0, 80) })}
+                            placeholder="Password"
+                            className={inputCls}
+                          />
+                        </>
+                      )}
+                    </div>
+                    {why && <p className={`mt-2 text-xs ${why.startsWith("Link must") ? "text-[#E2655A]" : "text-steam"}`}>{why}</p>}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-2">
+              {CARD_KINDS.map((k: CardKind) => (
+                <button
+                  key={k}
+                  type="button"
+                  disabled={cfg.cards.length >= 12}
+                  onClick={() => patch({ cards: [...cfg.cards, newCard(k)] })}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-ink-line px-3 py-1.5 text-xs font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz disabled:opacity-50"
+                >
+                  <PlusIcon className="h-3 w-3" />
+                  {CARD_PRESETS[k].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex flex-col gap-2">
+            <span className={labelCls}>Social links</span>
+            <textarea
+              value={socials}
+              onChange={(e) => setSocials(e.target.value)}
+              rows={3}
+              placeholder={"https://instagram.com/yourcafe\nhttps://facebook.com/yourcafe\nhttps://tiktok.com/@yourcafe"}
+              className={inputCls}
+            />
+            <span className={`text-xs ${out.socials.some(badLink) ? "text-[#E2655A]" : "text-steam"}`}>
+              {out.socials.some(badLink)
+                ? "Every link must start with https://"
+                : "One per line. Icons pick themselves from the link (Instagram, Facebook, TikTok, X, YouTube, Google Maps)."}
+            </span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}

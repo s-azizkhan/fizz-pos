@@ -250,6 +250,7 @@ export function FloatingCart({
   deliveryFee,
   packagingFee,
   upi,
+  table = null,
 }: {
   slug: string;
   storeName: string;
@@ -262,10 +263,13 @@ export function FloatingCart({
   packagingFee: number;
   /** Café's UPI payee, when set — enables pay-by-QR on the status sheet. */
   upi: { vpa: string; name: string | null } | null;
+  /** Table number from a table QR (?t=5). Rides along in the note. */
+  table?: string | null;
 }) {
   const { lines, open, setOpen, clear, placed, setPlaced } = useCart();
   const [statusOpen, setStatusOpen] = useState(false);
-  const [mode, setMode] = useState<string>(modes[0]);
+  // A guest scanning a table QR is sitting at it: start on Dine-in.
+  const [mode, setMode] = useState<string>(table && modes.includes("Dine-in") ? "Dine-in" : modes[0]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   // Saved on this device: show a summary instead of the inputs until "Change".
@@ -364,7 +368,7 @@ export function FloatingCart({
       mode,
       name,
       phone,
-      note,
+      note: [table && `Table ${table}`, note.trim()].filter(Boolean).join(". ").slice(0, 300),
       address: isDelivery ? address : "",
       currency,
     };
@@ -378,7 +382,7 @@ export function FloatingCart({
         name,
         phone,
         address: details.address,
-        note,
+        note: details.note,
         items: lines.map((l) => ({ menuItemId: l.itemId, variantId: l.variantId, quantity: l.qty })),
       });
       text = orderMessage({

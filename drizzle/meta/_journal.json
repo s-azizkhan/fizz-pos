@@ -120,6 +120,13 @@
       "when": 1791814509940,
       "tag": "0016_quick_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792074107091,
+      "tag": "0017_fast_shard",
+      "breakpoints": true
     }
   ]
 }

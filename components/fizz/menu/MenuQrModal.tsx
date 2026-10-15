@@ -287,7 +287,7 @@ function contrast(a: string, b: string): number {
 
 export default function MenuQrModal({
   storeName,
-  url,
+  url: baseUrl,
   published,
   slug,
   isOpen,
@@ -303,6 +303,9 @@ export default function MenuQrModal({
   const [saved] = useState(loadPrefs);
   const [frameKey, setFrameKey] = useState<string>(saved.frameKey ?? FRAMES[0].key);
   const [headline, setHeadline] = useState<string>(saved.headline ?? "Scan for our menu");
+  // Per-table QR: the welcome screen shows "Table N" and orders carry it.
+  const [table, setTable] = useState("");
+  const url = table.trim() ? `${baseUrl}?t=${encodeURIComponent(table.trim())}` : baseUrl;
   // null = show the menu link; any string = the café's own footer line.
   const [footer, setFooter] = useState<string | null>(saved.footer ?? null);
   const [busy, setBusy] = useState(false);
@@ -364,7 +367,7 @@ export default function MenuQrModal({
       });
       const a = document.createElement("a");
       a.href = png;
-      a.download = `${slug || "menu"}-qr-${frame.key}.png`;
+      a.download = `${slug || "menu"}${table.trim() ? `-table-${table.trim()}` : ""}-qr-${frame.key}.png`;
       a.click();
     } finally {
       setBusy(false);
@@ -508,6 +511,15 @@ export default function MenuQrModal({
                 QR color is too faint against its tile — phones will struggle to scan it.
               </p>
             )}
+
+            <ControlSection label="Table number (optional)">
+              <input
+                value={table}
+                onChange={(e) => setTable(e.target.value.slice(0, 12))}
+                placeholder="5 — one QR per table"
+                className="w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
+              />
+            </ControlSection>
 
             <ControlSection label="Headline">
               <input

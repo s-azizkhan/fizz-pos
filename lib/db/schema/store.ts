@@ -6,6 +6,7 @@ import { MENU_THEME_KEYS } from "@/lib/store/menu-themes";
 import { ORDER_PARTS, TEXT_SIZES, type Block } from "@/lib/print/templates";
 import { MENU_FONT_SCALES } from "./constants";
 import { FEATURE_KEYS } from "@/lib/store/features";
+import { welcomeConfig, type WelcomeConfig } from "@/lib/store/welcome";
 
 // Single café = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -67,6 +68,9 @@ export const store = pgTable("store", {
   menuAccent: text("menu_accent").notNull().default("#C6F432"),
   // Preset look for the public menu. Keys live in lib/store/menu-themes.ts.
   menuTheme: text("menu_theme").notNull().default("midnight"),
+  // Welcome screen shown before the menu (cover, cards, socials). null = the
+  // defaults in lib/store/welcome.ts, with the screen off.
+  menuWelcome: jsonb("menu_welcome").$type<WelcomeConfig>(),
   // Ordering config (cart, WhatsApp, delivery) lives in `order_settings`.
   // Feature keys the café switched off (lib/store/features.ts). Stored as the
   // OFF list so a new feature ships on. Check with featureOn().
@@ -186,6 +190,26 @@ export const menuAppearanceShape = {
     .string()
     .trim()
     .regex(/^#[0-9a-fA-F]{6}$/, "Use a hex color like #C6F432"),
+  // Welcome screen config arrives as a JSON string from the client form.
+  menuWelcome: z.string().transform((s, ctx) => {
+    let raw: unknown = null;
+    try {
+      raw = JSON.parse(s);
+    } catch {}
+    const r = welcomeConfig.safeParse(raw);
+    if (r.success) return r.data;
+    // Name the card so the admin knows which link to fix.
+    const issue = r.error.issues[0];
+    const cards = (raw as { cards?: { title?: string }[] } | null)?.cards;
+    const where =
+      issue?.path[0] === "cards" && typeof issue.path[1] === "number"
+        ? `Card "${cards?.[issue.path[1]]?.title || issue.path[1] + 1}": `
+        : issue?.path[0] === "socials"
+          ? "Social links: "
+          : "Welcome screen: ";
+    ctx.addIssue({ code: "custom", message: where + (issue?.message ?? "settings are invalid") });
+    return z.NEVER;
+  }),
 };
 
 export const menuAppearanceForm = z.object(menuAppearanceShape);

@@ -10,6 +10,7 @@ import { MENU_THEMES } from "@/lib/store/menu-themes";
 import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { OrderSettings, Store } from "@/lib/db/schema";
 import NumberInput from "@/components/fizz/ui/NumberInput";
+import WelcomeEditor from "@/components/fizz/menu/WelcomeEditor";
 import { CheckIcon, CloseIcon, ExternalIcon } from "@/components/fizz/dashboard/icons";
 
 
@@ -49,6 +50,7 @@ export default function PublicMenuModal({
   const [theme, setTheme] = useState(store.menuTheme);
   const [ordering, setOrdering] = useState(settings.ordering);
   const [delivery, setDelivery] = useState(settings.delivery);
+  const [whatsapp, setWhatsapp] = useState(settings.whatsapp ?? "");
 
   const url = `${origin}/m/${slug}`;
 
@@ -174,6 +176,12 @@ export default function PublicMenuModal({
               <span className="text-sm text-cream">Publish menu (make it public)</span>
             </label>
 
+            <WelcomeEditor
+              initial={store.menuWelcome}
+              hasPhone={!!store.phone}
+              hasWhatsapp={whatsapp.replace(/\D/g, "").length >= 8}
+            />
+
             <label className="flex items-center gap-3 sm:col-span-2">
               <input type="checkbox" name="ordering" value="true" checked={ordering} onChange={(e) => setOrdering(e.target.checked)} className="h-5 w-5 accent-[#C6F432]" />
               <span className="text-sm text-cream">
@@ -190,7 +198,8 @@ export default function PublicMenuModal({
                   <span className={labelCls}>WhatsApp number</span>
                   <input
                     name="whatsapp"
-                    defaultValue={settings.whatsapp ?? ""}
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
                     placeholder="919876543210 (country code, no +)"
                     inputMode="tel"
                     className={inputCls}

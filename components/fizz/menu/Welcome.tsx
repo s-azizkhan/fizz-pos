@@ -1,0 +1,153 @@
+import type { PublicMenu } from "@/lib/store/menu";
+import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
+import { DEFAULT_WELCOME, type WelcomeCard } from "@/lib/store/welcome";
+import { WifiCard, CardShell, CardIcon, SocialIcon } from "./WelcomeCards";
+
+// The welcome screen at /m/[slug]: cover, name, table badge, a stack of cards
+// (menu, review, Wi-Fi, call, WhatsApp, custom), socials. Server-rendered;
+// only the Wi-Fi reveal needs JS. Painted with the same theme vars as the menu.
+export default function Welcome({
+  slug,
+  menu,
+  table,
+  viewOnly,
+}: {
+  slug: string;
+  menu: PublicMenu;
+  table: string | null;
+  viewOnly?: string;
+}) {
+  const { store, ordering: cfg } = menu;
+  const w = store.menuWelcome ?? DEFAULT_WELCOME;
+  const theme = getMenuTheme(store.menuTheme);
+  const accent = store.menuAccent || theme.accent;
+  const qs = new URLSearchParams();
+  if (table) qs.set("t", table);
+  if (viewOnly) qs.set("viewOnly", viewOnly);
+  const menuHref = `/m/${slug}/menu${qs.size ? `?${qs}` : ""}`;
+
+  // Where each card goes. null = nothing to point at (no phone saved…): skip it.
+  const hrefFor = (c: WelcomeCard): string | null => {
+    switch (c.kind) {
+      case "menu":
+        return menuHref;
+      case "call":
+        return store.phone ? `tel:${store.phone.replace(/[^\d+]/g, "")}` : null;
+      case "whatsapp":
+        return cfg?.whatsapp
+          ? `https://wa.me/${cfg.whatsapp}?text=${encodeURIComponent(`Hi ${store.name}!${table ? ` Table ${table}.` : ""}`)}`
+          : null;
+      case "wifi":
+        return c.ssid ? "#" : null;
+      default:
+        return c.href ?? null;
+    }
+  };
+  const cards = w.cards.filter((c) => c.on).map((c) => [c, hrefFor(c)] as const).filter(([, h]) => h);
+
+  return (
+    <main
+      className="min-h-dvh bg-[var(--m-bg)] text-[var(--m-text)]"
+      style={themeVars(theme, accent)}
+    >
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-8 pt-4 sm:pt-8">
+        {/* Hero card: cover image (or a quiet accent wash), logo, name, tagline, table. */}
+        <section
+          className="relative overflow-hidden"
+          style={{ borderRadius: `calc(var(--m-radius) + 6px)`, backgroundColor: "var(--m-surface)" }}
+        >
+          <div className="relative aspect-[4/3] w-full">
+            {w.coverUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={w.coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <div
+                className="absolute inset-0"
+                style={{ background: `radial-gradient(120% 90% at 80% 10%, ${accent}55, transparent 60%), var(--m-surface)` }}
+              />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-5">
+              <div
+                className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-[var(--m-bg)] text-2xl font-bold"
+                style={{ borderColor: accent, fontFamily: theme.display }}
+              >
+                {store.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src="/api/logo" alt={store.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span style={{ color: accent }}>{store.name.trim().charAt(0).toUpperCase()}</span>
+                )}
+              </div>
+              <div className="min-w-0 text-white">
+                <h1 className="truncate text-[26px] font-bold leading-tight tracking-tight" style={{ fontFamily: theme.display }}>
+                  {store.name}
+                </h1>
+                {store.menuTagline && <p className="mt-0.5 truncate text-[15px] italic text-white/80">{store.menuTagline}</p>}
+                {table && (
+                  <span
+                    className="mt-2 inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--m-bg)]"
+                    style={{ backgroundColor: accent }}
+                  >
+                    Table {table}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Cards. First one is the headline action (accent-tinted). */}
+        <ul className="mt-4 flex flex-col gap-3">
+          {cards.map(([c, href], i) =>
+            c.kind === "wifi" ? (
+              <WifiCard key={c.id} card={c} accent={accent} />
+            ) : (
+              <li key={c.id}>
+                <CardShell
+                  href={href!}
+                  primary={i === 0}
+                  accent={accent}
+                  external={c.kind === "review" || c.kind === "link" || c.kind === "whatsapp"}
+                  icon={<CardIcon kind={c.kind} />}
+                  title={c.title}
+                  subtitle={c.subtitle}
+                />
+              </li>
+            ),
+          )}
+          {cards.length === 0 && (
+            <li>
+              <CardShell href={menuHref} primary accent={accent} icon={<CardIcon kind="menu" />} title="View Menu" subtitle="See what's pouring" />
+            </li>
+          )}
+        </ul>
+
+        {w.socials.length > 0 && (
+          <div className="mt-8 flex justify-center gap-3">
+            {w.socials.map((u) => (
+              <a
+                key={u}
+                href={u}
+                target="_blank"
+                rel="noreferrer"
+                className="flex h-12 w-12 items-center justify-center rounded-full border transition-transform hover:scale-105"
+                style={{ borderColor: "var(--m-line)", color: "var(--m-text)" }}
+              >
+                <SocialIcon url={u} />
+              </a>
+            ))}
+          </div>
+        )}
+
+        <footer className="mt-auto pt-10 text-center text-[11px] uppercase tracking-[0.2em] text-[var(--m-muted)]">
+          {store.name} · Powered by{" "}
+          <span className="font-wordmark font-bold normal-case tracking-normal text-[var(--m-text)]">
+            Fi<span style={{ color: accent }}>zz</span>
+            <span className="align-super text-[0.7em]" style={{ color: accent }}>●</span>
+          </span>
+        </footer>
+      </div>
+    </main>
+  );
+}
