@@ -6,6 +6,8 @@ import LeakCalc from "@/components/fizz/landing/LeakCalc";
 import Remedy from "@/components/fizz/landing/Remedy";
 import Loop from "@/components/fizz/landing/Loop";
 import Switches from "@/components/fizz/landing/Switches";
+import MenuShowcase from "@/components/fizz/landing/MenuShowcase";
+import MobileCtaBar from "@/components/fizz/landing/MobileCtaBar";
 import WhyFizz from "@/components/fizz/WhyFizz";
 import Compare from "@/components/fizz/landing/Compare";
 import Fit from "@/components/fizz/landing/Fit";
@@ -25,6 +27,7 @@ export default function Home() {
         <Remedy />
         <Loop />
         <Switches />
+        <MenuShowcase />
         <WhyFizz />
         <Compare />
         <Fit />
@@ -32,6 +35,7 @@ export default function Home() {
         <Cta />
       </main>
       <Footer />
+      <MobileCtaBar />
     </>
   );
 }

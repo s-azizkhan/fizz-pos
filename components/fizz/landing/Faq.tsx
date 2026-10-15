@@ -28,6 +28,18 @@ const QA = [
     a: "It's optional. Without it Fizz is still a fast POS. With it — about an hour for a typical 30-item menu, done with you on a WhatsApp call — the numbers become real: stock, margin, reorder alerts.",
   },
   {
+    q: "Hindi mein baat kar sakte hain?",
+    a: "Haan. Setup call, support, sab kuch Hindi ya English mein — jo aapko aasan lage. WhatsApp pe message karo, founder khud jawab dega.",
+  },
+  {
+    q: "Which UPI apps work?",
+    a: "All of them. Fizz shows a standard UPI QR with the exact bill amount; the customer scans with GPay, PhonePe, Paytm, BHIM — anything. Money lands in your own bank account, no middleman, no cut.",
+  },
+  {
+    q: "What if the internet drops?",
+    a: "Fizz is light — it runs fine on a 4G hotspot or a ₹8,000 Android. The app's screens are cached on your phone so it opens instantly. Billing itself needs a connection, same as UPI does.",
+  },
+  {
     q: "Is GST handled?",
     a: "Yes. Set your rate once; every bill shows it. Day-end and monthly totals come out ready for your CA.",
   },

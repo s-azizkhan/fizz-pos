@@ -5,6 +5,7 @@ const COLS = [
       { label: "The problem", href: "#problem" },
       { label: "One live loop", href: "#how" },
       { label: "Switches", href: "#switches" },
+      { label: "QR menu", href: "#menu" },
       { label: "Why Fizz", href: "#why" },
     ],
   },

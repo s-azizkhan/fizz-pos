@@ -11,7 +11,7 @@ const fmt = (n: number) =>
   "₹" + Math.round(n).toLocaleString("en-IN");
 
 export default function LeakCalc() {
-  const [daily, setDaily] = useState(25000);
+  const [daily, setDaily] = useState(15000);
   const monthly = daily * 30;
   const lo = monthly * LOW;
   const hi = monthly * HIGH;
@@ -41,15 +41,15 @@ export default function LeakCalc() {
             </span>
             <input
               type="range"
-              min={5000}
+              min={3000}
               max={150000}
-              step={1000}
+              step={500}
               value={daily}
               onChange={(e) => setDaily(Number(e.target.value))}
               className="mt-3 w-full accent-fizz"
             />
             <span className="mt-1 flex justify-between text-xs text-steam">
-              <span>₹5k</span>
+              <span>₹3k</span>
               <span>₹1.5L</span>
             </span>
           </label>

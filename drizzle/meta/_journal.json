@@ -141,6 +141,13 @@
       "when": 1792080055128,
       "tag": "0019_handy_terrax",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792093193215,
+      "tag": "0020_waitlist_phone_first",
+      "breakpoints": true
     }
   ]
 }

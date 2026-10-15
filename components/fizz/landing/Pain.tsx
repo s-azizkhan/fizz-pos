@@ -13,13 +13,13 @@ const LEAKS = [
     n: "3–5% of sales",
   },
   {
-    k: "Friday 9pm stock-out",
-    v: "Buns finish. Chicken finishes. Milk finishes. The rush is still at the counter. Every “sorry, out of stock” is a customer who tries the place next door.",
+    k: "Saturday 9pm stock-out",
+    v: "Buns finish. Chicken finishes. Milk finishes. The weekend rush — or Diwali week — is still at the counter. Every “sorry, khatam ho gaya” is a customer who tries the place next door.",
     n: "Your best hour, lost",
   },
   {
     k: "Khata vs. cash",
-    v: "Register says ₹42,000. Cash + UPI says ₹39,600. Who do you ask? You don't — you just absorb it.",
+    v: "Register says ₹42,000. Cash + UPI says ₹39,600. Plus ₹3,000 of udhaar nobody wrote down. Who do you ask? You don't — you just absorb it.",
     n: "Unexplained gap, every week",
   },
   {

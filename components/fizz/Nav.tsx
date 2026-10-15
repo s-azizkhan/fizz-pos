@@ -7,6 +7,7 @@ const LINKS = [
   { href: "#problem", label: "The leak" },
   { href: "#calc", label: "Your number" },
   { href: "#switches", label: "Switches" },
+  { href: "#menu", label: "QR menu" },
   { href: "#why", label: "What you get" },
   { href: "#compare", label: "Compare" },
   { href: "#faq", label: "FAQ" },

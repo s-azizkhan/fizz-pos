@@ -4,10 +4,11 @@ import ProductMock from "./landing/ProductMock";
 import WhatsAppButton from "./landing/WhatsAppButton";
 
 const PILLS = [
-  "UPI QR at the counter",
+  "GPay · PhonePe · Paytm — any UPI QR",
   "GST on every bill",
   "Switch features on or off",
-  "Runs on any phone or tablet",
+  "Runs on a ₹8,000 Android",
+  "Hindi / English support on WhatsApp",
   "Made in India",
 ];
 
@@ -33,11 +34,12 @@ export default function Hero() {
           </h1>
 
           <p className="mt-5 max-w-[54ch] text-lg text-steam">
-            Pizza, burgers, chai, momos, ice cream, sandwiches — if you sell
-            over a counter, Fizz bills it in 3 taps, counts every gram and
-            every rupee, and shows what you{" "}
-            <span className="text-cream">actually</span> made today. Switch on
-            only the parts you need.
+            Pizza, burgers, chai, momos, ice cream, rolls — if you sell over a
+            counter, Fizz bills it in 3 taps, takes UPI on screen, counts every
+            gram and every rupee, and shows what you{" "}
+            <span className="text-cream">actually</span> made today. Your menu
+            goes online with a QR and WhatsApp orders. Switch on only the parts
+            you need.
           </p>
 
           <div className="mt-8 max-w-2xl" id="waitlist">

@@ -5,16 +5,16 @@ import { router, publicProcedure } from "@/lib/trpc/init";
 
 export const waitlistRouter = router({
   // Public by design — the marketing page's conversion form.
-  // `|| null`, not `??`: over JSON an untouched cafe-name input arrives as
-  // "", where FormData.get() used to yield null.
+  // `|| null`, not `??`: over JSON an untouched input arrives as "", where
+  // FormData.get() used to yield null.
   join: publicProcedure.input(waitlistForm).mutation(async ({ input }) => {
     try {
       await db
         .insert(waitlist)
         .values({
-          email: input.email,
+          phone: input.phone,
+          email: input.email || null,
           cafeName: input.cafeName || null,
-          phone: input.phone || null,
         })
         .onConflictDoNothing();
     } catch {

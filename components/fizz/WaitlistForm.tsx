@@ -41,18 +41,26 @@ export default function WaitlistForm({ cta = "Plug my leaks →" }: { cta?: stri
         }}
         className="grid gap-3 sm:grid-cols-2"
       >
-        <input type="email" name="email" required placeholder="you@yourcafe.in" className={INPUT} />
         <input
           type="tel"
           name="phone"
+          required
           inputMode="numeric"
-          placeholder="WhatsApp number (+91…)"
+          autoComplete="tel-national"
+          placeholder="WhatsApp number (10 digits)"
           className={INPUT}
         />
         <input
           type="text"
           name="cafeName"
-          placeholder="Café / outlet name"
+          placeholder="Outlet name (optional)"
+          className={INPUT}
+        />
+        <input
+          type="email"
+          name="email"
+          autoComplete="email"
+          placeholder="Email (optional)"
           className={INPUT}
         />
         <button
@@ -64,7 +72,7 @@ export default function WaitlistForm({ cta = "Plug my leaks →" }: { cta?: stri
         </button>
       </form>
       <p className="text-xs text-steam">
-        Free during early access · No card · No hardware to buy · Setup over WhatsApp
+        Free during early access · No card · No hardware to buy · Setup over WhatsApp, Hindi or English
       </p>
       {join.error && <p className="text-sm text-[#E2655A]">{join.error.message}</p>}
     </div>

@@ -43,6 +43,19 @@ export const metadata: Metadata = {
   description:
     "Pizza, burgers, chai, momos, ice cream — one POS for any counter. UPI + GST billing in 3 taps, recipe-level stock and live margins you can switch on or off. Runs on the phone you own. Free during early access.",
   applicationName: "Fizz",
+  keywords: [
+    "POS software India", "billing software for cafe", "QSR POS", "UPI billing app",
+    "GST billing software", "restaurant billing app", "chai stall billing", "momo shop POS",
+    "pizza shop POS India", "inventory for restaurant", "Petpooja alternative", "RoyalPOS alternative",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    siteName: "Fizz",
+    title: "Fizz — The Counter Operating System",
+    description:
+      "One POS for any Indian quick-service counter. UPI + GST billing in 3 taps, QR menu with WhatsApp orders, stock and margins you can switch on or off. Free during early access.",
+  },
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
