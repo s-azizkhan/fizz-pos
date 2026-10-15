@@ -1,7 +1,10 @@
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { images } from "@/lib/db/schema";
 import { getStore, getStoreById } from "@/lib/store/data";
+import { featureOn } from "@/lib/store/features";
 
 // Same-origin proxy for the store logo. The logo lives on an arbitrary host
 // that need not send CORS headers, and <img crossOrigin> fails without them —
@@ -19,19 +22,38 @@ import { getStore, getStoreById } from "@/lib/store/data";
 //   in our origin if someone opens /api/logo directly; `nosniff` keeps the
 //   browser from re-typing the bytes into something executable.
 
-// Hosts that must never be reachable: loopback, link-local (cloud metadata),
-// and the RFC1918 ranges. Literal-IP check only — resolving DNS to catch a
-// hostname pointing inside is a bigger job than this route deserves.
-// ponytail: swap in a resolve-then-check if logos ever come from untrusted users.
-const PRIVATE_HOST =
-  /^(localhost$|127\.|0\.0\.0\.0$|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)/i;
+// Addresses that must never be reachable: loopback, link-local (cloud
+// metadata), RFC1918, IPv6 unique-local and IPv4-mapped forms of the same.
+// Any signed-up owner can set a logo URL, so the hostname is RESOLVED and
+// every address checked — a name that points inside is as bad as a literal.
+// ponytail: still resolves once here and once in fetch (a rebinding window);
+// pin the connection to the checked IP via a custom dispatcher if that matters.
+function privateAddress(ip: string): boolean {
+  const v4 = ip.replace(/^::ffff:/i, "");
+  if (isIP(v4) === 4) {
+    const [a, b] = v4.split(".").map(Number);
+    return a === 127 || a === 10 || a === 0 || (a === 169 && b === 254) || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 100 && b >= 64 && b <= 127);
+  }
+  const v6 = ip.toLowerCase();
+  return v6 === "::1" || v6 === "::" || /^f[cd]/.test(v6) || /^fe[89ab]/.test(v6);
+}
+async function resolvesPrivate(host: string): Promise<boolean> {
+  if (host === "localhost" || host.endsWith(".localhost")) return true;
+  const bare = host.replace(/^\[|\]$/g, "");
+  if (isIP(bare)) return privateAddress(bare);
+  const addrs = await lookup(bare, { all: true }).catch(() => []);
+  return addrs.length === 0 || addrs.some((a) => privateAddress(a.address));
+}
 
 // ?s=<storeId> names the store (public menu pages); without it, the signed-in
 // user's own store (dashboard, printable menu).
 export async function GET(req: Request) {
   const sid = new URL(req.url).searchParams.get("s");
   const store = sid ? await getStoreById(sid).catch(() => null) : await getStore();
-  if (!store) return new Response("No logo", { status: 404 });
+  // Guest requests reach only a store that chose to be public.
+  if (!store || (sid && !(store.menuPublished && featureOn(store.disabledFeatures, "publicMenu")))) {
+    return new Response("No logo", { status: 404 });
+  }
   const raw = store.logoUrl;
   if (!raw) return new Response("No logo", { status: 404 });
 
@@ -55,7 +77,7 @@ export async function GET(req: Request) {
   } catch {
     return new Response("No logo", { status: 404 });
   }
-  if (url.protocol !== "https:" || PRIVATE_HOST.test(url.hostname)) {
+  if (url.protocol !== "https:" || url.port !== "" || url.username || url.password || (await resolvesPrivate(url.hostname))) {
     return new Response("No logo", { status: 404 });
   }
 
