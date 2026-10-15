@@ -3,12 +3,14 @@ import { notFound } from "next/navigation";
 import { trpc } from "@/lib/trpc/server";
 import PublicMenuView from "@/components/fizz/menu/PublicMenuView";
 import Welcome from "@/components/fizz/menu/Welcome";
-import { menuMetadata, tableParam, type PublicSearch } from "@/lib/store/public-menu";
+import JsonLd from "@/components/fizz/menu/JsonLd";
+import { menuJsonLd, menuMetadata, tableParam, type PublicSearch } from "@/lib/store/public-menu";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  return menuMetadata((await params).slug);
+  const { slug } = await params;
+  return menuMetadata(slug, { path: `/m/${slug}` });
 }
 
 // /m/[slug]: the welcome screen when it's on, else straight to the menu.
@@ -24,10 +26,19 @@ export default async function PublicMenuPage({
   const menu = await api.menu.public(slug);
   if (!menu) notFound();
   const table = tableParam(sp.t);
+  const jsonLd = <JsonLd data={await menuJsonLd(slug, menu)} />;
   if (menu.store.menuWelcome?.on) {
     return (
-      <Welcome slug={slug} store={menu.store} whatsapp={menu.ordering?.whatsapp ?? null} table={table} viewOnly={sp.viewOnly} />
+      <>
+        {jsonLd}
+        <Welcome slug={slug} store={menu.store} whatsapp={menu.ordering?.whatsapp ?? null} table={table} viewOnly={sp.viewOnly} />
+      </>
     );
   }
-  return <PublicMenuView slug={slug} menu={menu} viewOnly={sp.viewOnly} table={table} />;
+  return (
+    <>
+      {jsonLd}
+      <PublicMenuView slug={slug} menu={menu} viewOnly={sp.viewOnly} table={table} />
+    </>
+  );
 }

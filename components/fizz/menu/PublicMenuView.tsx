@@ -68,11 +68,14 @@ export default function PublicMenuView({
                remote URL, so next/image would need a domain allowlist per café.
                It replaces the wordmark; alt keeps the name for screen readers. */
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src="/api/logo"
-              alt={store.name}
-              className="mx-auto mt-4 max-h-28 w-auto object-contain"
-            />
+            <>
+              <img
+                src="/api/logo"
+                alt={`${store.name} logo`}
+                className="mx-auto mt-4 max-h-28 w-auto object-contain"
+              />
+              <h1 className="sr-only">{store.name} menu</h1>
+            </>
           ) : (
             <h1
               className="mt-3 text-[2.4em] font-bold leading-tight tracking-tight"

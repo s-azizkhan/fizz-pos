@@ -77,7 +77,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
             <div className="wl-px absolute -inset-y-24 inset-x-0" style={{ "--wl-rate": 0.35 } as React.CSSProperties}>
               {w.coverUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={w.coverUrl} alt="" className="wl-cover absolute inset-0 h-full w-full object-cover" />
+                <img src={w.coverUrl} alt={`${store.name}`} className="wl-cover absolute inset-0 h-full w-full object-cover" />
               ) : (
                 <div
                   className="absolute inset-0"
@@ -99,7 +99,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
               >
                 {store.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src="/api/logo" alt={store.name} className="h-full w-full object-cover" />
+                  <img src="/api/logo" alt={`${store.name} logo`} className="h-full w-full object-cover" />
                 ) : (
                   <span style={{ color: accent }}>{store.name.trim().charAt(0).toUpperCase()}</span>
                 )}

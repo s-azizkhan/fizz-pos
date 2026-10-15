@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import { trpc } from "@/lib/trpc/server";
 import Games from "@/components/fizz/menu/Games";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
-import { tableParam } from "@/lib/store/public-menu";
+import { menuMetadata, tableParam } from "@/lib/store/public-menu";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const menu = await (await trpc()).menu.public((await params).slug);
-  return { title: menu ? `${menu.store.name} — Games` : "Menu not found" };
+  const { slug } = await params;
+  const m = await menuMetadata(slug, { path: `/m/${slug}/games`, noindex: true });
+  return { ...m, title: typeof m.title === "string" ? m.title.replace("— Menu", "— Games") : m.title };
 }
 
 // /m/[slug]/games: two small games for the wait, painted in the menu theme.
