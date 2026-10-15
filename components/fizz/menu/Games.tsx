@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentType } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ComponentType } from "react";
 import { best, boardStyle, Overlay, saveBest } from "./games/shared";
 import Snake from "./games/Snake";
 import TwentyFortyEight from "./games/TwentyFortyEight";
@@ -9,37 +9,96 @@ import Flap from "./games/Flap";
 // Pocket games for the wait, painted with the menu theme vars. No deps. Best
 // scores live in localStorage on the guest's phone.
 
-const GAMES: { key: string; name: string; blurb: string; Game: ComponentType<{ accent: string }> }[] = [
-  { key: "snake", name: "Snake", blurb: "Eat beans, grow, don't bite yourself.", Game: Snake },
-  { key: "2048", name: "2048", blurb: "Slide and merge. Get to 2048.", Game: TwentyFortyEight },
-  { key: "flap", name: "Steam Hop", blurb: "Tap to hop the bean through the steam.", Game: Flap },
-  { key: "beans", name: "Bean Drop", blurb: "Catch the beans. Miss three and the cup's cold.", Game: BeanDrop },
-  { key: "match", name: "Latte Match", blurb: "Flip the cards, find the pairs, beat the clock.", Game: LatteMatch },
+type GameDef = {
+  key: string;
+  name: string;
+  blurb: string;
+  emoji: string;
+  /** Best-score storage key, and whether lower is better (Latte Match = moves). */
+  bestKey: string;
+  lower?: boolean;
+  Game: ComponentType<{ accent: string }>;
+};
+export const GAMES: GameDef[] = [
+  { key: "snake", name: "Snake", blurb: "Eat beans, grow, don't bite yourself.", emoji: "🐍", bestKey: "snake", Game: Snake },
+  { key: "2048", name: "2048", blurb: "Slide and merge. Get to 2048.", emoji: "🔢", bestKey: "2048", Game: TwentyFortyEight },
+  { key: "flap", name: "Steam Hop", blurb: "Tap to hop the bean through the steam.", emoji: "☁️", bestKey: "flap", Game: Flap },
+  { key: "beans", name: "Bean Drop", blurb: "Catch the beans. Miss three and the cup's cold.", emoji: "☕", bestKey: "beans", Game: BeanDrop },
+  { key: "match", name: "Latte Match", blurb: "Flip the cards, find the pairs, beat the clock.", emoji: "🃏", bestKey: "match", lower: true, Game: LatteMatch },
 ];
 
-export default function Games({ accent }: { accent: string }) {
-  const [game, setGame] = useState("snake");
-  const cur = GAMES.find((g) => g.key === game)!;
+// Reads a best score after hydration only (server renders 0), so the card
+// never mismatches and we never set state from an effect.
+const noop = () => () => {};
+function useBest(key: string) {
+  return useSyncExternalStore(noop, () => best(key), () => 0);
+}
+
+function GameCard({ g, href, accent, index }: { g: GameDef; href: string; accent: string; index: number }) {
+  const b = useBest(g.bestKey);
   return (
-    <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:gap-4">
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
-        {GAMES.map((g) => (
-          <button
-            key={g.key}
-            type="button"
-            onClick={() => setGame(g.key)}
-            className="shrink-0 touch-manipulation rounded-full border px-4 py-2 text-[13px] font-bold transition-transform active:scale-95"
-            style={
-              game === g.key
-                ? { backgroundColor: accent, borderColor: accent, color: "var(--m-bg)" }
-                : { borderColor: "var(--m-line)", color: "var(--m-text)" }
-            }
-          >
-            {g.name}
-          </button>
+    <a
+      href={href}
+      className="wl-in wl-card flex items-center gap-4 border p-4"
+      style={{ "--i": index, borderRadius: "var(--m-radius)", borderColor: "var(--m-line)", backgroundColor: "var(--m-surface)" } as React.CSSProperties}
+    >
+      <span
+        className="wl-tile flex h-14 w-14 shrink-0 items-center justify-center text-[28px]"
+        style={{ borderRadius: "calc(var(--m-radius) - 4px)", backgroundColor: `${accent}26` }}
+      >
+        {g.emoji}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[18px] font-bold leading-tight">{g.name}</span>
+        <span className="mt-0.5 block text-[13px] text-[var(--m-muted)]">{g.blurb}</span>
+        {b > 0 && (
+          <span className="mt-1 block text-[12px] font-semibold" style={{ color: accent }}>
+            Best: {b}{g.lower ? " moves" : ""}
+          </span>
+        )}
+      </span>
+      <svg viewBox="0 0 24 24" className="wl-chev h-5 w-5 shrink-0 text-[var(--m-muted)]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </a>
+  );
+}
+
+// List of game cards, or one game when `game` names it. Card links keep the
+// page's ?t= / ?viewOnly= and add ?g=<key>.
+export default function Games({
+  accent,
+  game,
+  base,
+  query,
+}: {
+  accent: string;
+  game: string | null;
+  base: string;
+  query: Record<string, string>;
+}) {
+  const hrefFor = (key: string) => `${base}?${new URLSearchParams({ ...query, g: key })}`;
+  const cur = GAMES.find((g) => g.key === game);
+  if (!cur) {
+    return (
+      <ul className="mt-4 flex flex-col gap-3">
+        {GAMES.map((g, i) => (
+          <li key={g.key}>
+            <GameCard g={g} href={hrefFor(g.key)} accent={accent} index={i} />
+          </li>
         ))}
+      </ul>
+    );
+  }
+  return (
+    <div className="mt-4 flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <span className="text-[26px]">{cur.emoji}</span>
+        <div className="min-w-0">
+          <p className="text-[18px] font-bold leading-tight">{cur.name}</p>
+          <p className="text-[13px] text-[var(--m-muted)]">{cur.blurb}</p>
+        </div>
       </div>
-      <p className="text-[13px] text-[var(--m-muted)]">{cur.blurb}</p>
       <cur.Game key={cur.key} accent={accent} />
     </div>
   );

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { trpc } from "@/lib/trpc/server";
 import Games from "@/components/fizz/menu/Games";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
-import { tableParam, type PublicSearch } from "@/lib/store/public-menu";
+import { tableParam } from "@/lib/store/public-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ export default async function GamesPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: PublicSearch;
+  searchParams: Promise<{ viewOnly?: string; t?: string; g?: string }>;
 }) {
   const api = await trpc();
   const [{ slug }, sp] = await Promise.all([params, searchParams]);
@@ -31,7 +31,10 @@ export default async function GamesPage({
   const qs = new URLSearchParams();
   if (table) qs.set("t", table);
   if (sp.viewOnly) qs.set("viewOnly", sp.viewOnly);
-  const back = `/m/${slug}${qs.size ? `?${qs}` : ""}`;
+  const q = qs.size ? `?${qs}` : "";
+  const game = sp.g?.trim() || null;
+  // In a game, back goes to the list; on the list, back goes to the welcome screen.
+  const back = game ? `/m/${slug}/games${q}` : `/m/${slug}${q}`;
 
   return (
     <main
@@ -47,11 +50,15 @@ export default async function GamesPage({
             {store.name}
           </span>
         </div>
-        <h1 className="mt-3 text-[clamp(22px,6vw,28px)] font-bold tracking-tight" style={{ fontFamily: theme.display }}>
-          While you wait
-        </h1>
-        <p className="mt-1 text-[14px] text-[var(--m-muted)]">Two quick ones. Best scores stay on this phone.</p>
-        <Games accent={accent} />
+        {!game && (
+          <>
+            <h1 className="mt-3 text-[clamp(22px,6vw,28px)] font-bold tracking-tight" style={{ fontFamily: theme.display }}>
+              While you wait
+            </h1>
+            <p className="mt-1 text-[14px] text-[var(--m-muted)]">Pick one. Best scores stay on this phone.</p>
+          </>
+        )}
+        <Games accent={accent} game={game} base={`/m/${slug}/games`} query={Object.fromEntries(qs)} />
       </div>
     </main>
   );
