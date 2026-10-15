@@ -17,6 +17,9 @@ export type WelcomeProps = {
     menuTheme: string;
     menuAccent: string;
     menuWelcome: WelcomeConfig | null;
+    openingTime: string;
+    closingTime: string;
+    timezone: string;
   };
   whatsapp: string | null;
   table: string | null;
@@ -25,8 +28,26 @@ export type WelcomeProps = {
   embedded?: boolean;
 };
 
+// "Open · till 22:00" / "Opens at 08:00", in the café's own timezone.
+function openStatus(opening: string, closing: string, tz: string): { open: boolean; label: string } {
+  let hm = "";
+  try {
+    hm = new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+  } catch {
+    hm = new Date().toTimeString().slice(0, 5);
+  }
+  const overnight = closing < opening; // e.g. 18:00 → 02:00
+  const open = overnight ? hm >= opening || hm < closing : hm >= opening && hm < closing;
+  const to12 = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return `${((h + 11) % 12) + 1}${m ? `:${String(m).padStart(2, "0")}` : ""} ${h < 12 ? "am" : "pm"}`;
+  };
+  return open ? { open, label: `Open · till ${to12(closing)}` } : { open, label: `Closed · opens ${to12(opening)}` };
+}
+
 export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedded }: WelcomeProps) {
   const w = store.menuWelcome ?? DEFAULT_WELCOME;
+  const status = openStatus(store.openingTime, store.closingTime, store.timezone);
   const theme = getMenuTheme(store.menuTheme);
   const accent = store.menuAccent || theme.accent;
   const qs = new URLSearchParams();
@@ -64,8 +85,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
       <ParallaxDriver />
       {/* Ambient accent orbs behind the page; they trail the scroll. */}
       <div className="wl-px pointer-events-none absolute inset-0 overflow-hidden" style={{ "--wl-rate": 0.6 } as React.CSSProperties} aria-hidden>
-        <span className="wl-orb wl-orb-a -left-20 top-10 h-64 w-64" />
-        <span className="wl-orb wl-orb-b -right-24 bottom-20 h-72 w-72" />
+        <span className="wl-orb wl-orb-a -right-16 -top-10 h-72 w-72" />
       </div>
       <div className={`relative mx-auto flex max-w-md flex-col px-4 ${embedded ? "min-h-full pb-8 pt-4" : "min-h-dvh pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:pt-8"}`}>
         {/* Hero card: cover image (or a quiet accent wash), logo, name, tagline, table. */}
@@ -105,18 +125,24 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
                 )}
               </div>
               <div className="min-w-0 text-white">
-                <h1 className="truncate text-[26px] font-bold leading-tight tracking-tight" style={{ fontFamily: theme.display }}>
+                <h1 className="truncate text-[28px] font-bold leading-none tracking-tight" style={{ fontFamily: theme.display }}>
                   {store.name}
                 </h1>
-                {store.menuTagline && <p className="mt-0.5 truncate text-[15px] italic text-white/80">{store.menuTagline}</p>}
-                {table && (
-                  <span
-                    className="wl-badge mt-2 inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--m-bg)]"
-                    style={{ backgroundColor: accent }}
-                  >
-                    Table {table}
+                {store.menuTagline && <p className="mt-1 truncate text-[14px] text-white/75">{store.menuTagline}</p>}
+                <span className="mt-2.5 flex flex-wrap items-center gap-2">
+                  {table && (
+                    <span
+                      className="wl-badge inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--m-bg)]"
+                      style={{ backgroundColor: accent }}
+                    >
+                      Table {table}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/35 px-2.5 py-1 text-[11px] font-semibold text-white/90 backdrop-blur-sm">
+                    <span className={`h-1.5 w-1.5 rounded-full ${status.open ? "bg-[#4ADE80]" : "bg-[#F87171]"}`} />
+                    {status.label}
                   </span>
-                )}
+                </span>
               </div>
             </div>
           </div>
@@ -125,7 +151,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
         <div className="wl-in wl-rule mx-6 mt-4" style={{ "--i": 1 } as React.CSSProperties} aria-hidden />
 
         {/* Cards. First one is the headline action (accent-tinted). */}
-        <ul className="mt-4 flex flex-col gap-3">
+        <ul className="mt-4 flex flex-col gap-2.5">
           {cards.map(([c, href], i) =>
             c.kind === "wifi" ? (
               <WifiCard key={c.id} card={c} accent={accent} index={i + 1} />

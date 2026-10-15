@@ -34,7 +34,9 @@ export function CardShell({
   const cls = `wl-card ${primary ? "wl-primary" : ""} flex w-full items-center gap-4 border p-4 text-left`;
   const style = {
     borderRadius: "var(--m-radius)",
-    backgroundColor: primary ? `${accent}1F` : "var(--m-surface)",
+    background: primary
+      ? `linear-gradient(135deg, ${accent}2E, ${accent}14)`
+      : "linear-gradient(180deg, color-mix(in oklab, var(--m-surface) 92%, white), var(--m-surface))",
     borderColor: primary ? `${accent}66` : "var(--m-line)",
   };
   const inner = (
@@ -46,8 +48,8 @@ export function CardShell({
         {lottie ? <Lottie src={lottie} className="h-12 w-12" fallback={icon} /> : icon}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[18px] font-bold leading-tight">{title}</span>
-        {subtitle && <span className="mt-0.5 block truncate text-[13px] text-[var(--m-muted)]">{subtitle}</span>}
+        <span className="block truncate text-[17px] font-bold leading-tight tracking-[-0.01em]">{title}</span>
+        {subtitle && <span className="mt-1 block truncate text-[13px] leading-none text-[var(--m-muted)]">{subtitle}</span>}
       </span>
       <span className="wl-chev shrink-0 text-[var(--m-muted)]">{trailing ?? <Chevron />}</span>
     </>

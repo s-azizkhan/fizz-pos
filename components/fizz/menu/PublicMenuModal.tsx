@@ -336,7 +336,7 @@ function PhoneFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="origin-top scale-[0.78] xl:scale-[0.85]">
       <div className="h-[760px] w-[390px] overflow-hidden rounded-[40px] border-[6px] border-ink-line bg-ink shadow-lg">
-        <div data-wl-scroller className="h-full overflow-y-auto [scrollbar-width:none]">{children}</div>
+        <div data-wl-scroller className="h-full overflow-y-auto no-scrollbar">{children}</div>
       </div>
     </div>
   );

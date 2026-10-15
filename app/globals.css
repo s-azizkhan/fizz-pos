@@ -599,3 +599,7 @@ html[data-nav], html[data-nav] * { cursor: progress; }
 }
 .wl-confetti { position: absolute; left: 50%; top: 50%; width: 7px; height: 11px; border-radius: 2px; pointer-events: none; animation: wl-confetti 0.9s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
 @media (prefers-reduced-motion: reduce) { .wl-px { transform: none !important; } .wl-confetti { display: none; } }
+
+/* Hide the scrollbar on horizontal chip rows (all engines, incl. WebKit). */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }

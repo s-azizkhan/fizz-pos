@@ -45,91 +45,84 @@ export default function PublicMenuView({
       className="min-h-dvh bg-[var(--m-bg)] text-[var(--m-text)]"
       style={{ ...themeVars(theme, accent), fontSize: `${basePx}px` }}
     >
-      <div className="mx-auto max-w-3xl px-6 pb-14 pt-14 lg:pb-20 lg:pt-20" style={{ paddingBottom: ordering ? "7rem" : undefined }}>
-        {/* Branding header */}
-        <header className="border-b border-[var(--m-line)] pb-8 text-center">
-          {store.menuWelcome?.on && (
+      <div className="mx-auto max-w-3xl px-6 pb-14 pt-[max(1.25rem,env(safe-area-inset-top))] lg:pb-20 lg:pt-12" style={{ paddingBottom: ordering ? "7rem" : undefined }}>
+        {/* Compact header: logo/initial, name, tagline, one line of contact. */}
+        <header className="flex items-center gap-4">
+          {store.menuWelcome?.on ? (
             <a
               href={`/m/${slug}${table ? `?t=${encodeURIComponent(table)}` : ""}`}
-              className="mb-4 inline-flex items-center gap-1.5 text-[0.85em] font-semibold text-[var(--m-muted)] hover:text-[var(--m-text)]"
+              aria-label="Back to welcome"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] text-[var(--m-text)]"
             >
-              ← Back
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 6l-6 6 6 6" />
+              </svg>
             </a>
-          )}
-          <p
-            className={`text-[0.7em] font-semibold uppercase ${theme.eyebrow === "wide" ? "tracking-[0.3em]" : "tracking-[0.06em]"}`
-}
-            style={{ color: accent }}
-          >
-            {table ? `Table ${table}` : "Menu"}
-          </p>
-          {store.logoUrl ? (
-            /* ponytail: plain <img> via /api/logo — the logo is an arbitrary
-               remote URL, so next/image would need a domain allowlist per café.
-               It replaces the wordmark; alt keeps the name for screen readers. */
-            // eslint-disable-next-line @next/next/no-img-element
-            <>
-              <img
-                src="/api/logo"
-                alt={`${store.name} logo`}
-                className="mx-auto mt-4 max-h-28 w-auto object-contain"
-              />
-              <h1 className="sr-only">{store.name} menu</h1>
-            </>
           ) : (
-            <h1
-              className="mt-3 text-[2.4em] font-bold leading-tight tracking-tight"
-              style={{ fontFamily: theme.display }}
+            <span
+              className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-[var(--m-surface)] text-[1.2em] font-bold"
+              style={{ borderColor: accent, fontFamily: theme.display, color: accent }}
             >
+              {store.logoUrl ? (
+                /* ponytail: plain <img> via /api/logo — the logo is an arbitrary
+                   remote URL, so next/image would need a domain allowlist per café. */
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src="/api/logo" alt={`${store.name} logo`} className="h-full w-full object-cover" />
+              ) : (
+                store.name.trim().charAt(0).toUpperCase()
+              )}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-[1.5em] font-bold leading-tight tracking-tight" style={{ fontFamily: theme.display }}>
               {store.name}
             </h1>
-          )}
-          {store.menuTagline && (
-            <p className="mt-3 text-[1.05em] text-[var(--m-muted)]">{store.menuTagline}</p>
-          )}
-          {(store.city || store.phone || store.instagram || store.website) && (
-            <p className="mt-4 text-[0.85em] text-[var(--m-muted)]">
-              {[
-                store.addressLine1,
-                store.city,
-                store.phone,
-                store.instagram && `@${store.instagram.replace(/^@/, "")}`,
-                store.website?.replace(/^https?:\/\//, ""),
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+            <p className="truncate text-[0.85em] text-[var(--m-muted)]">
+              {store.menuTagline ||
+                [store.addressLine1, store.city].filter(Boolean).join(", ") ||
+                "Menu"}
             </p>
+          </div>
+          {table && (
+            <span
+              className="shrink-0 rounded-full px-3 py-1.5 text-[0.7em] font-bold uppercase tracking-[0.16em] text-[var(--m-bg)]"
+              style={{ backgroundColor: accent }}
+            >
+              Table {table}
+            </span>
           )}
         </header>
 
         {categories.length > 0 && (
           <MenuSearch
             storeName={store.name}
-            categories={categories.map((c) => c.name)}
+            categories={categories.map((c) => ({ id: c.id, name: c.name, icon: c.icon }))}
             whatsapp={cfg?.whatsapp}
             phone={store.phone}
             accent={accent}
+            hasDiet={categories.some((c) => c.items.some((i) => i.diet === "veg" || i.diet === "nonveg"))}
           />
         )}
 
         {categories.length === 0 ? (
           <p className="mt-16 text-center text-[var(--m-muted)]">This menu is being plated. Check back soon.</p>
         ) : (
-          <div className="mt-12 flex flex-col gap-12">
+          <div className="mt-8 flex flex-col gap-10">
             {categories.map((cat) => (
-              <section key={cat.id} data-cat>
-                <div className="flex items-center gap-3">
-                  <span style={{ color: accent }}>
+              <section key={cat.id} data-cat={cat.id} className="scroll-mt-32">
+                <div className="flex items-baseline gap-3">
+                  <span className="self-center" style={{ color: accent }}>
                     <MenuCategoryIconGlyph name={cat.icon} />
                   </span>
                   <h2
-                    className="text-[1.5em] font-bold tracking-tight"
+                    className="text-[1.35em] font-bold tracking-tight"
                     style={{ fontFamily: theme.display }}
                   >
                     {cat.name}
                   </h2>
+                  <span className="text-[0.8em] text-[var(--m-muted)]">{cat.items.length}</span>
                 </div>
-                <div className="mt-5 flex flex-col divide-y divide-[var(--m-line)]">
+                <div className="mt-3 flex flex-col divide-y divide-[var(--m-line)]">
                   {cat.items.map((item) => (
                     <div
                       key={item.id}
@@ -138,6 +131,7 @@ export default function PublicMenuView({
                         .filter(Boolean)
                         .join(" ")
                         .toLowerCase()}
+                      data-diet={item.diet === "veg" || item.diet === "nonveg" ? item.diet : undefined}
                     >
                       <div className="flex items-start justify-between gap-6">
                         <div className="min-w-0">
@@ -212,6 +206,19 @@ export default function PublicMenuView({
         )}
 
         <footer className="mt-16 border-t border-[var(--m-line)] pt-6 text-center text-[0.8em] text-[var(--m-muted)]">
+          {(store.addressLine1 || store.city || store.phone || store.instagram || store.website) && (
+            <p className="mb-3">
+              {[
+                store.addressLine1,
+                store.city,
+                store.phone,
+                store.instagram && `@${store.instagram.replace(/^@/, "")}`,
+                store.website?.replace(/^https?:\/\//, ""),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
           Menu by{" "}
           <span className="font-wordmark font-bold text-[var(--m-text)]">
             Fi<span style={{ color: accent }}>zz</span>
