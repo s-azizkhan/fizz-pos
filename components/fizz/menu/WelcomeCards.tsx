@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { CardKind, WelcomeCard } from "@/lib/store/welcome";
 
 // Card + icon primitives for the welcome screen. Client file because the
@@ -66,10 +66,13 @@ export function CardShell({
 export function WifiCard({ card, accent, index }: { card: WelcomeCard; accent: string; index: number }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  // One burst per copy; pieces clean themselves up after the animation.
+  const [burst, setBurst] = useState(0);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(card.password ?? "");
       setCopied(true);
+      setBurst((b) => b + 1);
       setTimeout(() => setCopied(false), 1500);
     } catch {}
   };
@@ -93,14 +96,17 @@ export function WifiCard({ card, accent, index }: { card: WelcomeCard; accent: s
             <span className="block truncate font-mono text-[16px]">{card.password || "No password"}</span>
           </span>
           {card.password && (
-            <button
-              type="button"
-              onClick={copy}
-              className="shrink-0 rounded-full px-4 py-2 text-[13px] font-bold"
-              style={{ backgroundColor: accent, color: "var(--m-bg)" }}
-            >
-              {copied ? "Copied" : "Copy"}
-            </button>
+            <span className="relative shrink-0">
+              {burst > 0 && <Confetti key={burst} accent={accent} />}
+              <button
+                type="button"
+                onClick={copy}
+                className="relative rounded-full px-4 py-2 text-[13px] font-bold"
+                style={{ backgroundColor: accent, color: "var(--m-bg)" }}
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </span>
           )}
         </div>
       )}
@@ -193,4 +199,62 @@ export function SocialIcon({ url }: { url: string }) {
       <path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18" />
     </>,
   );
+}
+
+// 18 pieces fan out from the Copy button. Deterministic spread, no library.
+const PIECES = Array.from({ length: 18 }, (_, i) => {
+  const a = (i / 18) * Math.PI * 2 + (i % 3) * 0.3;
+  const d = 48 + ((i * 29) % 40);
+  return { cx: Math.cos(a) * d, cy: Math.sin(a) * d - 24, cr: ((i * 137) % 360) - 180, hue: i % 3 };
+});
+
+function Confetti({ accent }: { accent: string }) {
+  return (
+    <span className="pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
+      {PIECES.map((p, i) => (
+        <span
+          key={i}
+          className="wl-confetti"
+          style={
+            {
+              "--cx": `${p.cx}px`,
+              "--cy": `${p.cy}px`,
+              "--cr": `${p.cr}deg`,
+              backgroundColor: p.hue === 0 ? accent : p.hue === 1 ? "var(--m-text)" : "var(--m-muted)",
+              animationDelay: `${(i % 4) * 30}ms`,
+            } as React.CSSProperties
+          }
+        />
+      ))}
+    </span>
+  );
+}
+
+// Sets --wl-scroll on its parent as the page (or the preview's phone) scrolls.
+// Capturing listener on window hears nested scrollers too, so the same code
+// drives the public page and the admin preview. One rAF per frame, max.
+export function ParallaxDriver() {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const host = ref.current?.parentElement;
+    if (!host || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let raf = 0;
+    const tick = () => {
+      raf = 0;
+      const top = host.getBoundingClientRect().top;
+      const scroller = host.closest<HTMLElement>("[data-wl-scroller]");
+      const base = scroller ? scroller.getBoundingClientRect().top : 0;
+      host.style.setProperty("--wl-scroll", `${Math.max(0, base - top)}px`);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(tick);
+    };
+    window.addEventListener("scroll", onScroll, { capture: true, passive: true });
+    tick();
+    return () => {
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+  return <span ref={ref} hidden />;
 }

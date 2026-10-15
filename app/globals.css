@@ -590,3 +590,12 @@ html[data-nav], html[data-nav] * { cursor: progress; }
   .wl-orb-a, .wl-orb-b, .wl-steam, .wl-cup, .wl-ripple, .wl-rule::after { animation: none !important; }
   .wl-in .wl-tile svg * { animation: none !important; stroke-dasharray: none; }
 }
+
+/* Welcome screen — scroll parallax (--wl-scroll set by ParallaxDriver) + confetti */
+.wl-px { transform: translate3d(0, calc(var(--wl-scroll, 0px) * var(--wl-rate, 0.4)), 0); will-change: transform; }
+@keyframes wl-confetti {
+  0% { transform: translate(0, 0) rotate(0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--cx), var(--cy)) rotate(var(--cr)) scale(0.4); opacity: 0; }
+}
+.wl-confetti { position: absolute; left: 50%; top: 50%; width: 7px; height: 11px; border-radius: 2px; pointer-events: none; animation: wl-confetti 0.9s cubic-bezier(0.1, 0.8, 0.3, 1) forwards; }
+@media (prefers-reduced-motion: reduce) { .wl-px { transform: none !important; } .wl-confetti { display: none; } }

@@ -1,6 +1,6 @@
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
 import { DEFAULT_WELCOME, type WelcomeConfig, type WelcomeCard } from "@/lib/store/welcome";
-import { WifiCard, CardShell, CardIcon, SocialIcon } from "./WelcomeCards";
+import { WifiCard, CardShell, CardIcon, SocialIcon, ParallaxDriver } from "./WelcomeCards";
 
 // The welcome screen at /m/[slug]: cover, name, table badge, a stack of cards
 // (menu, review, Wi-Fi, call, WhatsApp, custom), socials. Plain props (no
@@ -57,8 +57,9 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
       className={`relative overflow-hidden ${embedded ? "min-h-full [&_a]:pointer-events-none" : "min-h-dvh"} bg-[var(--m-bg)] text-[var(--m-text)]`}
       style={themeVars(theme, accent)}
     >
-      {/* Ambient accent orbs behind the page. */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      <ParallaxDriver />
+      {/* Ambient accent orbs behind the page; they trail the scroll. */}
+      <div className="wl-px pointer-events-none absolute inset-0 overflow-hidden" style={{ "--wl-rate": 0.6 } as React.CSSProperties} aria-hidden>
         <span className="wl-orb wl-orb-a -left-20 top-10 h-64 w-64" />
         <span className="wl-orb wl-orb-b -right-24 bottom-20 h-72 w-72" />
       </div>
@@ -69,18 +70,20 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
           style={{ "--i": 0, borderRadius: `calc(var(--m-radius) + 6px)`, backgroundColor: "var(--m-surface)" } as React.CSSProperties}
         >
           <div className="relative aspect-[4/3] w-full">
-            {w.coverUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={w.coverUrl} alt="" className="wl-cover absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              <div
-                className="absolute inset-0"
-                style={{ background: `radial-gradient(120% 90% at 80% 10%, ${accent}55, transparent 60%), var(--m-surface)` }}
-              >
-                <CupArt accent={accent} />
-              </div>
-            )}
-            <Bubbles />
+            <div className="wl-px absolute -inset-y-24 inset-x-0" style={{ "--wl-rate": 0.35 } as React.CSSProperties}>
+              {w.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={w.coverUrl} alt="" className="wl-cover absolute inset-0 h-full w-full object-cover" />
+              ) : (
+                <div
+                  className="absolute inset-0"
+                  style={{ background: `radial-gradient(120% 90% at 80% 10%, ${accent}55, transparent 60%), var(--m-surface)` }}
+                >
+                  <CupArt accent={accent} />
+                </div>
+              )}
+              <Bubbles />
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-5">
               <div
