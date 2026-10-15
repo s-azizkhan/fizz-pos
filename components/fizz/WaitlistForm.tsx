@@ -8,7 +8,15 @@ import { fields } from "@/lib/trpc/fields";
 const INPUT =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
 
-export default function WaitlistForm({ cta = "Plug my leaks →" }: { cta?: string }) {
+// `compact`: one phone field + button, for the hero. Outlet name and email
+// are optional anyway; the full form lives in the closing CTA.
+export default function WaitlistForm({
+  cta = "Plug my leaks →",
+  compact = false,
+}: {
+  cta?: string;
+  compact?: boolean;
+}) {
   const trpc = useTRPC();
   const { joined, setJoined } = useUi();
   const join = useMutation(
@@ -39,7 +47,7 @@ export default function WaitlistForm({ cta = "Plug my leaks →" }: { cta?: stri
           e.preventDefault();
           join.mutate(fields(e.currentTarget));
         }}
-        className="grid gap-3 sm:grid-cols-2"
+        className={compact ? "flex flex-col gap-3 sm:flex-row" : "grid gap-3 sm:grid-cols-2"}
       >
         <input
           type="tel"
@@ -48,31 +56,37 @@ export default function WaitlistForm({ cta = "Plug my leaks →" }: { cta?: stri
           inputMode="numeric"
           autoComplete="tel-national"
           placeholder="WhatsApp number (10 digits)"
-          className={INPUT}
+          className={`${INPUT} ${compact ? "flex-1" : ""}`}
         />
-        <input
-          type="text"
-          name="cafeName"
-          placeholder="Outlet name (optional)"
-          className={INPUT}
-        />
-        <input
-          type="email"
-          name="email"
-          autoComplete="email"
-          placeholder="Email (optional)"
-          className={INPUT}
-        />
+        {!compact && (
+          <>
+            <input
+              type="text"
+              name="cafeName"
+              placeholder="Outlet name (optional)"
+              className={INPUT}
+            />
+            <input
+              type="email"
+              name="email"
+              autoComplete="email"
+              placeholder="Email (optional)"
+              className={INPUT}
+            />
+          </>
+        )}
         <button
           type="submit"
           disabled={join.isPending}
-          className="rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
+          className="whitespace-nowrap rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60"
         >
           {join.isPending ? "Saving…" : cta}
         </button>
       </form>
       <p className="text-xs text-steam">
-        Free during early access · No card · No hardware to buy · Setup over WhatsApp, Hindi or English
+        {compact
+          ? "No card. No hardware. We set you up on a WhatsApp call."
+          : "Free during early access · No card · No hardware to buy · Setup over WhatsApp, Hindi or English"}
       </p>
       {join.error && <p className="text-sm text-[#E2655A]">{join.error.message}</p>}
     </div>
