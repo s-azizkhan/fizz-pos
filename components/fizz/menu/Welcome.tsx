@@ -54,10 +54,15 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
 
   return (
     <main
-      className={`${embedded ? "min-h-full [&_a]:pointer-events-none" : "min-h-dvh"} bg-[var(--m-bg)] text-[var(--m-text)]`}
+      className={`relative overflow-hidden ${embedded ? "min-h-full [&_a]:pointer-events-none" : "min-h-dvh"} bg-[var(--m-bg)] text-[var(--m-text)]`}
       style={themeVars(theme, accent)}
     >
-      <div className={`mx-auto flex max-w-md flex-col px-4 pb-8 pt-4 ${embedded ? "min-h-full" : "min-h-dvh sm:pt-8"}`}>
+      {/* Ambient accent orbs behind the page. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <span className="wl-orb wl-orb-a -left-20 top-10 h-64 w-64" />
+        <span className="wl-orb wl-orb-b -right-24 bottom-20 h-72 w-72" />
+      </div>
+      <div className={`relative mx-auto flex max-w-md flex-col px-4 pb-8 pt-4 ${embedded ? "min-h-full" : "min-h-dvh sm:pt-8"}`}>
         {/* Hero card: cover image (or a quiet accent wash), logo, name, tagline, table. */}
         <section
           className="wl-in relative overflow-hidden"
@@ -71,7 +76,9 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
               <div
                 className="absolute inset-0"
                 style={{ background: `radial-gradient(120% 90% at 80% 10%, ${accent}55, transparent 60%), var(--m-surface)` }}
-              />
+              >
+                <CupArt accent={accent} />
+              </div>
             )}
             <Bubbles />
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
@@ -104,6 +111,8 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
             </div>
           </div>
         </section>
+
+        <div className="wl-in wl-rule mx-6 mt-4" style={{ "--i": 1 } as React.CSSProperties} aria-hidden />
 
         {/* Cards. First one is the headline action (accent-tinted). */}
         <ul className="mt-4 flex flex-col gap-3">
@@ -185,5 +194,40 @@ function Bubbles() {
         />
       ))}
     </div>
+  );
+}
+
+// Cup with steam for cafés with no cover photo yet — still looks dressed.
+function CupArt({ accent }: { accent: string }) {
+  return (
+    <svg viewBox="0 0 320 240" className="absolute inset-0 h-full w-full" aria-hidden>
+      <g className="wl-ripple" style={{ transformBox: "fill-box" }}>
+        <ellipse cx="200" cy="150" rx="70" ry="22" fill="none" stroke={accent} strokeOpacity="0.5" strokeWidth="2" />
+      </g>
+      <g className="wl-cup">
+        {/* saucer */}
+        <ellipse cx="200" cy="150" rx="56" ry="14" fill={accent} fillOpacity="0.25" />
+        {/* cup body */}
+        <path d="M160 92h80l-8 50a14 14 0 0 1-14 12h-36a14 14 0 0 1-14-12z" fill={accent} fillOpacity="0.9" />
+        <ellipse cx="200" cy="92" rx="40" ry="10" fill={accent} />
+        <ellipse cx="200" cy="92" rx="30" ry="6" fill="#1b120d" fillOpacity="0.7" />
+        {/* handle */}
+        <path d="M240 104c18 0 24 10 22 20s-12 16-24 16" fill="none" stroke={accent} strokeWidth="8" strokeLinecap="round" />
+        {/* steam */}
+        {[-14, 0, 14].map((dx, i) => (
+          <path
+            key={i}
+            className="wl-steam"
+            style={{ animationDelay: `${i * 0.9}s` }}
+            d={`M${200 + dx} 78c-6-8 6-14 0-22s6-12 0-18`}
+            fill="none"
+            stroke={accent}
+            strokeOpacity="0.8"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        ))}
+      </g>
+    </svg>
   );
 }

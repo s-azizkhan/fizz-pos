@@ -561,3 +561,32 @@ html[data-nav], html[data-nav] * { cursor: progress; }
   .wl-in, .wl-badge { opacity: 1; animation: none !important; }
   .wl-cover, .wl-bubble, .wl-logo, .wl-social, .wl-primary .wl-tile { animation: none !important; }
 }
+
+/* Welcome screen — graphics layer */
+/* Two blurred accent orbs drifting behind everything. */
+@keyframes wl-orb-a { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(30px, -40px) scale(1.15); } }
+@keyframes wl-orb-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-40px, 30px) scale(0.9); } }
+.wl-orb { position: absolute; border-radius: 9999px; filter: blur(60px); opacity: 0.35; pointer-events: none; background: var(--m-accent); }
+.wl-orb-a { animation: wl-orb-a 14s ease-in-out infinite; }
+.wl-orb-b { animation: wl-orb-b 18s ease-in-out infinite; }
+/* Steam wisps off the cup (no-cover hero). */
+@keyframes wl-steam {
+  0% { transform: translateY(0) scaleX(1); opacity: 0; }
+  20% { opacity: 0.7; }
+  100% { transform: translateY(-34px) scaleX(1.4); opacity: 0; }
+}
+.wl-steam { animation: wl-steam 3.2s ease-out infinite; transform-origin: 50% 100%; }
+/* Cup bobs; its saucer ring pulses. */
+.wl-cup { animation: float-y 5s ease-in-out infinite; }
+@keyframes wl-ripple { 0% { transform: scale(0.7); opacity: 0.6; } 100% { transform: scale(1.6); opacity: 0; } }
+.wl-ripple { animation: wl-ripple 3s ease-out infinite; transform-origin: center; }
+/* Card icons draw themselves on load. */
+@keyframes wl-draw { from { stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
+.wl-in .wl-tile svg * { stroke-dasharray: 60; animation: wl-draw 1.1s ease-out forwards; animation-delay: calc(var(--i, 0) * 70ms + 250ms); }
+/* Accent hairline between hero and cards: a light runs along it. */
+.wl-rule { position: relative; height: 2px; overflow: hidden; border-radius: 2px; background: color-mix(in oklab, var(--m-accent) 18%, transparent); }
+.wl-rule::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 30%; background: linear-gradient(90deg, transparent, var(--m-accent), transparent); animation: sheen 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .wl-orb-a, .wl-orb-b, .wl-steam, .wl-cup, .wl-ripple, .wl-rule::after { animation: none !important; }
+  .wl-in .wl-tile svg * { animation: none !important; stroke-dasharray: none; }
+}
