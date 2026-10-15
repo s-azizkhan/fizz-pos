@@ -1,5 +1,5 @@
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { images } from "@/lib/db/schema";
@@ -23,30 +23,34 @@ import { featureOn } from "@/lib/store/features";
 //   browser from re-typing the bytes into something executable.
 
 // Addresses that must never be reachable: loopback, link-local (cloud
-// metadata), RFC1918, IPv6 unique-local and IPv4-mapped forms of the same.
-// Any signed-up owner can set a logo URL, so the hostname is RESOLVED and
-// every address checked — a name that points inside is as bad as a literal.
+// metadata), RFC1918, CGNAT, unspecified, IPv6 unique-local/link-local and the
+// IPv4-mapped forms of all of those. Any signed-up owner can set a logo URL,
+// so the hostname is RESOLVED and every address checked — a name that points
+// inside is as bad as a literal. net.BlockList does the parsing (incl.
+// ::ffff:a.b.c.d and ::ffff:hex), so no hand-rolled prefix matching.
 // ponytail: still resolves once here and once in fetch (a rebinding window);
 // pin the connection to the checked IP via a custom dispatcher if that matters.
+const DENY = new BlockList();
+for (const [net, bits] of [["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8], ["169.254.0.0", 16], ["172.16.0.0", 12], ["192.168.0.0", 16], ["224.0.0.0", 3]] as const) {
+  DENY.addSubnet(net, bits, "ipv4");
+}
+for (const [net, bits] of [["::", 128], ["::1", 128], ["fc00::", 7], ["fe80::", 10], ["ff00::", 8], ["64:ff9b::", 96], ["2002::", 16], ["2001::", 32]] as const) {
+  DENY.addSubnet(net, bits, "ipv6");
+}
 function privateAddress(ip: string): boolean {
-  const v4 = ip.replace(/^::ffff:/i, "");
-  if (isIP(v4) === 4) {
-    const [a, b] = v4.split(".").map(Number);
-    return a === 127 || a === 10 || a === 0 || (a === 169 && b === 254) || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31) || (a === 100 && b >= 64 && b <= 127);
-  }
-  const v6 = ip.toLowerCase();
-  return v6 === "::1" || v6 === "::" || /^f[cd]/.test(v6) || /^fe[89ab]/.test(v6);
+  const fam = isIP(ip);
+  if (!fam) return true;
+  return DENY.check(ip, fam === 6 ? "ipv6" : "ipv4");
 }
 async function resolvesPrivate(host: string): Promise<boolean> {
   if (host === "localhost" || host.endsWith(".localhost")) return true;
-  const bare = host.replace(/^\[|\]$/g, "");
-  if (isIP(bare)) return privateAddress(bare);
-  const addrs = await lookup(bare, { all: true }).catch(() => []);
+  // An IPv6 literal in a logo URL has no honest use; refuse rather than parse.
+  if (host.startsWith("[")) return true;
+  if (isIP(host)) return privateAddress(host);
+  const addrs = await lookup(host, { all: true }).catch(() => []);
   return addrs.length === 0 || addrs.some((a) => privateAddress(a.address));
 }
 
-// ?s=<storeId> names the store (public menu pages); without it, the signed-in
-// user's own store (dashboard, printable menu).
 export async function GET(req: Request) {
   const sid = new URL(req.url).searchParams.get("s");
   const store = sid ? await getStoreById(sid).catch(() => null) : await getStore();
