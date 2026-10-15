@@ -1,14 +1,14 @@
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  inventoryItems,
   menuCategories,
   menuItems,
   recipeForm,
   recipeComponents,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
 import { listRecipeIngredients, recipesByMenuItem } from "@/lib/store/recipe";
 import { router, featureGate, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
 
@@ -22,7 +22,7 @@ export const recipeRouter = router({
   // Save a menu item's recipe for one scope (base, or a specific variant). The
   // editor sends the full component list; we replace all rows for that scope so
   // removals stick. Wrapped in a transaction for an atomic swap.
-  save: editorProcedure.use(gate).input(recipeForm).mutation(async ({ input }) => {
+  save: editorProcedure.use(gate).input(recipeForm).mutation(async ({ ctx, input }) => {
     const { menuItemId, variantId, components } = input;
 
     // Reject duplicate ingredients in one scope — the unique constraint would
@@ -47,13 +47,29 @@ export const recipeRouter = router({
         .where(
           and(
             eq(menuItems.id, menuItemId),
-            eq(menuCategories.storeId, STORE_ID),
+            eq(menuCategories.storeId, ctx.user.storeId),
             isNull(menuItems.deletedAt),
           ),
         )
         .limit(1);
       if (!owner) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown item." });
+      }
+      // ...and so must every ingredient, or a sale here would deduct stock
+      // from another café.
+      if (components.length) {
+        const [{ n }] = await db
+          .select({ n: count() })
+          .from(inventoryItems)
+          .where(
+            and(
+              inArray(inventoryItems.id, components.map((c) => c.inventoryItemId)),
+              eq(inventoryItems.storeId, ctx.user.storeId),
+            ),
+          );
+        if (n !== components.length) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown ingredient." });
+        }
       }
 
       await db.transaction(async (tx) => {

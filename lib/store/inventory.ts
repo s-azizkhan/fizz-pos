@@ -8,7 +8,7 @@ import {
   type InventoryItem,
   type StockMovement,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 
 export type InventoryItemRow = InventoryItem & {
   enteredByName: string | null;
@@ -31,11 +31,12 @@ function decorate(
 // List active stock items for this store, alphabetical, with the name of the
 // person who created each one.
 export async function listInventory(): Promise<InventoryItemRow[]> {
+  const sid = await currentStoreId();
   const rows = await db
     .select({ item: inventoryItems, enteredByName: users.name })
     .from(inventoryItems)
     .leftJoin(users, eq(inventoryItems.enteredBy, users.id))
-    .where(and(eq(inventoryItems.storeId, STORE_ID), isNull(inventoryItems.deletedAt)))
+    .where(and(eq(inventoryItems.storeId, sid), isNull(inventoryItems.deletedAt)))
     .orderBy(inventoryItems.name);
 
   return rows.map(({ item, enteredByName }) => decorate({ ...item, enteredByName }));
@@ -44,13 +45,14 @@ export async function listInventory(): Promise<InventoryItemRow[]> {
 export async function getInventoryItem(
   id: string,
 ): Promise<InventoryItem | undefined> {
+  const sid = await currentStoreId();
   const [row] = await db
     .select()
     .from(inventoryItems)
     .where(
       and(
         eq(inventoryItems.id, id),
-        eq(inventoryItems.storeId, STORE_ID),
+        eq(inventoryItems.storeId, sid),
         isNull(inventoryItems.deletedAt),
       ),
     )

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { expenses, expenseForm } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
 import { listExpenses, getExpense } from "@/lib/store/expenses";
 import { router, featureGate, protectedProcedure } from "@/lib/trpc/init";
 
@@ -27,7 +26,7 @@ export const expensesRouter = router({
       try {
         await db
           .insert(expenses)
-          .values({ ...input, storeId: STORE_ID, enteredBy: ctx.user.id });
+          .values({ ...input, storeId: ctx.user.storeId, enteredBy: ctx.user.id });
       } catch {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -56,7 +55,7 @@ export const expensesRouter = router({
           .where(
             and(
               eq(expenses.id, input.id),
-              eq(expenses.storeId, STORE_ID),
+              eq(expenses.storeId, ctx.user.storeId),
               isNull(expenses.deletedAt),
             ),
           );

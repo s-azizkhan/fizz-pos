@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq, gte, isNull, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { dailySales, users, type DailySale } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 import { monthBounds } from "@/lib/store/date-range";
 
 export type DailySaleRow = DailySale & {
@@ -13,6 +13,7 @@ export type DailySaleRow = DailySale & {
 // List active (not soft-deleted) entries in a YYYY-MM month, newest sale date
 // first, with the name of whoever keyed each one.
 export async function listDailySales(month: string): Promise<DailySaleRow[]> {
+  const sid = await currentStoreId();
   const [start, end] = monthBounds(month);
   const rows = await db
     .select({
@@ -23,7 +24,7 @@ export async function listDailySales(month: string): Promise<DailySaleRow[]> {
     .leftJoin(users, eq(dailySales.enteredBy, users.id))
     .where(
       and(
-        eq(dailySales.storeId, STORE_ID),
+        eq(dailySales.storeId, sid),
         isNull(dailySales.deletedAt),
         gte(dailySales.saleDate, start),
         lt(dailySales.saleDate, end),
@@ -43,13 +44,14 @@ export async function listDailySales(month: string): Promise<DailySaleRow[]> {
 }
 
 export async function getDailySale(id: string): Promise<DailySale | undefined> {
+  const sid = await currentStoreId();
   const [row] = await db
     .select()
     .from(dailySales)
     .where(
       and(
         eq(dailySales.id, id),
-        eq(dailySales.storeId, STORE_ID),
+        eq(dailySales.storeId, sid),
         isNull(dailySales.deletedAt),
       ),
     )

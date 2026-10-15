@@ -8,7 +8,7 @@ import {
   orderItems,
   orders,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 
 export type ItemMargin = {
   id: string;
@@ -47,11 +47,12 @@ function pct(part: number, whole: number): number {
 // plus realized profit pulled from paid order lines. Variants are flattened by
 // using their own cost when set, otherwise the parent item cost.
 export async function getMargins(): Promise<MarginsSummary> {
+  const sid = await currentStoreId();
   const [cats, items, variants, soldRows] = await Promise.all([
     db
       .select({ id: menuCategories.id, name: menuCategories.name })
       .from(menuCategories)
-      .where(and(eq(menuCategories.storeId, STORE_ID), isNull(menuCategories.deletedAt))),
+      .where(and(eq(menuCategories.storeId, sid), isNull(menuCategories.deletedAt))),
     db
       .select()
       .from(menuItems)
@@ -66,7 +67,7 @@ export async function getMargins(): Promise<MarginsSummary> {
       })
       .from(orderItems)
       .innerJoin(orders, eq(orderItems.orderId, orders.id))
-      .where(and(eq(orders.storeId, STORE_ID), eq(orders.status, "paid")))
+      .where(and(eq(orders.storeId, sid), eq(orders.status, "paid")))
       .groupBy(orderItems.menuItemId),
   ]);
 

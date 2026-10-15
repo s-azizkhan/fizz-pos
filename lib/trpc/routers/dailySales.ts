@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { and, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { dailySales, dailySaleForm, orders } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
 import { listDailySales, getDailySale } from "@/lib/store/daily-sales";
 import { fromDateInput } from "@/lib/store/date-range";
 import { router, featureGate, protectedProcedure } from "@/lib/trpc/init";
@@ -30,7 +29,7 @@ export const dailySalesRouter = router({
   tillTotals: protectedProcedure
     .use(gate)
     .input(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
       const start = fromDateInput(input);
       const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
       const rows = await db
@@ -41,7 +40,7 @@ export const dailySalesRouter = router({
         .from(orders)
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, ctx.user.storeId),
             eq(orders.status, "paid"),
             gte(orders.paidAt, start),
             lt(orders.paidAt, end),
@@ -60,7 +59,7 @@ export const dailySalesRouter = router({
       try {
         await db
           .insert(dailySales)
-          .values({ ...input, storeId: STORE_ID, enteredBy: ctx.user.id });
+          .values({ ...input, storeId: ctx.user.storeId, enteredBy: ctx.user.id });
       } catch {
         throw fizzled;
       }
@@ -86,7 +85,7 @@ export const dailySalesRouter = router({
           .where(
             and(
               eq(dailySales.id, input.id),
-              eq(dailySales.storeId, STORE_ID),
+              eq(dailySales.storeId, ctx.user.storeId),
               isNull(dailySales.deletedAt),
             ),
           );

@@ -8,7 +8,7 @@ import {
   type OrderItem,
   type KitchenStatus,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 import { fromDateInput, monthBounds, resolvePreset } from "@/lib/store/date-range";
 import { customersByIds } from "@/lib/store/customers";
 import type { LoadedOrder } from "@/components/fizz/pos/types";
@@ -81,13 +81,14 @@ export async function listOrders(
   month: string,
   opts: { offset: number; limit: number; includeVoid: boolean },
 ): Promise<{ rows: OrderRow[]; hasMore: boolean }> {
+  const sid = await currentStoreId();
   const [start, end] = monthBounds(month).map(fromDateInput);
   const [open, closed] = await Promise.all([
     opts.offset === 0
       ? db
           .select()
           .from(orders)
-          .where(and(eq(orders.storeId, STORE_ID), eq(orders.status, "open")))
+          .where(and(eq(orders.storeId, sid), eq(orders.status, "open")))
           .orderBy(desc(orders.createdAt))
       : Promise.resolve([]),
     db
@@ -95,7 +96,7 @@ export async function listOrders(
       .from(orders)
       .where(
         and(
-          eq(orders.storeId, STORE_ID),
+          eq(orders.storeId, sid),
           gte(orders.createdAt, start),
           lt(orders.createdAt, end),
           ne(orders.status, "open"),
@@ -155,10 +156,11 @@ export async function listOrders(
 
 // Fetch a single order with its lines, scoped to the store. Null if missing.
 export async function getOrder(id: string): Promise<OrderWithItems | null> {
+  const sid = await currentStoreId();
   const [row] = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.id, id), eq(orders.storeId, STORE_ID)))
+    .where(and(eq(orders.id, id), eq(orders.storeId, sid)))
     .limit(1);
   if (!row) return null;
   const items = await db
@@ -182,6 +184,7 @@ function inCurrentMonth() {
 }
 
 export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
+  const sid = await currentStoreId();
   const rows = await db
     .select({
       id: orders.id,
@@ -196,7 +199,7 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
     .from(orders)
     .where(
       and(
-        eq(orders.storeId, STORE_ID),
+        eq(orders.storeId, sid),
         ne(orders.status, "void"),
         // Guest web orders wait for staff to accept them (or pay) before the kitchen sees them.
         or(eq(orders.webPending, false), eq(orders.status, "paid")),
@@ -231,6 +234,7 @@ export async function listKot(lane: KitchenStatus): Promise<KotTicket[]> {
 // Lane counts drive the tab badges, so a cook can see work piling up in a lane
 // they aren't looking at.
 export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
+  const sid = await currentStoreId();
   const rows = await db
     .select({
       lane: orders.kitchenStatus,
@@ -239,7 +243,7 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
     .from(orders)
     .where(
       and(
-        eq(orders.storeId, STORE_ID),
+        eq(orders.storeId, sid),
         ne(orders.status, "void"),
         // Guest web orders wait for staff to accept them (or pay) before the kitchen sees them.
         or(eq(orders.webPending, false), eq(orders.status, "paid")),
@@ -256,11 +260,12 @@ export async function kotCounts(): Promise<Record<KitchenStatus, number>> {
 // Guest web orders nobody has accepted yet — what the new-order alarm rings
 // for. Polled from every dashboard screen, so it returns three columns only.
 export async function pendingWebOrders() {
+  const sid = await currentStoreId();
   return db
     .select({ id: orders.id, number: orders.number })
     .from(orders)
     .where(
-      and(eq(orders.storeId, STORE_ID), eq(orders.status, "open"), eq(orders.webPending, true)),
+      and(eq(orders.storeId, sid), eq(orders.status, "open"), eq(orders.webPending, true)),
     )
     .orderBy(asc(orders.createdAt))
     .limit(20);
@@ -268,9 +273,10 @@ export async function pendingWebOrders() {
 
 // Count of currently-open tabs — used for the POS/orders badge.
 export async function openOrderCount(): Promise<number> {
+  const sid = await currentStoreId();
   const [row] = await db
     .select({ count: sql<number>`count(*)`.mapWith(Number) })
     .from(orders)
-    .where(and(eq(orders.storeId, STORE_ID), eq(orders.status, "open")));
+    .where(and(eq(orders.storeId, sid), eq(orders.status, "open")));
   return row?.count ?? 0;
 }

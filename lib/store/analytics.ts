@@ -8,7 +8,7 @@ import {
   orderItems,
   orders,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 import { ORDER_SOURCE_LABELS } from "@/lib/db/schema/constants";
 import type { DateRange } from "@/lib/store/date-range";
 
@@ -67,6 +67,7 @@ const SERVER_TZ =
 
 // Sum paid-order revenue/tax/discount and order count in a window.
 async function paidTotals(start: Date, end: Date) {
+  const sid = await currentStoreId();
   const [row] = await db
     .select({
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
@@ -77,7 +78,7 @@ async function paidTotals(start: Date, end: Date) {
     .from(orders)
     .where(
       and(
-        eq(orders.storeId, STORE_ID),
+        eq(orders.storeId, sid),
         eq(orders.status, "paid"),
         gte(orders.paidAt, start),
         lt(orders.paidAt, end),
@@ -96,6 +97,7 @@ function localDate(d: Date): string {
 }
 
 async function expenseTotal(start: Date, end: Date) {
+  const sid = await currentStoreId();
   const startS = localDate(start);
   const endS = localDate(end);
   const [row] = await db
@@ -105,7 +107,7 @@ async function expenseTotal(start: Date, end: Date) {
     .from(expenses)
     .where(
       and(
-        eq(expenses.storeId, STORE_ID),
+        eq(expenses.storeId, sid),
         sql`${expenses.deletedAt} is null`,
         gte(expenses.expenseDate, startS),
         lt(expenses.expenseDate, endS),
@@ -120,6 +122,7 @@ export async function getAnalytics(
   prev: DateRange,
   hourly: boolean,
 ): Promise<Analytics> {
+  const sid = await currentStoreId();
   const { start, end } = range;
 
   const [cur, prior, curExp, priorExp, payRows, typeRows, sourceRows, catRows, topRows, trendRows] =
@@ -138,7 +141,7 @@ export async function getAnalytics(
         .from(orders)
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, sid),
             eq(orders.status, "paid"),
             gte(orders.paidAt, start),
             lt(orders.paidAt, end),
@@ -155,7 +158,7 @@ export async function getAnalytics(
         .from(orders)
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, sid),
             eq(orders.status, "paid"),
             gte(orders.paidAt, start),
             lt(orders.paidAt, end),
@@ -172,7 +175,7 @@ export async function getAnalytics(
         .from(orders)
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, sid),
             eq(orders.status, "paid"),
             gte(orders.paidAt, start),
             lt(orders.paidAt, end),
@@ -192,7 +195,7 @@ export async function getAnalytics(
         .leftJoin(menuCategories, eq(menuItems.categoryId, menuCategories.id))
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, sid),
             eq(orders.status, "paid"),
             gte(orders.paidAt, start),
             lt(orders.paidAt, end),
@@ -210,7 +213,7 @@ export async function getAnalytics(
         .innerJoin(orders, eq(orderItems.orderId, orders.id))
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, sid),
             eq(orders.status, "paid"),
             gte(orders.paidAt, start),
             lt(orders.paidAt, end),
@@ -237,7 +240,7 @@ export async function getAnalytics(
         .from(orders)
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, sid),
             eq(orders.status, "paid"),
             gte(orders.paidAt, start),
             lt(orders.paidAt, end),

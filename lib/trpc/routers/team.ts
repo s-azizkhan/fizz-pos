@@ -26,7 +26,8 @@ function expiry(): Date {
 const live = () => and(isNull(invites.acceptedAt), gt(invites.expiresAt, new Date()));
 
 export const teamRouter = router({
-  list: adminProcedure.query(async () => {
+  list: adminProcedure.query(async ({ ctx }) => {
+    const sid = ctx.user.storeId;
     const [members, pending] = await Promise.all([
       db
         .select({
@@ -37,6 +38,7 @@ export const teamRouter = router({
           createdAt: users.createdAt,
         })
         .from(users)
+        .where(eq(users.storeId, sid))
         .orderBy(asc(users.createdAt)),
       db
         .select({
@@ -48,7 +50,7 @@ export const teamRouter = router({
           createdAt: invites.createdAt,
         })
         .from(invites)
-        .where(live())
+        .where(and(eq(invites.storeId, sid), live()))
         .orderBy(desc(invites.createdAt)),
     ]);
     return { members, pending };
@@ -80,6 +82,7 @@ export const teamRouter = router({
         const [created] = await tx
           .insert(invites)
           .values({
+            storeId: ctx.user.storeId,
             email: input.email,
             role: input.role,
             token,
@@ -94,10 +97,10 @@ export const teamRouter = router({
 
   revoke: adminProcedure
     .input(z.object({ id: z.uuid() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       await db
         .delete(invites)
-        .where(and(eq(invites.id, input.id), isNull(invites.acceptedAt)));
+        .where(and(eq(invites.id, input.id), eq(invites.storeId, ctx.user.storeId), isNull(invites.acceptedAt)));
       return { ok: true as const };
     }),
 
@@ -115,7 +118,7 @@ export const teamRouter = router({
       await db
         .update(users)
         .set({ role: input.role })
-        .where(eq(users.id, input.userId));
+        .where(and(eq(users.id, input.userId), eq(users.storeId, ctx.user.storeId)));
       return { ok: true as const };
     }),
 
@@ -128,7 +131,9 @@ export const teamRouter = router({
           message: "You can't remove yourself.",
         });
       }
-      await db.delete(users).where(eq(users.id, input.userId));
+      await db
+        .delete(users)
+        .where(and(eq(users.id, input.userId), eq(users.storeId, ctx.user.storeId)));
       return { ok: true as const };
     }),
 
@@ -163,6 +168,8 @@ export const teamRouter = router({
         const [created] = await tx
           .insert(users)
           .values({
+            // Store and role both ride the invite, never the invitee's form.
+            storeId: invite.storeId,
             email: invite.email,
             name: input.name,
             passwordHash,

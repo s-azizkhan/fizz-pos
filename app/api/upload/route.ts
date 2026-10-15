@@ -2,7 +2,6 @@ import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { images } from "@/lib/db/schema";
 import { getSessionUser } from "@/lib/auth/dal";
-import { STORE_ID } from "@/lib/store/constants";
 
 const KINDS = new Set(["logo", "cover"]);
 const MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -33,8 +32,8 @@ export async function POST(req: Request) {
 
   const [row] = await db
     .insert(images)
-    .values({ storeId: STORE_ID, kind, mime: file.type, size: data.length, data })
+    .values({ storeId: user.storeId, kind, mime: file.type, size: data.length, data })
     .returning({ id: images.id });
-  await db.delete(images).where(and(eq(images.storeId, STORE_ID), eq(images.kind, kind), ne(images.id, row.id)));
+  await db.delete(images).where(and(eq(images.storeId, user.storeId), eq(images.kind, kind), ne(images.id, row.id)));
   return Response.json({ url: `/api/img/${row.id}` });
 }

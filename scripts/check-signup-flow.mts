@@ -1,9 +1,9 @@
 // Runnable end-to-end check for owner signup + onboarding. Talks HTTP to a
-// running dev server. Needs an EMPTY users table to exercise the signup half;
-// on a populated DB it only asserts signup is closed.
+// running dev server; creates a throwaway store and deletes it at the end.
 //   npm run dev   # in another shell
 //   npx tsx --env-file=.env scripts/check-signup-flow.mts
 import assert from "node:assert/strict";
+import postgres from "postgres";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 
@@ -17,7 +17,7 @@ async function call(path: string, body: unknown, cookie = "") {
   return { ok: res.ok, res, data: payload.result?.data?.json, error: payload.error };
 }
 async function query(path: string, cookie = "") {
-  const url = `${BASE}/api/trpc/${path}?input=${encodeURIComponent(JSON.stringify({ json: undefined }))}`;
+  const url = `${BASE}/api/trpc/${path}?input=${encodeURIComponent(JSON.stringify({ json: null }))}`;
   const payload = await (await fetch(url, { headers: { origin: BASE, ...(cookie ? { cookie } : {}) } })).json();
   return { data: payload.result?.data?.json, error: payload.error };
 }
@@ -27,17 +27,10 @@ const hop = async (path: string, cookie = "") => {
 };
 const sessionFrom = (res: Response) => (res.headers.get("set-cookie") ?? "").split(";")[0];
 
-const open = (await query("auth.canSignup")).data;
 const owner = { storeName: "E2E Chai", name: "E2E Owner", email: `e2e.owner.${Date.now()}@example.com`, password: "brew1234" };
 
-if (!open) {
-  assert.equal((await call("auth.signup", owner)).error?.json?.data?.code, "CONFLICT", "signup closed once a user exists");
-  assert.equal((await hop("/signup")).status, 200, "/signup renders the 'has an owner' screen");
-  console.log("signup flow OK (closed — DB already has users)");
-  process.exit(0);
-}
-
-// --- fresh counter: first account becomes admin and lands on onboarding -----
+// --- a new counter: first account is its admin and lands on onboarding -------
+assert.equal((await hop("/signup")).status, 200, "/signup renders");
 assert.ok((await call("auth.signup", { ...owner, password: "short" })).error, "weak password rejected");
 const signed = await call("auth.signup", owner);
 assert.ok(signed.ok, `signup failed: ${signed.error?.json?.message}`);
@@ -47,11 +40,11 @@ assert.ok(cookie.startsWith("fizz_session="), "owner signed in on signup");
 
 const me = (await query("auth.me", cookie)).data;
 assert.equal(me.role, "admin");
+const storeId: string = me.storeId;
 assert.equal((await query("store.get", cookie)).data.name, "E2E Chai");
 
-// second owner can't happen
-assert.equal((await call("auth.signup", { ...owner, email: "second@example.com" })).error?.json?.data?.code, "CONFLICT");
-assert.equal((await query("auth.canSignup")).data, false);
+// same email can't open a second counter
+assert.equal((await call("auth.signup", owner)).error?.json?.data?.code, "CONFLICT");
 
 // dashboard bounces to the wizard until onboarded; /onboarding itself renders
 const dash = await hop("/dashboard", cookie);
@@ -76,4 +69,8 @@ assert.deepEqual(store.disabledFeatures, ["inventory"]);
 assert.equal((await hop("/dashboard", cookie)).status, 200, "dashboard opens after onboarding");
 assert.ok((await hop("/onboarding", cookie)).to?.endsWith("/dashboard"), "wizard is one-shot");
 
+// --- cleanup -------------------------------------------------------------------
+const sql = postgres(process.env.DB_URL!, { prepare: false });
+await sql`delete from store where id = ${storeId}`;
+await sql.end();
 console.log("signup flow OK");

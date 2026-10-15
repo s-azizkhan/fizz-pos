@@ -1,7 +1,7 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { images } from "@/lib/db/schema";
-import { getStore } from "@/lib/store/data";
+import { getStore, getStoreById } from "@/lib/store/data";
 
 // Same-origin proxy for the store logo. The logo lives on an arbitrary host
 // that need not send CORS headers, and <img crossOrigin> fails without them —
@@ -26,15 +26,23 @@ import { getStore } from "@/lib/store/data";
 const PRIVATE_HOST =
   /^(localhost$|127\.|0\.0\.0\.0$|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[?::1\]?$)/i;
 
-export async function GET() {
-  const store = await getStore();
+// ?s=<storeId> names the store (public menu pages); without it, the signed-in
+// user's own store (dashboard, printable menu).
+export async function GET(req: Request) {
+  const sid = new URL(req.url).searchParams.get("s");
+  const store = sid ? await getStoreById(sid).catch(() => null) : await getStore();
+  if (!store) return new Response("No logo", { status: 404 });
   const raw = store.logoUrl;
   if (!raw) return new Response("No logo", { status: 404 });
 
   // Uploaded logo: ours, served from the DB. No fetch, no SSRF surface.
   const own = raw.match(/^\/api\/img\/([0-9a-f-]{36})$/);
   if (own) {
-    const [img] = await db.select().from(images).where(eq(images.id, own[1])).limit(1);
+    const [img] = await db
+      .select()
+      .from(images)
+      .where(and(eq(images.id, own[1]), eq(images.storeId, store.id)))
+      .limit(1);
     if (!img) return new Response("No logo", { status: 404 });
     return new Response(new Uint8Array(img.data), {
       headers: { "content-type": img.mime, "cache-control": "public, max-age=3600", "x-content-type-options": "nosniff" },

@@ -23,10 +23,16 @@ Required env: `DB_URL` (postgres), `SESSION_SECRET` (JWT signing). Prod also nee
 
 ## Architecture
 
-**Single-store POS.** Public marketing/menu site + an authed `/dashboard` operating the POS, inventory, menu, expenses, and analytics.
+**Multi-tenant counter POS.** Public marketing/menu site + an authed `/dashboard` operating the POS, inventory, menu, expenses, and analytics — one DB, many stores.
 
-### Single-store model
-Every row links to one store identified by the fixed UUID `STORE_ID` in `lib/store/constants.ts`. `getStore()` (`lib/store/data.ts`) lazily creates that singleton row. The schema is multi-store-ready but the app is hardwired to one store — scope new queries by `STORE_ID`.
+### Tenancy model
+Every row belongs to a `store`. Users and invites carry `store_id`; menu items/variants and recipe components inherit it through their category/item. Scoping:
+- **Authed code** (pages, lib/store loaders, protected procedures): the store is the signed-in user's — `ctx.user.storeId` in tRPC, `currentStoreId()` (`lib/auth/dal.ts`) in server-only loaders, `getStore()` for the cached row. Every `where` on a store-owned table ANDs the store id; by-id writes on child tables (menu items, recipe ingredients) join through to the store first (`ownItems`, `requireCategory` in `routers/menu.ts`).
+- **Guest code** (public menu, web orders): no session. `getPublicMenu(slug)` resolves the store by `menuSlug` (or `menuDomain` for host `~`), and everything downstream takes that store's id explicitly (`getStoreById`, `getFullMenuById`, `nextOrderNumber(storeId)`, `resolveCustomer(tx, storeId, …)`).
+- **Caches** are per store: tags `store:<id>` / `menu:<id>` via `storeTag()` / `menuTag()` in `lib/store/cache.ts`; writers `bust()` their own store's tag.
+- `STORE_ID` in `lib/store/constants.ts` is the legacy first store, used only by the seeder and the backfill migration.
+
+Signup (`/signup`, `auth.signup`) creates a store + its admin; `/onboarding` is the owner's first-run wizard (`store.onboardedAt`); managers/staff join via invite links (`/join/[token]`) and inherit the invite's store. `scripts/check-tenancy.mts` asserts two stores can't see each other.
 
 ### Auth (two-layer)
 - `proxy.ts` is the Next 16 middleware (renamed from `middleware.ts`). It does an **optimistic** check only — verifies the JWT signature with no DB hit, redirecting `/dashboard/*` ↔ `/login`. Must stay Edge-compatible: no `next/headers`, no `server-only` imports.

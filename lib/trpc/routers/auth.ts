@@ -1,10 +1,7 @@
 import { TRPCError } from "@trpc/server";
-import { count, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { store, users, loginForm, signupForm } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
-import { loadStore } from "@/lib/store/data";
-import { bust } from "@/lib/store/cache";
 import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import { createSession, deleteSession } from "@/lib/auth/session";
 import { router, publicProcedure, protectedProcedure } from "@/lib/trpc/init";
@@ -37,37 +34,25 @@ export const authRouter = router({
     return { ok: true as const, redirectTo: "/dashboard" };
   }),
 
-  // Owner signup is open only while the counter has no users — single-store
-  // app, so the first account owns it and everyone else joins by invite.
-  canSignup: publicProcedure.query(async () => {
-    const [{ n }] = await db.select({ n: count() }).from(users);
-    return n === 0;
-  }),
-
+  // Owner signup: a new counter and its first admin in one transaction.
+  // Everyone else at that counter joins through an invite link.
   signup: publicProcedure.input(signupForm).mutation(async ({ input }) => {
-    await loadStore(); // ensure the singleton row exists before naming it
+    const taken = await db.select({ id: users.id }).from(users).where(eq(users.email, input.email)).limit(1);
+    if (taken[0]) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "That email already has an account. Sign in instead.",
+      });
+    }
     const passwordHash = await hashPassword(input.password);
     const user = await db.transaction(async (tx) => {
-      // Serialise concurrent signups so two first owners can't both win.
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext('fizz.signup'))`);
-      const [{ n }] = await tx.select({ n: count() }).from(users);
-      if (n > 0) {
-        throw new TRPCError({
-          code: "CONFLICT",
-          message: "This counter already has an owner. Sign in or ask for an invite.",
-        });
-      }
+      const [s] = await tx.insert(store).values({ name: input.storeName }).returning({ id: store.id });
       const [created] = await tx
         .insert(users)
-        .values({ email: input.email, name: input.name, passwordHash, role: "admin" })
+        .values({ storeId: s.id, email: input.email, name: input.name, passwordHash, role: "admin" })
         .returning({ id: users.id, role: users.role });
-      await tx
-        .update(store)
-        .set({ name: input.storeName, updatedAt: new Date() })
-        .where(eq(store.id, STORE_ID));
       return created;
     });
-    bust("store");
     await createSession({ userId: user.id, role: user.role });
     return { ok: true as const, redirectTo: "/onboarding" };
   }),

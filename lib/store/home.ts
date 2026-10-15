@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 import { listInventory } from "@/lib/store/inventory";
 import { resolvePreset } from "@/lib/store/date-range";
 
@@ -47,6 +47,7 @@ const r2 = (x: number) => Math.round(x * 100) / 100;
 const SERVER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 
 async function paid(start: Date, end: Date) {
+  const sid = await currentStoreId();
   const [row] = await db
     .select({
       revenue: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
@@ -55,7 +56,7 @@ async function paid(start: Date, end: Date) {
     .from(orders)
     .where(
       and(
-        eq(orders.storeId, STORE_ID),
+        eq(orders.storeId, sid),
         eq(orders.status, "paid"),
         gte(orders.paidAt, start),
         lt(orders.paidAt, end),
@@ -67,6 +68,7 @@ async function paid(start: Date, end: Date) {
 // Aggregate everything the home dashboard needs in one pass. Role filtering is
 // done by the page — this returns the full snapshot.
 export async function getHomeSnapshot(): Promise<HomeSnapshot> {
+  const sid = await currentStoreId();
   const today = resolvePreset("today");
   const yesterday = resolvePreset("yesterday");
   const week = resolvePreset("this_week");
@@ -91,7 +93,7 @@ export async function getHomeSnapshot(): Promise<HomeSnapshot> {
       .from(orders)
       .where(
         and(
-          eq(orders.storeId, STORE_ID),
+          eq(orders.storeId, sid),
           eq(orders.status, "paid"),
           gte(orders.paidAt, today.start),
           lt(orders.paidAt, today.end),
@@ -107,7 +109,7 @@ export async function getHomeSnapshot(): Promise<HomeSnapshot> {
       .from(orders)
       .where(
         and(
-          eq(orders.storeId, STORE_ID),
+          eq(orders.storeId, sid),
           eq(orders.status, "paid"),
           gte(orders.paidAt, week.start),
           lt(orders.paidAt, week.end),
@@ -121,7 +123,7 @@ export async function getHomeSnapshot(): Promise<HomeSnapshot> {
         value: sql<number>`coalesce(sum(${orders.total}), 0)`.mapWith(Number),
       })
       .from(orders)
-      .where(and(eq(orders.storeId, STORE_ID), eq(orders.status, "open"))),
+      .where(and(eq(orders.storeId, sid), eq(orders.status, "open"))),
     // Recent orders (any status except void), newest first.
     db
       .select({
@@ -136,7 +138,7 @@ export async function getHomeSnapshot(): Promise<HomeSnapshot> {
         items: sql<number>`(select coalesce(sum(oi.quantity),0) from order_items oi where oi.order_id = ${orders.id})`.mapWith(Number),
       })
       .from(orders)
-      .where(and(eq(orders.storeId, STORE_ID), sql`${orders.status} <> 'void'`))
+      .where(and(eq(orders.storeId, sid), sql`${orders.status} <> 'void'`))
       .orderBy(desc(orders.createdAt))
       .limit(6),
     listInventory(),

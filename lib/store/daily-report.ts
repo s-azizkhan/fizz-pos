@@ -2,7 +2,7 @@ import "server-only";
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orders } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 import { getAnalytics, type Analytics } from "@/lib/store/analytics";
 import { fromDateInput, resolvePreset, toDateInput } from "@/lib/store/date-range";
 import { listInventory } from "@/lib/store/inventory";
@@ -46,6 +46,7 @@ export async function getDailyReport(
   currency: string,
   date?: string, // YYYY-MM-DD; omitted = today
 ): Promise<DailyReport> {
+  const sid = await currentStoreId();
   const money = (x: number) => formatMoney(x, currency);
   const anchor = date ? fromDateInput(date) : new Date();
   const today = resolvePreset("today", anchor);
@@ -70,7 +71,7 @@ export async function getDailyReport(
       .from(orders)
       .where(
         and(
-          eq(orders.storeId, STORE_ID),
+          eq(orders.storeId, sid),
           gte(orders.createdAt, today.start),
           lt(orders.createdAt, today.end),
         ),

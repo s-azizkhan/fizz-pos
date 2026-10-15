@@ -27,6 +27,7 @@ export const getSessionUser = cache(async () => {
   const rows = await db
     .select({
       id: users.id,
+      storeId: users.storeId,
       email: users.email,
       name: users.name,
       role: users.role,
@@ -45,3 +46,8 @@ export const getSessionUser = cache(async () => {
 export const getCurrentUser = cache(
   async () => (await getSessionUser()) ?? redirect("/logout"),
 );
+
+// The signed-in user's store. The server-only loaders in lib/store/* call this
+// so pages and procedures never thread a storeId by hand; public (guest) code
+// paths resolve the store from the menu slug/host instead and never call it.
+export const currentStoreId = cache(async () => (await getCurrentUser()).storeId);

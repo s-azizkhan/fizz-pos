@@ -5,7 +5,10 @@ import superjson from "superjson";
 // Cross-request data cache for hot, rarely-written reads (store row, menu
 // tree, ordering config). Every writer of that data calls bust() — a missed
 // bust means stale data until the next write, so keep writes in the routers.
-export type CacheTag = "store" | "menu";
+// Per-store tags so one café's save never evicts another's.
+export type CacheTag = `store:${string}` | `menu:${string}`;
+export const storeTag = (storeId: string): CacheTag => `store:${storeId}`;
+export const menuTag = (storeId: string): CacheTag => `menu:${storeId}`;
 
 // ponytail: unstable_cache is the pre-Cache-Components API; move to
 // 'use cache' + cacheTag if the app opts into cacheComponents.

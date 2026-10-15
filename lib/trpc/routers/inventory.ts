@@ -9,7 +9,6 @@ import {
   stockMovements,
   stockMovementForm,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
 import {
   listInventory,
   getInventoryItem,
@@ -72,7 +71,7 @@ export const inventoryRouter = router({
         await db.transaction(async (tx) => {
           const [created] = await tx
             .insert(inventoryItems)
-            .values({ ...input, storeId: STORE_ID, enteredBy: ctx.user.id })
+            .values({ ...input, storeId: ctx.user.storeId, enteredBy: ctx.user.id })
             .returning({ id: inventoryItems.id });
           // Seed an opening-stock movement so history is complete from day one.
           if (Number(input.quantity) > 0) {
@@ -96,7 +95,7 @@ export const inventoryRouter = router({
   updateItem: editorProcedure
     .use(gate)
     .input(inventoryItemForm.extend({ id: z.uuid("Invalid item.") }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       // Editing item details must not silently move stock — quantity changes
       // go through stock movements. Build the update set without quantity.
       const { name, sku, category, unit, reorderLevel, costPerUnit, supplier } = input;
@@ -108,7 +107,7 @@ export const inventoryRouter = router({
           .where(
             and(
               eq(inventoryItems.id, input.id),
-              eq(inventoryItems.storeId, STORE_ID),
+              eq(inventoryItems.storeId, ctx.user.storeId),
               isNull(inventoryItems.deletedAt),
             ),
           );
@@ -122,13 +121,13 @@ export const inventoryRouter = router({
   deleteItem: editorProcedure
     .use(gate)
     .input(z.object({ id: z.uuid("Invalid item.") }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         await db
           .update(inventoryItems)
           .set({ deletedAt: new Date(), updatedAt: new Date() })
           .where(
-            and(eq(inventoryItems.id, input.id), eq(inventoryItems.storeId, STORE_ID)),
+            and(eq(inventoryItems.id, input.id), eq(inventoryItems.storeId, ctx.user.storeId)),
           );
       } catch {
         throw fizzled;
@@ -151,7 +150,7 @@ export const inventoryRouter = router({
             .where(
               and(
                 eq(inventoryItems.id, itemId),
-                eq(inventoryItems.storeId, STORE_ID),
+                eq(inventoryItems.storeId, ctx.user.storeId),
                 isNull(inventoryItems.deletedAt),
               ),
             )

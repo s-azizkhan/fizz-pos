@@ -15,7 +15,6 @@ import {
   orderItems,
   orders,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
 import { featureOn } from "@/lib/store/features";
 import { computeTotals, r2 } from "@/lib/store/totals";
 import {
@@ -26,7 +25,7 @@ import {
   listKot,
   kotCounts,
 } from "@/lib/store/orders";
-import { nextOrderNumber, getStore } from "@/lib/store/data";
+import { nextOrderNumber, getStore, getStoreById } from "@/lib/store/data";
 import { receiptStore } from "@/lib/store/order-settings";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
 import { resolveCustomer } from "@/lib/store/customers";
@@ -71,11 +70,11 @@ async function writeItems(
 
 // Load an order for editing, asserting it's still open. Guards against settling
 // or re-saving a tab someone else already closed. Admins may edit any state.
-async function requireOpen(orderId: string, role: string) {
+async function requireOpen(storeId: string, orderId: string, role: string) {
   const [row] = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.id, orderId), eq(orders.storeId, STORE_ID)))
+    .where(and(eq(orders.id, orderId), eq(orders.storeId, storeId)))
     .limit(1);
   if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Order not found." });
   if (row.status !== "open" && role !== "admin")
@@ -87,12 +86,12 @@ async function requireOpen(orderId: string, role: string) {
 }
 
 // The order a previous delivery of this offline sale already created, if any.
-async function byClientId(clientId: string | undefined) {
+async function byClientId(storeId: string, clientId: string | undefined) {
   if (!clientId) return undefined;
   const [row] = await db
     .select({ id: orders.id, number: orders.number, paidAt: orders.paidAt, total: orders.total })
     .from(orders)
-    .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, clientId)))
+    .where(and(eq(orders.storeId, storeId), eq(orders.clientId, clientId)))
     .limit(1);
   return row;
 }
@@ -202,7 +201,8 @@ export const ordersRouter = router({
       total: totals.total.toFixed(2),
     });
 
-    const dup = await byClientId(input.clientId);
+    const sid = menu.store.id;
+    const dup = await byClientId(sid, input.clientId);
     if (dup) return receipt(dup.number);
 
     const phone = normalisePhone(input.phone);
@@ -213,7 +213,7 @@ export const ordersRouter = router({
         .innerJoin(customers, eq(orders.customerId, customers.id))
         .where(
           and(
-            eq(orders.storeId, STORE_ID),
+            eq(orders.storeId, sid),
             eq(orders.source, "web"),
             eq(customers.phone, phone ?? ""),
             gte(orders.createdAt, sql`now() - interval '10 minutes'`),
@@ -222,7 +222,7 @@ export const ordersRouter = router({
       db
         .select({ n: count() })
         .from(orders)
-        .where(and(eq(orders.storeId, STORE_ID), eq(orders.webPending, true), eq(orders.status, "open"))),
+        .where(and(eq(orders.storeId, sid), eq(orders.webPending, true), eq(orders.status, "open"))),
     ]);
     if (recent.n >= 3 || pending.n >= 25) {
       throw new TRPCError({
@@ -236,13 +236,13 @@ export const ordersRouter = router({
     const reference =
       [type === "delivery" ? input.address : "", input.note].filter(Boolean).join(" · ").slice(0, 300) ||
       null;
-    const number = await nextOrderNumber();
+    const number = await nextOrderNumber(sid);
     try {
       await db.transaction(async (tx) => {
         const [o] = await tx
           .insert(orders)
           .values({
-            storeId: STORE_ID,
+            storeId: sid,
             number,
             clientId: input.clientId,
             status: "open",
@@ -253,7 +253,7 @@ export const ordersRouter = router({
             source: "web",
             type,
             reference,
-            customerId: await resolveCustomer(tx, {
+            customerId: await resolveCustomer(tx, sid, {
               customerName: input.name,
               customerPhone: input.phone,
             }),
@@ -264,7 +264,7 @@ export const ordersRouter = router({
       });
     } catch {
       // A double tap lost the race on the clientId unique index — same order.
-      const won = await byClientId(input.clientId);
+      const won = await byClientId(sid, input.clientId);
       if (won) return receipt(won.number);
       throw fizzled("Something fizzled placing your order. Try again.");
     }
@@ -275,9 +275,9 @@ export const ordersRouter = router({
   // A guest checking on their own web order. PUBLIC — the clientId they minted
   // is an unguessable UUID, so it doubles as the access key (no number lookups).
   webStatus: publicProcedure.input(z.uuid()).query(async ({ input }) => {
-    const [[o], { disabledFeatures }] = await Promise.all([
-      db
+    const [o] = await db
         .select({
+          storeId: orders.storeId,
           number: orders.number,
           status: orders.status,
           kitchenStatus: orders.kitchenStatus,
@@ -285,12 +285,12 @@ export const ordersRouter = router({
           total: orders.total,
         })
         .from(orders)
-        .where(and(eq(orders.storeId, STORE_ID), eq(orders.clientId, input)))
-        .limit(1),
-      getStore(),
-    ]);
+        .where(eq(orders.clientId, input))
+        .limit(1);
+    if (!o) return null;
+    const { disabledFeatures } = await getStoreById(o.storeId);
     // KOT off: the guest's tracker stops at "Confirmed" — no kitchen steps.
-    return o ? { ...o, kot: featureOn(disabledFeatures, "kot") } : null;
+    return { number: o.number, status: o.status, kitchenStatus: o.kitchenStatus, webPending: o.webPending, total: o.total, kot: featureOn(disabledFeatures, "kot") };
   }),
 
   list: protectedProcedure
@@ -311,14 +311,14 @@ export const ordersRouter = router({
   webPending: protectedProcedure.query(() => pendingWebOrders()),
 
   // Staff OK a guest's web order: it drops into the KOT "new" lane.
-  acceptWeb: protectedProcedure.input(z.uuid()).mutation(async ({ input }) => {
+  acceptWeb: protectedProcedure.input(z.uuid()).mutation(async ({ ctx, input }) => {
     const done = await db
       .update(orders)
       .set({ webPending: false, updatedAt: new Date() })
       .where(
         and(
           eq(orders.id, input),
-          eq(orders.storeId, STORE_ID),
+          eq(orders.storeId, ctx.user.storeId),
           eq(orders.webPending, true),
           eq(orders.status, "open"),
         ),
@@ -347,11 +347,11 @@ export const ordersRouter = router({
   kotMove: protectedProcedure
     .use(featureGate("kot"))
     .input(kitchenMoveSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const [row] = await db
         .select({ status: orders.status, lane: orders.kitchenStatus })
         .from(orders)
-        .where(and(eq(orders.id, input.orderId), eq(orders.storeId, STORE_ID)))
+        .where(and(eq(orders.id, input.orderId), eq(orders.storeId, ctx.user.storeId)))
         .limit(1);
       if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Order not found." });
       if (row.status === "void")
@@ -390,7 +390,7 @@ export const ordersRouter = router({
       );
 
       if (orderId) {
-        const existing = await requireOpen(orderId, ctx.user.role);
+        const existing = await requireOpen(ctx.user.storeId, orderId, ctx.user.role);
         try {
           await db.transaction(async (tx) => {
             await tx
@@ -400,7 +400,7 @@ export const ordersRouter = router({
                 reference,
                 webPending: false,
                 source: input.source,
-                customerId: await resolveCustomer(tx, input),
+                customerId: await resolveCustomer(tx, ctx.user.storeId, input),
                 ...moneyColumns(totals),
                 servedBy: ctx.user.id,
                 updatedAt: new Date(),
@@ -416,16 +416,16 @@ export const ordersRouter = router({
       }
 
       // Replay of a tab already saved from the offline queue.
-      const dup = await byClientId(clientId);
+      const dup = await byClientId(ctx.user.storeId, clientId);
       if (dup) return { orderId: dup.id, orderNumber: dup.number };
 
-      const number = await nextOrderNumber();
+      const number = await nextOrderNumber(ctx.user.storeId);
       try {
         const newId = await db.transaction(async (tx) => {
           const [o] = await tx
             .insert(orders)
             .values({
-              storeId: STORE_ID,
+              storeId: ctx.user.storeId,
               number,
               clientId,
               createdAt: saleTime(soldAt),
@@ -434,7 +434,7 @@ export const ordersRouter = router({
               type,
               source: input.source,
               reference,
-              customerId: await resolveCustomer(tx, input),
+              customerId: await resolveCustomer(tx, ctx.user.storeId, input),
               ...moneyColumns(totals),
               servedBy: ctx.user.id,
             })
@@ -446,7 +446,7 @@ export const ordersRouter = router({
         return { orderId: newId, orderNumber: number };
       } catch {
         // Lost a race with another delivery of the same queued tab.
-        const won = await byClientId(clientId);
+        const won = await byClientId(ctx.user.storeId, clientId);
         if (won) return { orderId: won.id, orderNumber: won.number };
         throw fizzled("Something fizzled saving the tab. Try again.");
       }
@@ -493,8 +493,8 @@ export const ordersRouter = router({
 
       // Replay of a sale that already landed: answer with the same receipt and
       // touch nothing — no new number, no second stock deduction.
-      const dup = await byClientId(clientId);
-      const existing = !dup && orderId ? await requireOpen(orderId, ctx.user.role) : null;
+      const dup = await byClientId(ctx.user.storeId, clientId);
+      const existing = !dup && orderId ? await requireOpen(ctx.user.storeId, orderId, ctx.user.role) : null;
       // Admin re-settling an already-paid order: keep its sale time and don't
       // burn stock a second time.
       const resettle = existing?.status === "paid";
@@ -502,7 +502,7 @@ export const ordersRouter = router({
         ? dup.number
         : existing
           ? existing.number
-          : await nextOrderNumber();
+          : await nextOrderNumber(ctx.user.storeId);
 
       if (!dup) try {
         await db.transaction(async (tx) => {
@@ -512,7 +512,7 @@ export const ordersRouter = router({
             reference,
             webPending: false,
                 source: input.source,
-            customerId: await resolveCustomer(tx, input),
+            customerId: await resolveCustomer(tx, ctx.user.storeId, input),
             ...moneyColumns(totals),
             paymentMethod,
             tendered: tendered != null ? tendered.toFixed(2) : null,
@@ -529,7 +529,7 @@ export const ordersRouter = router({
             const [o] = await tx
               .insert(orders)
               .values({
-                storeId: STORE_ID,
+                storeId: ctx.user.storeId,
                 number,
                 clientId,
                 createdAt: at,
@@ -552,7 +552,7 @@ export const ordersRouter = router({
         if (e instanceof TRPCError) throw e;
         // Two deliveries of the same offline sale raced; the other one won the
         // unique index. Same sale, so answer as a replay.
-        const won = await byClientId(clientId);
+        const won = await byClientId(ctx.user.storeId, clientId);
         if (!won) throw fizzled("Something fizzled at the POS. Try again.");
         number = won.number;
       }
@@ -592,7 +592,7 @@ export const ordersRouter = router({
   void: protectedProcedure
     .input(z.uuid())
     .mutation(async ({ ctx, input: orderId }) => {
-      await requireOpen(orderId, ctx.user.role);
+      await requireOpen(ctx.user.storeId, orderId, ctx.user.role);
       try {
         await db
           .update(orders)
@@ -608,10 +608,10 @@ export const ordersRouter = router({
   // Hard delete, any state. Line items cascade.
   delete: adminProcedure
     .input(z.uuid())
-    .mutation(async ({ input: orderId }) => {
+    .mutation(async ({ ctx, input: orderId }) => {
       const gone = await db
         .delete(orders)
-        .where(and(eq(orders.id, orderId), eq(orders.storeId, STORE_ID)))
+        .where(and(eq(orders.id, orderId), eq(orders.storeId, ctx.user.storeId)))
         .returning({ id: orders.id });
       if (!gone.length)
         throw new TRPCError({ code: "NOT_FOUND", message: "Order not found." });

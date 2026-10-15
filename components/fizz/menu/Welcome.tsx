@@ -12,6 +12,7 @@ import ShareButton from "./ShareButton";
 export type WelcomeProps = {
   slug: string;
   store: {
+    id: string;
     name: string;
     menuTagline: string | null;
     logoUrl: string | null;
@@ -91,7 +92,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
     >
       {store.logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src="/api/logo" alt={`${store.name} logo`} className="h-full w-full object-cover" />
+        <img src={`/api/logo?s=${store.id}`} alt={`${store.name} logo`} className="h-full w-full object-cover" />
       ) : (
         <span style={{ color: accent }}>{store.name.trim().charAt(0).toUpperCase()}</span>
       )}

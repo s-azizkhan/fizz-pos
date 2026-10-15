@@ -13,7 +13,7 @@ export default async function StorePage() {
   if (user.role !== "admin") redirect("/dashboard");
 
   // Uncached: the form posts the seq counters back, so they must be exact.
-  const store = await loadStore();
+  const store = await loadStore(user.storeId);
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 lg:py-14">

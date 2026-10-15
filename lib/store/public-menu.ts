@@ -64,7 +64,7 @@ export async function menuMetadata(
   const origin = new URL(canonical).origin;
   const title = opts.title ?? `${store.name} — Menu${store.city ? ` · ${store.city}` : ""}`;
   const description = menuDescription(menu);
-  const image = absolute(origin, store.menuWelcome?.coverUrl) ?? (store.logoUrl ? `${origin}/api/logo` : null);
+  const image = absolute(origin, store.menuWelcome?.coverUrl) ?? (store.logoUrl ? `${origin}/api/logo?s=${store.id}` : null);
   return {
     metadataBase: new URL(origin),
     title,
@@ -128,8 +128,8 @@ export async function menuJsonLd(slug: string, menu: PublicMenu): Promise<Record
     name: store.name,
     url,
     description: menuDescription(menu),
-    image: absolute(origin, store.menuWelcome?.coverUrl) ?? (store.logoUrl ? `${origin}/api/logo` : undefined),
-    logo: store.logoUrl ? `${origin}/api/logo` : undefined,
+    image: absolute(origin, store.menuWelcome?.coverUrl) ?? (store.logoUrl ? `${origin}/api/logo?s=${store.id}` : undefined),
+    logo: store.logoUrl ? `${origin}/api/logo?s=${store.id}` : undefined,
     telephone: store.phone ?? undefined,
     email: store.email ?? undefined,
     address,

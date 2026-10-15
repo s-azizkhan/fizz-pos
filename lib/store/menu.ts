@@ -1,8 +1,8 @@
 import "server-only";
-import { cache } from "react";
 import { headers } from "next/headers";
 import { DOMAIN_SLUG } from "@/lib/store/menu-path";
 import { and, asc, eq, isNull } from "drizzle-orm";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import {
   menuCategories,
@@ -14,11 +14,12 @@ import {
   type OrderSettings,
   type Store,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { store } from "@/lib/db/schema";
 import { featureOn } from "@/lib/store/features";
-import { cached } from "@/lib/store/cache";
-import { getStore } from "@/lib/store/data";
-import { getOrderSettings } from "@/lib/store/order-settings";
+import { cached, menuTag } from "@/lib/store/cache";
+import { getStoreById } from "@/lib/store/data";
+import { getOrderSettingsById } from "@/lib/store/order-settings";
+import { currentStoreId } from "@/lib/auth/dal";
 
 export type MenuItemWithVariants = MenuItem & { variants: MenuItemVariant[] };
 export type MenuCategoryWithItems = MenuCategory & {
@@ -32,22 +33,31 @@ const byPrice = (a: { price: string }, b: { price: string }) =>
 
 // Assemble the full menu tree (active rows only), ordered by position. Used by
 // the admin manager, POS, printable PDF and (filtered) the public renderer.
-async function buildMenu(): Promise<MenuCategoryWithItems[]> {
+async function buildMenu(storeId: string): Promise<MenuCategoryWithItems[]> {
+  // Items and variants carry no store_id of their own — scope them through
+  // their category so another café's rows never land in this tree.
+  const mine = and(eq(menuCategories.storeId, storeId), isNull(menuCategories.deletedAt));
   const [cats, items, variants] = await Promise.all([
     db
       .select()
       .from(menuCategories)
-      .where(and(eq(menuCategories.storeId, STORE_ID), isNull(menuCategories.deletedAt)))
+      .where(mine)
       .orderBy(asc(menuCategories.position), asc(menuCategories.id)),
     db
-      .select()
+      .select({ item: menuItems })
       .from(menuItems)
-      .where(isNull(menuItems.deletedAt))
-      .orderBy(asc(menuItems.position), asc(menuItems.id)),
+      .innerJoin(menuCategories, eq(menuItems.categoryId, menuCategories.id))
+      .where(and(mine, isNull(menuItems.deletedAt)))
+      .orderBy(asc(menuItems.position), asc(menuItems.id))
+      .then((rows) => rows.map((r) => r.item)),
     db
-      .select()
+      .select({ variant: menuItemVariants })
       .from(menuItemVariants)
-      .orderBy(asc(menuItemVariants.position), asc(menuItemVariants.id)),
+      .innerJoin(menuItems, eq(menuItemVariants.itemId, menuItems.id))
+      .innerJoin(menuCategories, eq(menuItems.categoryId, menuCategories.id))
+      .where(mine)
+      .orderBy(asc(menuItemVariants.position), asc(menuItemVariants.id))
+      .then((rows) => rows.map((r) => r.variant)),
   ]);
 
   const variantsByItem = new Map<string, MenuItemVariant[]>();
@@ -70,9 +80,12 @@ async function buildMenu(): Promise<MenuCategoryWithItems[]> {
   return cats.map((c) => ({ ...c, items: itemsByCat.get(c.id) ?? [] }));
 }
 
-// Cached across requests (tag "menu") — every POS load and every guest on the
-// public menu reads it. Menu mutations call bust("menu").
-export const getFullMenu = cache(cached("menu-tree", "menu", buildMenu));
+// Cached across requests (tag menu:<id>) — every POS load and every guest on
+// the public menu reads it. Menu mutations call bust(menuTag(id)).
+export const getFullMenuById = cache((storeId: string) =>
+  cached(`menu-tree:${storeId}`, menuTag(storeId), () => buildMenu(storeId))(),
+);
+export const getFullMenu = cache(async () => getFullMenuById(await currentStoreId()));
 
 export type PublicMenu = {
   store: Store;
@@ -82,20 +95,23 @@ export type PublicMenu = {
 };
 
 // Look up a published menu by its public slug. Returns null when missing,
-// unpublished or switched off so the route can 404. Single store: the slug
-// must match the one store row. Every read here is cached.
+// unpublished or switched off so the route can 404. Guest path: no session,
+// so the store is found by slug (or by host for "~"). Slug and domain are
+// unique columns, so the id lookup is one indexed read; the rest is cached.
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
-  const row = await getStore();
-  // "~" = the store's own domain (proxy.ts rewrite): the host must be the one saved.
+  let match = eq(store.menuSlug, slug);
+  // "~" = the café's own domain (proxy.ts rewrite): the host picks the store.
   if (slug === DOMAIN_SLUG) {
     const h = await headers();
     const host = (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(":")[0].toLowerCase();
-    if (!row.menuDomain || host !== row.menuDomain) return null;
-    slug = row.menuSlug ?? "";
+    if (!host) return null;
+    match = eq(store.menuDomain, host);
   }
-  if (row.menuSlug !== slug || !row.menuPublished || !featureOn(row.disabledFeatures, "publicMenu"))
-    return null;
-  const [menu, ordering] = await Promise.all([getFullMenu(), getOrderSettings()]);
+  const [hit] = await db.select({ id: store.id }).from(store).where(match).limit(1);
+  if (!hit) return null;
+  const row = await getStoreById(hit.id);
+  if (!row.menuSlug || !row.menuPublished || !featureOn(row.disabledFeatures, "publicMenu")) return null;
+  const [menu, ordering] = await Promise.all([getFullMenuById(row.id), getOrderSettingsById(row.id)]);
   // Unavailable items hide from guests; categories left empty drop out.
   const categories = menu
     .map((c) => ({ ...c, items: c.items.filter((it) => it.available) }))

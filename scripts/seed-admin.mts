@@ -25,7 +25,7 @@ await db.insert(store).values({ id: STORE_ID }).onConflictDoNothing();
 const passwordHash = await hashPassword(password);
 const [row] = await db
   .insert(users)
-  .values({ email, name, passwordHash, role: "admin" })
+  .values({ storeId: STORE_ID, email, name, passwordHash, role: "admin" })
   .onConflictDoUpdate({ target: users.email, set: { passwordHash, role: "admin", name } })
   .returning();
 

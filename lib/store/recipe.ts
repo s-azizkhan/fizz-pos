@@ -9,7 +9,7 @@ import {
   type InventoryUnit,
   type RecipeComponent,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 
 export type RecipeIngredient = {
   id: string;
@@ -19,10 +19,11 @@ export type RecipeIngredient = {
 
 // Active stock items offered as recipe ingredients, alphabetical.
 export async function listRecipeIngredients(): Promise<RecipeIngredient[]> {
+  const sid = await currentStoreId();
   return db
     .select({ id: inventoryItems.id, name: inventoryItems.name, unit: inventoryItems.unit })
     .from(inventoryItems)
-    .where(and(eq(inventoryItems.storeId, STORE_ID), isNull(inventoryItems.deletedAt)))
+    .where(and(eq(inventoryItems.storeId, sid), isNull(inventoryItems.deletedAt)))
     .orderBy(asc(inventoryItems.name));
 }
 
@@ -31,6 +32,7 @@ export async function listRecipeIngredients(): Promise<RecipeIngredient[]> {
 export async function recipesByMenuItem(): Promise<
   Record<string, RecipeComponent[]>
 > {
+  const sid = await currentStoreId();
   // One join, not a two-step id fetch: scope to this store through the menu
   // item -> category chain so a stray row can't leak.
   const rows = await db
@@ -38,7 +40,7 @@ export async function recipesByMenuItem(): Promise<
     .from(recipeComponents)
     .innerJoin(menuItems, eq(recipeComponents.menuItemId, menuItems.id))
     .innerJoin(menuCategories, eq(menuItems.categoryId, menuCategories.id))
-    .where(and(eq(menuCategories.storeId, STORE_ID), isNull(menuItems.deletedAt)));
+    .where(and(eq(menuCategories.storeId, sid), isNull(menuItems.deletedAt)));
 
   const byItem: Record<string, RecipeComponent[]> = {};
   for (const { c } of rows) {

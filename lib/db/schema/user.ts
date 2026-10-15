@@ -1,6 +1,7 @@
 import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { store } from "./store";
 
 // Roles for the shop floor. `admin` owns everything; `manager` runs a shift;
 // `staff` rings orders. Order matters — first value is the column default.
@@ -9,6 +10,11 @@ export type UserRole = (typeof userRole.enumValues)[number];
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
+  // The counter this person works at. Every authed read/write is scoped by it.
+  storeId: uuid("store_id")
+    .notNull()
+    .references(() => store.id, { onDelete: "cascade" }),
+  // Global, not per-store: login is email-only, so one email = one counter.
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
@@ -43,8 +49,8 @@ export const createUserSchema = baseUserInsert.extend({
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
-// Owner signup: only valid while the counter has no users at all. The first
-// account becomes `admin`; everyone after arrives through an invite link.
+// Owner signup: creates a brand-new store and its first `admin` in one go.
+// Everyone else at that counter arrives through an invite link.
 export const signupForm = z.object({
   storeName: z.string().trim().min(1, "Name your counter").max(120),
   name: z.string().trim().min(1, "Enter your name").max(120),
@@ -61,6 +67,9 @@ export type SignupInput = z.infer<typeof signupForm>;
 // if DB-read-only leaks become part of the threat model (kills re-copy).
 export const invites = pgTable("invites", {
   id: uuid("id").primaryKey().defaultRandom(),
+  storeId: uuid("store_id")
+    .notNull()
+    .references(() => store.id, { onDelete: "cascade" }),
   email: text("email").notNull(),
   role: userRole("role").notNull().default("staff"),
   token: text("token").notNull().unique(),

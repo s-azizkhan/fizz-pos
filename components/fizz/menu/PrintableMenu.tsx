@@ -249,7 +249,7 @@ export default function PrintableMenu({
               <div className="pdf-brand-badge" style={headStyle}>
                 {store.logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img className="pdf-brand-logo" src="/api/logo" alt={store.name} />
+                  <img className="pdf-brand-logo" src={`/api/logo?s=${store.id}`} alt={store.name} />
                 ) : (
                   <span className="pdf-brand-name">{store.name}</span>
                 )}
@@ -268,7 +268,7 @@ export default function PrintableMenu({
               </span>
               {store.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img className="pdf-logo pdf-logo-body" src="/api/logo" alt={store.name} />
+                <img className="pdf-logo pdf-logo-body" src={`/api/logo?s=${store.id}`} alt={store.name} />
               ) : (
                 <h2 className="pdf-body-title" style={headStyle}>
                   {store.name}
@@ -412,7 +412,7 @@ function Cover({
         // Served through /api/logo so it is same-origin — the PNG export
         // rasterizes it instead of throwing on a tainted canvas.
         // eslint-disable-next-line @next/next/no-img-element
-        <img className="pdf-logo" src="/api/logo" alt={store.name} />
+        <img className="pdf-logo" src={`/api/logo?s=${store.id}`} alt={store.name} />
       ) : (
         <h1 className="pdf-cover-title" style={headStyle}>
           {store.name}

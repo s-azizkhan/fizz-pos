@@ -2,7 +2,7 @@ import "server-only";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { customers, normalisePhone, orderItems, orders } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
+import { currentStoreId } from "@/lib/auth/dal";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -11,6 +11,7 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 // Returns the customer id, or null when nothing was entered.
 export async function resolveCustomer(
   tx: Tx,
+  sid: string,
   input: { customerId?: string | null; customerName: string | null; customerPhone: string | null },
 ): Promise<string | null> {
   const name = input.customerName;
@@ -19,11 +20,11 @@ export async function resolveCustomer(
 
   const byPhone = async (p: string) =>
     (await tx.select({ id: customers.id }).from(customers)
-      .where(and(eq(customers.storeId, STORE_ID), eq(customers.phone, p))).limit(1))[0];
+      .where(and(eq(customers.storeId, sid), eq(customers.phone, p))).limit(1))[0];
 
   if (input.customerId) {
     const [c] = await tx.select().from(customers)
-      .where(and(eq(customers.id, input.customerId), eq(customers.storeId, STORE_ID))).limit(1);
+      .where(and(eq(customers.id, input.customerId), eq(customers.storeId, sid))).limit(1);
     // A number that already belongs to someone else wins — link to them.
     const owner = c && phone && phone !== c.phone ? await byPhone(phone) : undefined;
     const target = owner?.id ?? c?.id;
@@ -42,7 +43,7 @@ export async function resolveCustomer(
 
   if (phone) {
     const [c] = await tx.insert(customers)
-      .values({ storeId: STORE_ID, name, phone })
+      .values({ storeId: sid, name, phone })
       .onConflictDoUpdate({
         target: [customers.storeId, customers.phone],
         set: { name: sql`coalesce(excluded.name, ${customers.name})`, updatedAt: new Date() },
@@ -56,13 +57,13 @@ export async function resolveCustomer(
   // number share a row. Ask for a phone when that matters.
   const [same] = await tx.select({ id: customers.id }).from(customers)
     .where(and(
-      eq(customers.storeId, STORE_ID),
+      eq(customers.storeId, sid),
       isNull(customers.phone),
       sql`lower(${customers.name}) = lower(${name})`,
     )).limit(1);
   if (same) return same.id;
   const [c] = await tx.insert(customers)
-    .values({ storeId: STORE_ID, name })
+    .values({ storeId: sid, name })
     .returning({ id: customers.id });
   return c.id;
 }
@@ -71,27 +72,30 @@ export async function resolveCustomer(
 // ponytail: newest 5000 only (~400KB worst case, cached on the device). Page it
 // or fall back to a server search if a store ever outgrows that.
 export async function customerBook() {
+  const sid = await currentStoreId();
   return db
     .select({ id: customers.id, name: customers.name, phone: customers.phone })
     .from(customers)
-    .where(eq(customers.storeId, STORE_ID))
+    .where(eq(customers.storeId, sid))
     .orderBy(desc(customers.updatedAt))
     .limit(5000);
 }
 
 export async function customersByIds(ids: string[]) {
+  const sid = await currentStoreId();
   if (ids.length === 0) return [];
   return db
     .select({ id: customers.id, name: customers.name, phone: customers.phone })
     .from(customers)
-    .where(and(eq(customers.storeId, STORE_ID), inArray(customers.id, ids)));
+    .where(and(eq(customers.storeId, sid), inArray(customers.id, ids)));
 }
 
 export async function getCustomer(id: string) {
+  const sid = await currentStoreId();
   const [c] = await db
     .select({ id: customers.id, name: customers.name, phone: customers.phone })
     .from(customers)
-    .where(and(eq(customers.id, id), eq(customers.storeId, STORE_ID)))
+    .where(and(eq(customers.id, id), eq(customers.storeId, sid)))
     .limit(1);
   return c ?? null;
 }
@@ -102,6 +106,7 @@ export async function getCustomer(id: string) {
 // the lot once. ponytail: capped at 2000 rows, newest activity first; add
 // paging + server search when a store outgrows that.
 export async function listCustomers() {
+  const sid = await currentStoreId();
   const live = sql`${orders.status} <> 'void'`;
   return db
     .select({
@@ -114,7 +119,7 @@ export async function listCustomers() {
     })
     .from(customers)
     .leftJoin(orders, eq(orders.customerId, customers.id))
-    .where(eq(customers.storeId, STORE_ID))
+    .where(eq(customers.storeId, sid))
     .groupBy(customers.id)
     .orderBy(sql`max(${orders.createdAt}) desc nulls last`, desc(customers.createdAt))
     .limit(2000);
@@ -122,10 +127,11 @@ export async function listCustomers() {
 
 // One customer's order history, newest first, with lines for a quick read.
 export async function customerOrders(customerId: string) {
+  const sid = await currentStoreId();
   const rows = await db
     .select()
     .from(orders)
-    .where(and(eq(orders.storeId, STORE_ID), eq(orders.customerId, customerId)))
+    .where(and(eq(orders.storeId, sid), eq(orders.customerId, customerId)))
     .orderBy(desc(orders.createdAt));
   if (rows.length === 0) return [];
   const items = await db

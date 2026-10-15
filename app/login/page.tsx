@@ -2,16 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Bubbles from "@/components/fizz/Bubbles";
 import LoginForm from "@/components/fizz/LoginForm";
-import { trpc } from "@/lib/trpc/server";
 
 export const metadata: Metadata = {
   title: "Sign in — Fizz",
   description: "Sign in to Fizz, the Counter Operating System.",
 };
 
-export default async function LoginPage() {
-  const api = await trpc();
-  const fresh = await api.auth.canSignup().catch(() => false);
+export default function LoginPage() {
   return (
     <main className="grid min-h-dvh lg:grid-cols-2">
       {/* Brand panel — the effervescent welcome. Hidden on small screens. */}
@@ -65,17 +62,11 @@ export default async function LoginPage() {
           </div>
 
           <p className="mt-8 text-sm text-steam">
-            {fresh ? (
-              <>
-                New counter?{" "}
-                <Link href="/signup" className="font-semibold text-fizz hover:underline">
-                  Create the owner account
-                </Link>
-                .
-              </>
-            ) : (
-              "No account yet? Your counter owner pours the first cup."
-            )}
+            New counter?{" "}
+            <Link href="/signup" className="font-semibold text-fizz hover:underline">
+              Open it here
+            </Link>
+            . Joining a team? Ask your owner for an invite link.
           </p>
         </div>
       </section>

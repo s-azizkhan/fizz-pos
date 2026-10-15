@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
-import { and, eq, isNull, max, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, max, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   store,
@@ -14,10 +14,9 @@ import {
   menuItems,
   menuItemVariants,
 } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
 import { getFullMenu, getPublicMenu } from "@/lib/store/menu";
 import { getOrderSettings } from "@/lib/store/order-settings";
-import { bust } from "@/lib/store/cache";
+import { bust, menuTag, storeTag } from "@/lib/store/cache";
 import { getStore } from "@/lib/store/data";
 import { addDomain, removeDomain, domainStatus, vercelEnabled } from "@/lib/vercel";
 import {
@@ -38,12 +37,31 @@ function rethrow(e: unknown): never {
   throw fizzled;
 }
 
-function bump() {
-  bust("menu");
+function bump(storeId: string) {
+  bust(menuTag(storeId));
   revalidatePath("/dashboard/menu");
 }
 
 const idInput = (msg: string) => z.object({ id: z.uuid(msg) });
+
+// Items carry no store_id; "this store's items" = items in this store's
+// categories. Every by-id item write ANDs this in so a guessed uuid from
+// another café is a no-op.
+const ownItems = (storeId: string) =>
+  inArray(
+    menuItems.categoryId,
+    db.select({ id: menuCategories.id }).from(menuCategories).where(eq(menuCategories.storeId, storeId)),
+  );
+
+// The category a form names must be this store's.
+async function requireCategory(storeId: string, categoryId: string) {
+  const [owner] = await db
+    .select({ id: menuCategories.id })
+    .from(menuCategories)
+    .where(and(eq(menuCategories.id, categoryId), eq(menuCategories.storeId, storeId), isNull(menuCategories.deletedAt)))
+    .limit(1);
+  if (!owner) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown category." });
+}
 
 // One modal edits both the look (store row) and the ordering config
 // (order_settings row), so the mutation takes both shapes in one object.
@@ -104,12 +122,12 @@ export const menuRouter = router({
           await tx
             .update(store)
             .set({ ...appearance, updatedAt: new Date() })
-            .where(eq(store.id, STORE_ID));
+            .where(eq(store.id, ctx.user.storeId));
           // Ordering config lives in its own table, one row per store.
           await tx
             .insert(orderSettings)
             .values({
-              storeId: STORE_ID,
+              storeId: ctx.user.storeId,
               ordering,
               whatsapp,
               dineIn,
@@ -145,7 +163,7 @@ export const menuRouter = router({
               : "Something fizzled. Try again.",
         });
       }
-      bust("store");
+      bust(storeTag(ctx.user.storeId));
       revalidatePath("/dashboard/menu");
       // Still the only way the PUBLIC menu page goes stale-free for visitors.
       if (input.menuSlug) revalidatePath(`/m/${input.menuSlug}`);
@@ -169,24 +187,24 @@ export const menuRouter = router({
           .select({ value: max(menuCategories.position) })
           .from(menuCategories)
           .where(
-            and(eq(menuCategories.storeId, STORE_ID), isNull(menuCategories.deletedAt)),
+            and(eq(menuCategories.storeId, ctx.user.storeId), isNull(menuCategories.deletedAt)),
           );
         await db.insert(menuCategories).values({
           ...input,
-          storeId: STORE_ID,
+          storeId: ctx.user.storeId,
           position: (maxPos ?? 0) + 1,
           enteredBy: ctx.user.id,
         });
       } catch {
         throw fizzled;
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
   updateCategory: editorProcedure
     .input(categoryForm.extend({ id: z.uuid("Invalid category.") }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { id, ...fieldsToSet } = input;
       try {
         await db
@@ -195,31 +213,31 @@ export const menuRouter = router({
           .where(
             and(
               eq(menuCategories.id, id),
-              eq(menuCategories.storeId, STORE_ID),
+              eq(menuCategories.storeId, ctx.user.storeId),
               isNull(menuCategories.deletedAt),
             ),
           );
       } catch {
         throw fizzled;
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
   deleteCategory: editorProcedure
     .input(idInput("Invalid category."))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         await db
           .update(menuCategories)
           .set({ deletedAt: new Date(), updatedAt: new Date() })
           .where(
-            and(eq(menuCategories.id, input.id), eq(menuCategories.storeId, STORE_ID)),
+            and(eq(menuCategories.id, input.id), eq(menuCategories.storeId, ctx.user.storeId)),
           );
       } catch {
         throw fizzled;
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
@@ -227,11 +245,11 @@ export const menuRouter = router({
   // that category (or another store's) are ignored by the WHERE.
   reorderItems: editorProcedure
     .input(z.object({ categoryId: z.uuid(), ids: z.array(z.uuid("Invalid order.")) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const [cat] = await db
         .select({ id: menuCategories.id })
         .from(menuCategories)
-        .where(and(eq(menuCategories.id, input.categoryId), eq(menuCategories.storeId, STORE_ID)));
+        .where(and(eq(menuCategories.id, input.categoryId), eq(menuCategories.storeId, ctx.user.storeId)));
       if (!cat) throw new TRPCError({ code: "NOT_FOUND", message: "Category not found." });
       try {
         await db.transaction(async (tx) => {
@@ -248,14 +266,14 @@ export const menuRouter = router({
           message: "Could not save order.",
         });
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
   // Persist a new category order: an array of ids, in order.
   reorderCategories: editorProcedure
     .input(z.array(z.uuid("Invalid order.")))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         await db.transaction(async (tx) => {
           for (let i = 0; i < input.length; i++) {
@@ -263,7 +281,7 @@ export const menuRouter = router({
               .update(menuCategories)
               .set({ position: i + 1, updatedAt: new Date() })
               .where(
-                and(eq(menuCategories.id, input[i]), eq(menuCategories.storeId, STORE_ID)),
+                and(eq(menuCategories.id, input[i]), eq(menuCategories.storeId, ctx.user.storeId)),
               );
           }
         });
@@ -273,29 +291,15 @@ export const menuRouter = router({
           message: "Could not save order.",
         });
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
   // ---- Items + variants -------------------------------------------------
-  createItem: editorProcedure.input(itemForm).mutation(async ({ input }) => {
+  createItem: editorProcedure.input(itemForm).mutation(async ({ ctx, input }) => {
     const { variants, ...item } = input;
     try {
-      // Guard: the chosen category must belong to this store.
-      const [owner] = await db
-        .select({ id: menuCategories.id })
-        .from(menuCategories)
-        .where(
-          and(
-            eq(menuCategories.id, item.categoryId),
-            eq(menuCategories.storeId, STORE_ID),
-            isNull(menuCategories.deletedAt),
-          ),
-        )
-        .limit(1);
-      if (!owner) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown category." });
-      }
+      await requireCategory(ctx.user.storeId, item.categoryId);
 
       const [{ value: maxPos } = { value: null }] = await db
         .select({ value: max(menuItems.position) })
@@ -316,20 +320,23 @@ export const menuRouter = router({
     } catch (e) {
       rethrow(e);
     }
-    bump();
+    bump(ctx.user.storeId);
     return { ok: true as const };
   }),
 
   updateItem: editorProcedure
     .input(itemForm.extend({ id: z.uuid("Invalid item.") }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { variants, id, ...item } = input;
       try {
+        await requireCategory(ctx.user.storeId, item.categoryId);
         await db.transaction(async (tx) => {
-          await tx
+          const [hit] = await tx
             .update(menuItems)
             .set({ ...item, updatedAt: new Date() })
-            .where(and(eq(menuItems.id, id), isNull(menuItems.deletedAt)));
+            .where(and(eq(menuItems.id, id), ownItems(ctx.user.storeId), isNull(menuItems.deletedAt)))
+            .returning({ id: menuItems.id });
+          if (!hit) throw new TRPCError({ code: "NOT_FOUND", message: "Unknown item." });
           // Replace variants wholesale — simplest correct sync for a small list.
           await tx.delete(menuItemVariants).where(eq(menuItemVariants.itemId, id));
           if (variants.length) {
@@ -341,54 +348,54 @@ export const menuRouter = router({
       } catch (e) {
         rethrow(e);
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
   deleteItem: editorProcedure
     .input(idInput("Invalid item."))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         await db
           .update(menuItems)
           .set({ deletedAt: new Date(), updatedAt: new Date() })
-          .where(eq(menuItems.id, input.id));
+          .where(and(eq(menuItems.id, input.id), ownItems(ctx.user.storeId)));
       } catch {
         throw fizzled;
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
   // Tag veg / non-veg / none from the row, no full editor.
   setDiet: editorProcedure
     .input(z.object({ id: z.uuid("Invalid item."), diet: z.enum(["veg", "nonveg"]).nullable() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         await db
           .update(menuItems)
           .set({ diet: input.diet, updatedAt: new Date() })
-          .where(and(eq(menuItems.id, input.id), isNull(menuItems.deletedAt)));
+          .where(and(eq(menuItems.id, input.id), ownItems(ctx.user.storeId), isNull(menuItems.deletedAt)));
       } catch {
         throw fizzled;
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 
   // Toggle availability without opening the full editor.
   toggleAvailable: editorProcedure
     .input(idInput("Invalid item."))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         await db
           .update(menuItems)
           .set({ available: sql`NOT ${menuItems.available}`, updatedAt: new Date() })
-          .where(and(eq(menuItems.id, input.id), isNull(menuItems.deletedAt)));
+          .where(and(eq(menuItems.id, input.id), ownItems(ctx.user.storeId), isNull(menuItems.deletedAt)));
       } catch {
         throw fizzled;
       }
-      bump();
+      bump(ctx.user.storeId);
       return { ok: true as const };
     }),
 });

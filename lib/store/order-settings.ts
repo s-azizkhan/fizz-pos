@@ -3,24 +3,24 @@ import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { orderSettings, type OrderSettings } from "@/lib/db/schema";
-import { STORE_ID } from "@/lib/store/constants";
 import { getStore } from "@/lib/store/data";
-import { cached } from "@/lib/store/cache";
+import { cached, storeTag } from "@/lib/store/cache";
+import { currentStoreId } from "@/lib/auth/dal";
 import type { ReceiptData } from "@/lib/print/templates";
 
-// Lazily create the store's ordering-config row, then return it. Same pattern
-// as getStore(): cached across requests under the "store" tag (the menu
-// settings modal writes both together), memoized per render.
-async function loadOrderSettings(): Promise<OrderSettings> {
+// Lazily create a store's ordering-config row, then return it. Cached across
+// requests under the store's tag (the menu settings modal writes both
+// together), memoized per render.
+async function loadOrderSettings(storeId: string): Promise<OrderSettings> {
   const [row] = await db
     .select()
     .from(orderSettings)
-    .where(eq(orderSettings.storeId, STORE_ID))
+    .where(eq(orderSettings.storeId, storeId))
     .limit(1);
   if (row) return row;
   const [created] = await db
     .insert(orderSettings)
-    .values({ storeId: STORE_ID })
+    .values({ storeId })
     .onConflictDoNothing()
     .returning();
   if (created) return created;
@@ -28,11 +28,14 @@ async function loadOrderSettings(): Promise<OrderSettings> {
   const [again] = await db
     .select()
     .from(orderSettings)
-    .where(eq(orderSettings.storeId, STORE_ID))
+    .where(eq(orderSettings.storeId, storeId))
     .limit(1);
   return again;
 }
-export const getOrderSettings = cache(cached("order-settings", "store", loadOrderSettings));
+export const getOrderSettingsById = cache((storeId: string) =>
+  cached(`order-settings:${storeId}`, storeTag(storeId), () => loadOrderSettings(storeId))(),
+);
+export const getOrderSettings = cache(async () => getOrderSettingsById(await currentStoreId()));
 
 // Store header/footer fields a printed receipt needs (checkout + reprints).
 export async function receiptStore(): Promise<ReceiptData["store"]> {
