@@ -34,8 +34,11 @@ export default async function GamesPage({
   const back = `/m/${slug}${qs.size ? `?${qs}` : ""}`;
 
   return (
-    <main className="min-h-dvh bg-[var(--m-bg)] text-[var(--m-text)]" style={themeVars(theme, accent)}>
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-8 pt-4">
+    <main
+      className="min-h-dvh overscroll-none bg-[var(--m-bg)] text-[var(--m-text)] [-webkit-tap-highlight-color:transparent]"
+      style={themeVars(theme, accent)}
+    >
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:max-w-lg">
         <div className="flex items-center justify-between">
           <a href={back} className="text-[14px] font-semibold text-[var(--m-muted)] hover:text-[var(--m-text)]">
             ← Back
@@ -44,7 +47,7 @@ export default async function GamesPage({
             {store.name}
           </span>
         </div>
-        <h1 className="mt-4 text-[26px] font-bold tracking-tight" style={{ fontFamily: theme.display }}>
+        <h1 className="mt-3 text-[clamp(22px,6vw,28px)] font-bold tracking-tight" style={{ fontFamily: theme.display }}>
           While you wait
         </h1>
         <p className="mt-1 text-[14px] text-[var(--m-muted)]">Two quick ones. Best scores stay on this phone.</p>

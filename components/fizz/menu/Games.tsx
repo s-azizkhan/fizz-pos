@@ -21,14 +21,14 @@ export default function Games({ accent }: { accent: string }) {
   const [game, setGame] = useState("snake");
   const cur = GAMES.find((g) => g.key === game)!;
   return (
-    <div className="mt-5 flex flex-col gap-4">
+    <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:gap-4">
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none]">
         {GAMES.map((g) => (
           <button
             key={g.key}
             type="button"
             onClick={() => setGame(g.key)}
-            className="shrink-0 rounded-full border px-4 py-2 text-[13px] font-bold transition-transform active:scale-95"
+            className="shrink-0 touch-manipulation rounded-full border px-4 py-2 text-[13px] font-bold transition-transform active:scale-95"
             style={
               game === g.key
                 ? { backgroundColor: accent, borderColor: accent, color: "var(--m-bg)" }
@@ -171,7 +171,7 @@ function BeanDrop({ accent }: { accent: string }) {
 
   return (
     <div className="relative overflow-hidden border" style={boardStyle}>
-      <canvas ref={canvasRef} className="block h-[420px] w-full touch-none" />
+      <canvas ref={canvasRef} className="block h-[clamp(300px,58dvh,520px)] w-full touch-none" />
       {state !== "play" && (
         <Overlay
           accent={accent}
@@ -264,7 +264,7 @@ function LatteMatch({ accent }: { accent: string }) {
               type="button"
               onClick={() => flip(i)}
               disabled={!cards}
-              className="aspect-square [perspective:600px]"
+              className="aspect-square touch-manipulation [perspective:600px]"
               aria-label={show ? f : "Hidden card"}
             >
               <span

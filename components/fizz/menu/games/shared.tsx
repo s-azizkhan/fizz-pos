@@ -61,7 +61,7 @@ export function Overlay({
       <button
         type="button"
         onClick={onStart}
-        className="rounded-full px-6 py-3 text-[15px] font-bold transition-transform active:scale-95"
+        className="touch-manipulation rounded-full px-6 py-3 text-[15px] font-bold transition-transform active:scale-95"
         style={{ backgroundColor: accent, color: "var(--m-bg)" }}
       >
         {cta}
@@ -81,13 +81,16 @@ export function useDirInput(el: HTMLElement | null, onDir: (d: Dir) => void, act
     let start: { x: number; y: number } | null = null;
     const down = (e: PointerEvent) => {
       start = { x: e.clientX, y: e.clientY };
+      try {
+        el.setPointerCapture(e.pointerId);
+      } catch {}
     };
     const up = (e: PointerEvent) => {
       if (!start) return;
       const dx = e.clientX - start.x;
       const dy = e.clientY - start.y;
       start = null;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < (e.pointerType === "touch" ? 14 : 24)) return;
       onDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up");
     };
     const key = (e: KeyboardEvent) => {

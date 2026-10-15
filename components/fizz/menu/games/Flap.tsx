@@ -117,7 +117,7 @@ export default function Flap({ accent }: { accent: string }) {
 
   return (
     <div className="relative overflow-hidden border" style={boardStyle}>
-      <canvas ref={canvasRef} className="block h-[440px] w-full touch-none" />
+      <canvas ref={canvasRef} className="block h-[clamp(300px,58dvh,520px)] w-full touch-none" />
       {state !== "play" && (
         <Overlay
           accent={accent}

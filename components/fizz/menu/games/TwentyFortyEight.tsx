@@ -117,7 +117,7 @@ export default function TwentyFortyEight({ accent }: { accent: string }) {
         {(grid ?? empty()).flat().map((v, i) => (
           <div
             key={i}
-            className="flex items-center justify-center rounded-[12px] border text-[22px] font-bold transition-colors duration-150"
+            className="flex items-center justify-center rounded-[12px] border text-[clamp(14px,5.5vw,24px)] font-bold tabular-nums transition-colors duration-150"
             style={{ borderColor: "var(--m-line)", ...tile(v) }}
           >
             {v || ""}

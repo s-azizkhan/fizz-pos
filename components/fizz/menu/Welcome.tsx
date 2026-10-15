@@ -58,7 +58,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
 
   return (
     <main
-      className={`relative overflow-hidden ${embedded ? "min-h-full [&_a]:pointer-events-none" : "min-h-dvh"} bg-[var(--m-bg)] text-[var(--m-text)]`}
+      className={`relative overflow-hidden [-webkit-tap-highlight-color:transparent] ${embedded ? "min-h-full [&_a]:pointer-events-none" : "min-h-dvh"} bg-[var(--m-bg)] text-[var(--m-text)]`}
       style={themeVars(theme, accent)}
     >
       <ParallaxDriver />
@@ -67,7 +67,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
         <span className="wl-orb wl-orb-a -left-20 top-10 h-64 w-64" />
         <span className="wl-orb wl-orb-b -right-24 bottom-20 h-72 w-72" />
       </div>
-      <div className={`relative mx-auto flex max-w-md flex-col px-4 pb-8 pt-4 ${embedded ? "min-h-full" : "min-h-dvh sm:pt-8"}`}>
+      <div className={`relative mx-auto flex max-w-md flex-col px-4 ${embedded ? "min-h-full pb-8 pt-4" : "min-h-dvh pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:pt-8"}`}>
         {/* Hero card: cover image (or a quiet accent wash), logo, name, tagline, table. */}
         <section
           className="wl-in relative overflow-hidden"
