@@ -81,7 +81,7 @@ export default function LeakCalc() {
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <a
-              href="#waitlist"
+              href="/signup"
               className="rounded-fizz bg-fizz px-6 py-3 text-center font-semibold text-ink transition-transform hover:scale-105"
             >
               Plug the leak →

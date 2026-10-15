@@ -3,7 +3,7 @@ import { getStore } from "@/lib/store/data";
 import { featureOn } from "@/lib/store/features";
 import { siteOrigin } from "@/lib/store/public-menu";
 
-// The public pages worth indexing: the landing page and the café's menu.
+// The public pages worth indexing: the landing page and the store's public menu.
 // Dashboard, login and API routes never appear (robots disallows them too).
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = await siteOrigin();

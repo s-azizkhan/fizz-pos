@@ -10,7 +10,6 @@ import { ordersRouter } from "@/lib/trpc/routers/orders";
 import { recipeRouter } from "@/lib/trpc/routers/recipe";
 import { teamRouter } from "@/lib/trpc/routers/team";
 import { storeRouter } from "@/lib/trpc/routers/store";
-import { waitlistRouter } from "@/lib/trpc/routers/waitlist";
 
 export const appRouter = router({
   analytics: analyticsRouter,
@@ -24,7 +23,6 @@ export const appRouter = router({
   recipe: recipeRouter,
   store: storeRouter,
   team: teamRouter,
-  waitlist: waitlistRouter,
 });
 
 export type AppRouter = typeof appRouter;

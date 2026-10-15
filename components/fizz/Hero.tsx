@@ -1,10 +1,10 @@
 import Bubbles from "./Bubbles";
-import WaitlistForm from "./WaitlistForm";
+import Link from "next/link";
 import HeroChat from "./landing/HeroChat";
 import { WA_HREF } from "./landing/contact";
 
 // One question, one answer, one field. Everything else lives below the fold.
-const TRUST = ["UPI + GST", "Any Android", "Hindi / English", "Free in early access"];
+const TRUST = ["UPI + GST", "Any Android", "Hindi / English", "Free to start"];
 
 export default function Hero() {
   return (
@@ -33,18 +33,25 @@ export default function Hero() {
             profit. Pizza, chai, momos, ice cream. Any counter.
           </p>
 
-          <div className="mt-10 max-w-md" id="waitlist">
-            <WaitlistForm compact cta="Get early access →" />
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              href="/signup"
+              className="rounded-fizz bg-fizz px-7 py-3.5 text-center font-semibold text-ink transition-transform hover:scale-105"
+            >
+              Start free →
+            </Link>
+            <a
+              href={WA_HREF("Hi, I run a food counter and want to see Fizz.")}
+              target="_blank"
+              rel="noopener"
+              className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line bg-ink-soft px-6 py-3.5 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+            >
+              <span className="text-bubble">●</span> WhatsApp the founder
+            </a>
           </div>
-
-          <a
-            href={WA_HREF("Hi, I run a food counter and want to see Fizz.")}
-            target="_blank"
-            rel="noopener"
-            className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-steam transition-colors hover:text-cream"
-          >
-            <span className="text-bubble">●</span> Or WhatsApp the founder — Hindi or English
-          </a>
+          <p className="mt-4 text-sm text-steam">
+            No card. No hardware. Billing in ten minutes — setup help on WhatsApp, Hindi or English.
+          </p>
 
           <ul className="mt-12 flex flex-wrap gap-x-6 gap-y-2 text-xs font-medium uppercase tracking-[0.14em] text-steam">
             {TRUST.map((t) => (

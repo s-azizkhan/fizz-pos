@@ -12,7 +12,7 @@ const COLS = [
   {
     title: "Get started",
     links: [
-      { label: "Early access", href: "#waitlist-cta" },
+      { label: "Create account", href: "/signup" },
       { label: "Sign in", href: "/login" },
     ],
   },

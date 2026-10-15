@@ -82,11 +82,11 @@ className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz"
 
 Four attributes — what it IS / is NOT:
 - **Fast** — short sentences, verbs first, no jargon. Not clipped or cold.
-- **Sharp** — specific numbers, real café language. Not vague SaaS-speak.
+- **Sharp** — specific numbers, real counter language (chai, momos, pizza, khata). Not vague SaaS-speak.
 - **Effervescent** — light, a little playful, alive. Not goofy or unserious about money.
 - **Honest** — plain hard numbers. Not flattering or sugar-coated.
 
-Copy patterns: name the outcome not the process. Enemy = spreadsheets/guesswork, not Toast/Square. Café idiom welcome ("we'll pour you a spot", "something fizzled"). Em-dash for punch.
+Copy patterns: name the outcome not the process. Enemy = spreadsheets/guesswork, not Toast/Square. Counter idiom welcome ("we'll pour you a spot", "something fizzled"). Em-dash for punch.
 
 ## Do / Don't
 

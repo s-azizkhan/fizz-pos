@@ -5,9 +5,6 @@ type UiState = {
   mobileNavOpen: boolean;
   toggleMobileNav: () => void;
   closeMobileNav: () => void;
-  // Sticky "you're on the list" flag so the success state survives in-page nav.
-  joined: boolean;
-  setJoined: (v: boolean) => void;
   // Dashboard sidebar.
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
@@ -23,8 +20,6 @@ export const useUi = create<UiState>()(
       mobileNavOpen: false,
       toggleMobileNav: () => set((s) => ({ mobileNavOpen: !s.mobileNavOpen })),
       closeMobileNav: () => set({ mobileNavOpen: false }),
-      joined: false,
-      setJoined: (v) => set({ joined: v }),
       sidebarCollapsed: false,
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       moreOpen: false,

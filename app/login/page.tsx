@@ -6,7 +6,7 @@ import { trpc } from "@/lib/trpc/server";
 
 export const metadata: Metadata = {
   title: "Sign in — Fizz",
-  description: "Sign in to the Fizz café operating system.",
+  description: "Sign in to Fizz, the Counter Operating System.",
 };
 
 export default async function LoginPage() {
@@ -58,7 +58,7 @@ export default async function LoginPage() {
           <h1 className="font-display text-[clamp(26px,4vw,36px)] font-bold tracking-tight">
             Welcome back
           </h1>
-          <p className="mt-2 text-steam">Sign in to your café.</p>
+          <p className="mt-2 text-steam">Sign in to your counter.</p>
 
           <div className="mt-8">
             <LoginForm />
@@ -74,7 +74,7 @@ export default async function LoginPage() {
                 .
               </>
             ) : (
-              "No account yet? Your café admin pours the first cup."
+              "No account yet? Your counter owner pours the first cup."
             )}
           </p>
         </div>

@@ -5,7 +5,7 @@ import JoinForm from "@/components/fizz/team/JoinForm";
 import { trpc } from "@/lib/trpc/server";
 
 export const metadata: Metadata = {
-  title: "Join your café — Fizz",
+  title: "Join your counter — Fizz",
   robots: { index: false, follow: false },
 };
 
@@ -89,7 +89,7 @@ export default async function JoinPage({
                 This link fizzled
               </h1>
               <p className="mt-3 max-w-[40ch] text-steam">
-                It&apos;s expired, already used, or was revoked. Ask your café admin
+                It&apos;s expired, already used, or was revoked. Ask your counter owner
                 for a fresh one.
               </p>
               <Link

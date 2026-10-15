@@ -41,10 +41,10 @@ export default function Nav() {
             Sign in
           </a>
           <a
-            href="#waitlist"
+            href="/signup"
             className="rounded-full bg-fizz px-4 py-2 text-sm font-semibold text-ink transition-transform hover:scale-105"
           >
-            Plug my leaks
+            Start free
           </a>
         </div>
 
@@ -79,11 +79,11 @@ export default function Nav() {
               Sign in
             </a>
             <a
-              href="#waitlist"
+              href="/signup"
               onClick={closeMobileNav}
               className="rounded-full bg-fizz px-4 py-2 text-center text-sm font-semibold text-ink"
             >
-              Plug my leaks
+              Start free
             </a>
           </div>
         </div>

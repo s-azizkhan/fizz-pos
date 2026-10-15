@@ -4,7 +4,6 @@
 export * from "./constants";
 export * from "./user";
 export * from "./store";
-export * from "./waitlist";
 export * from "./dailySales";
 export * from "./expenses";
 export * from "./menu";

@@ -15,10 +15,10 @@ export default function MobileCtaBar() {
           <span className="text-bubble">●</span> WhatsApp
         </a>
         <a
-          href="#waitlist"
+          href="/signup"
           className="flex items-center justify-center rounded-fizz bg-fizz py-3 text-sm font-semibold text-ink"
         >
-          Get early access
+          Start free
         </a>
       </div>
     </div>
