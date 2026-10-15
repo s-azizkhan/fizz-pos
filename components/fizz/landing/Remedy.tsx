@@ -1,7 +1,7 @@
 const ROWS = [
   {
-    from: "Cheese, chicken and buns counted by eye. Excel updated “later”.",
-    to: "Every order deducts its recipe — 160 g mozzarella, 1 bun, 2 leg pieces — the second it's billed.",
+    from: "Cheese, chicken, milk and buns counted by eye. Excel updated “later”.",
+    to: "Every order deducts its recipe — 160 g mozzarella, 1 bun, 200 ml milk — the second it's billed. Only if you switch Inventory on.",
   },
   {
     from: "Buns finish at 9pm Friday. You find out from the counter.",
@@ -12,7 +12,7 @@ const ROWS = [
     to: "Each bill tagged cash / UPI / card. Day-end total matches, or shows exactly where it doesn't.",
   },
   {
-    from: "Zinger price set last year. Margin today: a guess.",
+    from: "Best-seller priced last year. Margin today: a guess.",
     to: "Live margin per item from today's ingredient costs. Raise price or fix the recipe — you decide with numbers.",
   },
   {
@@ -21,7 +21,7 @@ const ROWS = [
   },
   {
     from: "Two hours of tallying after close.",
-    to: "Day-end report on your phone before you've locked the shutter.",
+    to: "Day-end report on your phone before you've pulled the shutter.",
   },
 ];
 
@@ -37,7 +37,8 @@ export default function Remedy() {
         </h2>
         <p className="mt-4 max-w-[60ch] text-lg text-steam">
           Most POS software prints a bill and stops. Fizz keeps going — into
-          your fridge, your freezer, your margins. One system, one truth.
+          your fridge, your freezer, your margins. One system, one truth. And
+          if all you want today is the bill, that&apos;s fine too.
         </p>
 
         <div className="mt-8 overflow-hidden rounded-fizz border border-ink-line">

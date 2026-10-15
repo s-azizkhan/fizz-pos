@@ -4,8 +4,8 @@ Single source of truth for every design choice. Apply this on all UI work. When 
 
 ## Identity
 
-- **Name:** Fizz — the Café Operating System.
-- **Product:** POS + inventory + margins for independent cafés/restaurants, in one live loop.
+- **Name:** Fizz — the Counter Operating System.
+- **Product:** POS + inventory + margins for any independent quick-service counter (pizza, burgers, chai, momos, ice cream, rolls), in one live loop. Every module is a switch — a chai stall runs billing only.
 - **Personality:** Fast. Sharp. Effervescent. Honest.
 - **Look:** Dark-first. Near-black ink base + one high-voltage electric-lime accent. Effervescent (rising bubbles). Tension via color — never warm/safe.
 

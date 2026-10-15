@@ -3,7 +3,7 @@
 
 const NODES = [
   { icon: "🍕", k: "Sell", v: "Bill in 3 taps. UPI QR on screen.", pos: "left-1/2 top-0 -translate-x-1/2 -translate-y-1/2" },
-  { icon: "🧀", k: "Deduct", v: "Recipe pulls from stock — cheese, buns, chicken.", pos: "bottom-0 left-0 -translate-x-1/4 translate-y-1/4" },
+  { icon: "🧀", k: "Deduct", v: "Recipe pulls from stock — cheese, milk, buns, chicken.", pos: "bottom-0 left-0 -translate-x-1/4 translate-y-1/4" },
   { icon: "₹", k: "See", v: "Margin per item, live.", pos: "bottom-0 right-0 translate-x-1/4 translate-y-1/4" },
 ];
 
@@ -17,12 +17,13 @@ export default function Loop() {
             One live loop
           </div>
           <h2 className="max-w-[16ch] font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
-            The counter and the kitchen store, finally on the same wire.
+            The counter and the store room, finally on the same wire.
           </h2>
           <p className="mt-4 max-w-[52ch] text-lg text-steam">
             Bill a Margherita and Fizz already knows: 160 g mozzarella gone,
-            one base gone, ₹112 cost, ₹87 margin. No export, no Excel, no
-            midnight count. Set recipes once — it runs forever.
+            one base gone, ₹112 cost, ₹87 margin. Same for a cutting chai or a
+            plate of momos. No export, no Excel, no midnight count. Set recipes
+            once — it runs forever.
           </p>
         </div>
 

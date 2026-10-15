@@ -24,12 +24,12 @@ export default function LeakCalc() {
             Your leak, in rupees
           </div>
           <h2 className="max-w-[18ch] font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
-            How much is guesswork costing your café?
+            How much is guesswork costing your counter?
           </h2>
           <p className="mt-4 max-w-[52ch] text-lg text-steam">
             Drag to your average daily sales. Uncounted stock, unrung items and
-            portion drift typically eat 3–8% of a QSR&apos;s revenue. See what
-            that is for you.
+            portion drift typically eat 3–8% of a quick-service counter&apos;s
+            revenue. See what that is for you.
           </p>
 
           <label className="mt-8 block">
@@ -87,7 +87,7 @@ export default function LeakCalc() {
               Plug the leak →
             </a>
             <WhatsAppButton
-              text={`Hi, my café does about ${fmt(daily)}/day. Want to see how Fizz would help.`}
+              text={`Hi, my counter does about ${fmt(daily)}/day. Want to see how Fizz would help.`}
               label="Ask on WhatsApp"
             />
           </div>

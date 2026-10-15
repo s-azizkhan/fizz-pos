@@ -1,14 +1,17 @@
-// Infinite marquee ribbon — the kind of place Fizz is built for. Track is
+// Infinite marquee ribbon — the kind of counter Fizz is built for. Track is
 // duplicated and shifted -50% so the loop is seamless. Edges faded via mask.
 
 const ITEMS = [
-  "Pizza cafés",
+  "Pizza counters",
   "Burger joints",
+  "Chai & coffee stalls",
+  "Momo carts",
+  "Ice cream parlours",
+  "Sandwich & roll shops",
   "Fried chicken outlets",
-  "Wings & shakes counters",
+  "Juice & shake bars",
   "Cloud kitchens",
-  "Fast-food franchises",
-  "Café + QSR combos",
+  "Bakery counters",
 ];
 
 function Track() {
@@ -28,7 +31,7 @@ export default function Marquee() {
   return (
     <section className="border-b border-ink-line py-7">
       <div className="mb-5 text-center text-xs font-semibold uppercase tracking-[0.18em] text-steam">
-        Built for India&apos;s
+        One POS for every quick-service counter
       </div>
       <div
         className="flex overflow-hidden"

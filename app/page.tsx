@@ -5,6 +5,7 @@ import Pain from "@/components/fizz/landing/Pain";
 import LeakCalc from "@/components/fizz/landing/LeakCalc";
 import Remedy from "@/components/fizz/landing/Remedy";
 import Loop from "@/components/fizz/landing/Loop";
+import Switches from "@/components/fizz/landing/Switches";
 import WhyFizz from "@/components/fizz/WhyFizz";
 import Compare from "@/components/fizz/landing/Compare";
 import Fit from "@/components/fizz/landing/Fit";
@@ -23,6 +24,7 @@ export default function Home() {
         <LeakCalc />
         <Remedy />
         <Loop />
+        <Switches />
         <WhyFizz />
         <Compare />
         <Fit />

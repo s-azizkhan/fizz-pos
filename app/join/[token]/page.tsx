@@ -41,7 +41,7 @@ export default async function JoinPage({
         <Wordmark className="relative z-10 text-3xl" />
         <div className="relative z-10">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-            The Café Operating System
+            The Counter Operating System
           </p>
           <h2 className="mt-4 max-w-[18ch] font-display text-[clamp(26px,4vw,40px)] font-bold leading-tight tracking-tight">
             You&apos;ve been handed <span className="text-fizz">the keys</span>.

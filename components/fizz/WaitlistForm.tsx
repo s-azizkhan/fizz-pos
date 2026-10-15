@@ -26,7 +26,7 @@ export default function WaitlistForm({ cta = "Plug my leaks →" }: { cta?: stri
           You&apos;re in ●
         </p>
         <p className="mt-1 text-sm text-steam">
-          We&apos;ll WhatsApp you within 24 hours to set up your café.
+          We&apos;ll WhatsApp you within 24 hours to set up your counter.
         </p>
       </div>
     );

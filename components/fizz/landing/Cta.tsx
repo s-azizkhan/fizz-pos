@@ -19,8 +19,8 @@ export default function Cta() {
             <span className="text-fizz">Stop it this week.</span>
           </h2>
           <p className="mt-4 max-w-[52ch] text-lg text-steam">
-            Leave your details. We set up your menu and recipes with you on a
-            WhatsApp call. You bill on Fizz the same day.
+            Leave your details. We set up your menu — and only the features you
+            want — with you on a WhatsApp call. You bill on Fizz the same day.
           </p>
           <div className="mt-8">
             <WaitlistForm cta="Get early access →" />

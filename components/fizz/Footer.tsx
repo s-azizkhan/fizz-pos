@@ -4,6 +4,7 @@ const COLS = [
     links: [
       { label: "The problem", href: "#problem" },
       { label: "One live loop", href: "#how" },
+      { label: "Switches", href: "#switches" },
       { label: "Why Fizz", href: "#why" },
     ],
   },
@@ -28,8 +29,8 @@ export default function Footer() {
               <span className="align-super text-xs text-bubble">●</span>
             </div>
             <p className="mt-3 max-w-[34ch] text-sm text-steam">
-              The Café Operating System. POS, inventory, and margins in one
-              effervescent live loop.
+              The Counter Operating System. POS, inventory, and margins in one
+              effervescent live loop — switch on only what you need.
             </p>
           </div>
 

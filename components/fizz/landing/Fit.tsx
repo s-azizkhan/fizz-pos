@@ -2,17 +2,17 @@ import { CheckIcon, CloseIcon } from "@/components/fizz/dashboard/icons";
 // Qualify the reader. Saying who it's NOT for makes the "for" column land.
 
 const YES = [
-  "Pizza, burger, fried chicken or wings outlet in India",
+  "You sell over a counter — pizza, burgers, chai, momos, ice cream, rolls, juice, bakery",
   "1–3 outlets, owner-run or a manager you trust",
   "Billing on a phone/tablet is fine — no hardware fetish",
   "Tired of Excel, khata, and “I'll remember it”",
-  "Want to know today's real profit, today",
+  "Want only the features you use — nothing else in the way",
 ];
 
 const NO = [
   "Fine dining with table service and a 200-item menu",
   "A 50-outlet chain that needs an ERP",
-  "You never want to set up recipes (that's where the magic is)",
+  "You want a hardware bundle with a 3-year AMC",
   "You're happy with the Friday 9pm stock-out",
 ];
 
@@ -24,7 +24,7 @@ export default function Fit() {
           Is Fizz for you?
         </div>
         <h2 className="max-w-[20ch] font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
-          Built for small QSR cafés. Honestly, not for everyone.
+          Built for small quick-service counters. Honestly, not for everyone.
         </h2>
 
         <div className="mt-10 grid gap-5 md:grid-cols-2">

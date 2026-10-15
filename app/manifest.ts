@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Fizz — The Café Operating System",
+    name: "Fizz — The Counter Operating System",
     short_name: "Fizz",
     description:
       "Run the POS, track every ingredient, know your margins — one live loop.",

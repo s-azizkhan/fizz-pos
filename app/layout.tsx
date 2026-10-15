@@ -39,9 +39,9 @@ const wordmark = Pixelify_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Fizz — POS for pizza, burger & fried chicken cafés in India",
+  title: "Fizz — The Counter Operating System. POS for any quick-service counter in India",
   description:
-    "Your pizza sells. Your profit leaks. Fizz bills with UPI + GST and deducts every gram of cheese and every bun from stock — so you know today's real margin. Free during early access.",
+    "Pizza, burgers, chai, momos, ice cream — one POS for any counter. UPI + GST billing in 3 taps, recipe-level stock and live margins you can switch on or off. Runs on the phone you own. Free during early access.",
   applicationName: "Fizz",
   manifest: "/manifest.webmanifest",
   icons: {

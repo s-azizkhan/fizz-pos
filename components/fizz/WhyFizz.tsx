@@ -38,7 +38,7 @@ function MiniRing() {
         </div>
       </div>
       <div className="text-sm text-steam">
-        Your real margin on the Zinger — not a guess.
+        Your real margin on your best-seller — not a guess.
       </div>
     </div>
   );
@@ -52,7 +52,7 @@ export default function WhyFizz() {
           What you get
         </div>
         <h2 className="max-w-[20ch] font-display text-[clamp(26px,4vw,40px)] font-bold tracking-tight">
-          Everything a QSR counter needs. Nothing it doesn&apos;t.
+          Everything a quick-service counter needs. Nothing it doesn&apos;t.
         </h2>
 
         <div className="mt-10 grid gap-5 md:grid-cols-3 md:auto-rows-[minmax(0,1fr)]">
@@ -71,7 +71,7 @@ export default function WhyFizz() {
 
             {/* Mini keypad / ticket */}
             <div className="mt-auto grid grid-cols-3 gap-2.5 pt-7">
-              {["Margherita", "Zinger", "Wings 6pc", "Fries", "Coke", "UPI ₹"].map(
+              {["Margherita", "Cutting chai", "Momos 8pc", "Fries", "Cold coffee", "UPI ₹"].map(
                 (k, i) => (
                   <div
                     key={k}
@@ -92,8 +92,8 @@ export default function WhyFizz() {
           <div className="rounded-fizz border border-ink-line bg-ink-soft p-7">
             <h3 className="font-display text-lg font-bold">Recipe-level stock</h3>
             <p className="mt-2 text-sm text-steam">
-              Cheese in grams, chicken in pieces, buns in units. Every bill
-              deducts automatically.
+              Cheese in grams, milk in ml, buns in units. Every bill deducts
+              automatically. Optional — switch it on when you want it.
             </p>
             <MiniBars />
           </div>
@@ -115,12 +115,13 @@ export default function WhyFizz() {
               </h3>
               <p className="mt-2 max-w-[54ch] text-sm text-steam">
                 Know you&apos;re short on buns Friday morning — not Friday 9pm.
-                Plus: expenses, daily cash-up, QR menu, WhatsApp orders, staff
-                roles. All in.
+                Plus: expenses, daily cash-up, QR menu on your own domain, KOT
+                board, printers, customers, staff roles. All in, each one a
+                switch.
               </p>
             </div>
             <div className="flex flex-wrap gap-2.5">
-              {["Burger buns · low", "Chicken · 1 day", "Reorder ↻"].map(
+              {["Buns · low", "Milk · 1 day", "Reorder ↻"].map(
                 (a, i) => (
                   <span
                     key={a}

@@ -6,6 +6,7 @@ import { MenuToggleIcon } from "@/components/fizz/dashboard/icons";
 const LINKS = [
   { href: "#problem", label: "The leak" },
   { href: "#calc", label: "Your number" },
+  { href: "#switches", label: "Switches" },
   { href: "#why", label: "What you get" },
   { href: "#compare", label: "Compare" },
   { href: "#faq", label: "FAQ" },

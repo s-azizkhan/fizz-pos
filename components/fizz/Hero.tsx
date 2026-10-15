@@ -4,9 +4,9 @@ import ProductMock from "./landing/ProductMock";
 import WhatsAppButton from "./landing/WhatsAppButton";
 
 const PILLS = [
-  "UPI QR at the POS",
+  "UPI QR at the counter",
   "GST on every bill",
-  "Recipe-level stock",
+  "Switch features on or off",
   "Runs on any phone or tablet",
   "Made in India",
 ];
@@ -24,19 +24,20 @@ export default function Hero() {
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-ink-line bg-ink-soft/70 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-steam backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-bubble" />
-            For pizza, burger &amp; fried chicken cafés in India
+            The Counter Operating System · India
           </span>
 
           <h1 className="mt-6 max-w-[16ch] font-display text-[clamp(30px,5.2vw,58px)] font-bold leading-[1.02] tracking-tight">
-            Your pizza sells.{" "}
-            <span className="text-fizz">Your profit leaks.</span>
+            Any counter. One POS.{" "}
+            <span className="text-fizz">Zero leaks.</span>
           </h1>
 
           <p className="mt-5 max-w-[54ch] text-lg text-steam">
-            Extra cheese. &ldquo;Free&rdquo; fries for friends. Buns finished at
-            9pm on Friday. Khata that never matches cash. Fizz is the POS that
-            counts every gram and every rupee — so you know what you{" "}
-            <span className="text-cream">actually</span> made today.
+            Pizza, burgers, chai, momos, ice cream, sandwiches — if you sell
+            over a counter, Fizz bills it in 3 taps, counts every gram and
+            every rupee, and shows what you{" "}
+            <span className="text-cream">actually</span> made today. Switch on
+            only the parts you need.
           </p>
 
           <div className="mt-8 max-w-2xl" id="waitlist">

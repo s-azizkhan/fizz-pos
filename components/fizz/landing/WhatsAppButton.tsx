@@ -1,7 +1,7 @@
 import { WA_HREF } from "./contact";
 
 export default function WhatsAppButton({
-  text = "Hi, I run a café and want to see Fizz.",
+  text = "Hi, I run a food counter and want to see Fizz.",
   label = "WhatsApp the founder",
   className = "",
 }: {

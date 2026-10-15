@@ -2,28 +2,32 @@
 // who it's built for, how you get set up) — defensible, not feature-sniping.
 // Swap names in COLS; rows use the same index order.
 
-const COLS = ["Fizz", "Petpooja", "Posist", "Excel + khata"];
+const COLS = ["Fizz", "Petpooja", "RoyalPOS", "Excel + khata"];
 
 const ROWS: { k: string; v: [string, string, string, string] }[] = [
   {
     k: "Built for",
-    v: ["1–3 outlet pizza / burger / chicken cafés", "Every restaurant type, chains", "Enterprise chains, cloud kitchens", "Nobody — it just happened"],
+    v: ["Any quick-service counter, 1–3 outlets", "Every restaurant type, chains", "Retail + restaurant, general", "Nobody — it just happened"],
   },
   {
     k: "Price",
-    v: ["Free during early access, no card", "Annual licence per outlet + add-ons", "Annual licence, enterprise quote", "Free, costs you 3–8% in leaks"],
+    v: ["Free during early access, no card", "Annual licence per outlet + paid add-ons", "Annual licence per device + add-ons", "Free, costs you 3–8% in leaks"],
+  },
+  {
+    k: "Features you don't need",
+    v: ["Switch them off — they vanish", "Always there, always in the menu", "Always there, always in the menu", "—"],
   },
   {
     k: "Hardware",
-    v: ["Any phone / tablet / laptop you own", "Usually bundled billing hardware", "Usually bundled billing hardware", "A notebook"],
+    v: ["Any phone / tablet / laptop you own", "Usually bundled billing hardware", "Windows / Android device", "A notebook"],
   },
   {
     k: "Setup",
-    v: ["One WhatsApp call, billing same day", "Onboarding team, training sessions", "Implementation project", "Nothing — and nothing works"],
+    v: ["One WhatsApp call, billing same day", "Onboarding team, training sessions", "Install + training", "Nothing — and nothing works"],
   },
   {
     k: "Recipe-level stock deduction",
-    v: ["Core, every bill, every item", "Available, inventory module", "Available, enterprise module", "Manual, whenever you remember"],
+    v: ["Built in, on every bill", "Inventory module", "Inventory module", "Manual, whenever you remember"],
   },
   {
     k: "Live margin per item",
@@ -34,8 +38,12 @@ const ROWS: { k: string; v: [string, string, string, string] }[] = [
     v: ["Built in", "Built in", "Built in", "Phone QR + handwritten"],
   },
   {
+    k: "Public menu on your own domain",
+    v: ["Built in, free", "Separate online-ordering product", "Separate online-ordering product", "—"],
+  },
+  {
     k: "Who answers when it breaks",
-    v: ["The founder, on WhatsApp", "Support desk / ticket", "Account manager", "You"],
+    v: ["The founder, on WhatsApp", "Support desk / ticket", "Support desk / ticket", "You"],
   },
 ];
 
@@ -50,8 +58,10 @@ export default function Compare() {
           Big POS is built for chains. Fizz is built for your counter.
         </h2>
         <p className="mt-4 max-w-[60ch] text-lg text-steam">
-          Petpooja and Posist are good software — for a 40-outlet chain with an
-          IT guy. You have one counter, a tablet, and a Friday rush.
+          Petpooja, RoyalPOS, eZee — good software for a 40-outlet chain with
+          an IT guy. You have one counter, a tablet, and a rush at 9pm. You
+          shouldn&apos;t pay for, or scroll past, 30 screens you&apos;ll never
+          open.
         </p>
 
         <div className="mt-10 overflow-x-auto rounded-fizz border border-ink-line">
@@ -99,8 +109,8 @@ export default function Compare() {
         </div>
         <p className="mt-4 text-xs text-steam">
           Competitor details from their public pages, Oct 2026. Plans change —
-          confirm with the vendor. Petpooja and Posist are trademarks of their
-          owners; no affiliation.
+          confirm with the vendor. Petpooja, RoyalPOS and eZee are trademarks
+          of their owners; no affiliation.
         </p>
       </div>
     </section>

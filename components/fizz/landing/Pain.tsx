@@ -1,20 +1,20 @@
-// The leak — name the exact ways a QSR café bleeds money. Numbers are worked
-// examples with the arithmetic shown, not adoption claims.
+// The leak — name the exact ways a quick-service counter bleeds money.
+// Numbers are worked examples with the arithmetic shown, not adoption claims.
 
 const LEAKS = [
   {
     k: "Over-portioning",
-    v: "20 g extra mozzarella on every pizza. Nobody notices. At 60 pizzas a day that's 1.2 kg — about ₹500 — gone daily.",
+    v: "20 g extra cheese on every pizza. An extra scoop of ice cream. A heavier pour of chai. Nobody notices. At 60 orders a day that's ₹500 — gone daily.",
     n: "≈ ₹15,000 / month",
   },
   {
     k: "“Free” items",
-    v: "Fries for a friend. Coke for the delivery boy. A burger not rung in. No one is stealing — but nothing is counted either.",
+    v: "Fries for a friend. A cold drink for the delivery boy. A plate of momos not rung in. No one is stealing — but nothing is counted either.",
     n: "3–5% of sales",
   },
   {
     k: "Friday 9pm stock-out",
-    v: "Buns finish. Chicken finishes. The rush is still at the counter. Every “sorry, out of stock” is a customer who tries the place next door.",
+    v: "Buns finish. Chicken finishes. Milk finishes. The rush is still at the counter. Every “sorry, out of stock” is a customer who tries the place next door.",
     n: "Your best hour, lost",
   },
   {
@@ -24,7 +24,7 @@ const LEAKS = [
   },
   {
     k: "Blind pricing",
-    v: "You priced the Zinger at ₹169 last year. Chicken went up 18% since. Your margin on your best-seller is now a guess.",
+    v: "You priced your best-seller last year. Milk, cheese and chicken went up 18% since. Your margin on it today is a guess.",
     n: "Unknown margin",
   },
   {
@@ -45,7 +45,7 @@ export default function Pain() {
           Sales are up. Bank balance isn&apos;t. Here&apos;s why.
         </h2>
         <p className="mt-4 max-w-[60ch] text-lg text-steam">
-          A QSR café doesn&apos;t lose money in one big hit. It leaks in six
+          A counter doesn&apos;t lose money in one big hit. It leaks in six
           small places, every single day. You feel it at month-end. You
           can&apos;t point to it.
         </p>
