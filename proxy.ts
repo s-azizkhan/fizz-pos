@@ -21,8 +21,32 @@ async function hasValidSession(token: string | undefined): Promise<boolean> {
   }
 }
 
+// Hosts that are "ours". Anything else is a café's own domain (store.menuDomain)
+// and serves only the public menu: "/" → "/m/~", resolved from the host in
+// getPublicMenu. Dashboard/login never answer there. No DB here (Edge), so an
+// unknown host just 404s on the menu page.
+function isOurHost(host: string): boolean {
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_PROJECT_PRODUCTION_URL ?? "";
+  const primary = site.replace(/^https?:\/\//, "").split("/")[0];
+  const bare = host.split(":")[0];
+  return (
+    !primary ||
+    bare === primary ||
+    bare === "localhost" ||
+    /^(\d+\.){3}\d+$/.test(bare) ||
+    bare.endsWith(".vercel.app") ||
+    bare.endsWith(`.${primary}`)
+  );
+}
+
 export async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname;
+  const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? "";
+  if (!isOurHost(host)) {
+    const url = req.nextUrl.clone();
+    url.pathname = `/m/~${path === "/" ? "" : path}`;
+    return NextResponse.rewrite(url);
+  }
   const isProtected = path.startsWith("/dashboard");
   const isAuthPage = path === "/login";
 

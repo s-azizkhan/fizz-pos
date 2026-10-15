@@ -57,6 +57,9 @@ export const store = pgTable("store", {
   nextOrderSeq: integer("next_order_seq").notNull().default(1),
   // Public menu page. `menuSlug` is the shareable URL token; null = not shared.
   menuSlug: text("menu_slug").unique(),
+  // The café's own hostname (menu.cafe.com) serving the public menu at "/".
+  // proxy.ts rewrites requests on it to /m/~; null = fizz link only.
+  menuDomain: text("menu_domain").unique(),
   // Printed ticket layouts (Printers → Ticket design), shared by every POS.
   // A missing kind falls back to the built-in default layout.
   ticketLayouts: jsonb("ticket_layouts").$type<{ receipt?: Block[]; kot?: Block[] }>(),
@@ -184,6 +187,14 @@ export const menuAppearanceShape = {
     .min(2, "At least 2 characters")
     .max(48)
     .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, and dashes only"),
+  // Hostname only; "https://" and paths pasted in are stripped first.
+  menuDomain: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .transform((v) => v.replace(/^https?:\/\//, "").split("/")[0])
+    .refine((v) => !v || /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(v), "Use a hostname like menu.yourcafe.com")
+    .transform((v) => v || null),
   menuTagline: optionalText(160),
   menuTheme: z.enum(MENU_THEME_KEYS, "Pick a theme"),
   menuFontScale: z.enum(MENU_FONT_SCALES, "Pick a size"),

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  return menuMetadata(slug, { path: `/m/${slug}` });
+  return menuMetadata(slug);
 }
 
 // /m/[slug]: the welcome screen when it's on, else straight to the menu.

@@ -1,5 +1,7 @@
 import "server-only";
 import { cache } from "react";
+import { headers } from "next/headers";
+import { DOMAIN_SLUG } from "@/lib/store/menu-path";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
@@ -84,6 +86,13 @@ export type PublicMenu = {
 // must match the one store row. Every read here is cached.
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const row = await getStore();
+  // "~" = the café's own domain (proxy.ts rewrite): the host must be the one saved.
+  if (slug === DOMAIN_SLUG) {
+    const h = await headers();
+    const host = (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(":")[0].toLowerCase();
+    if (!row.menuDomain || host !== row.menuDomain) return null;
+    slug = row.menuSlug ?? "";
+  }
   if (row.menuSlug !== slug || !row.menuPublished || !featureOn(row.disabledFeatures, "publicMenu"))
     return null;
   const [menu, ordering] = await Promise.all([getFullMenu(), getOrderSettings()]);

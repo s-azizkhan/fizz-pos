@@ -4,12 +4,13 @@ import { trpc } from "@/lib/trpc/server";
 import Games from "@/components/fizz/menu/Games";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
 import { menuMetadata, tableParam } from "@/lib/store/public-menu";
+import { menuPath } from "@/lib/store/menu-path";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const m = await menuMetadata(slug, { path: `/m/${slug}/games`, noindex: true });
+  const m = await menuMetadata(slug, { sub: "/games", noindex: true });
   return { ...m, title: typeof m.title === "string" ? m.title.replace("— Menu", "— Games") : m.title };
 }
 
@@ -35,7 +36,7 @@ export default async function GamesPage({
   const q = qs.size ? `?${qs}` : "";
   const game = sp.g?.trim() || null;
   // In a game, back goes to the list; on the list, back goes to the welcome screen.
-  const back = game ? `/m/${slug}/games${q}` : `/m/${slug}${q}`;
+  const back = game ? `${menuPath(slug, "/games")}${q}` : `${menuPath(slug)}${q}`;
 
   return (
     <main
@@ -59,7 +60,7 @@ export default async function GamesPage({
             <p className="mt-1 text-[14px] text-[var(--m-muted)]">Pick one. Best scores stay on this phone.</p>
           </>
         )}
-        <Games accent={accent} game={game} base={`/m/${slug}/games`} query={Object.fromEntries(qs)} />
+        <Games accent={accent} game={game} base={menuPath(slug, "/games")} query={Object.fromEntries(qs)} />
       </div>
     </main>
   );

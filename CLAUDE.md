@@ -19,7 +19,7 @@ npm run db:seed        # Seed/promote the admin user (scripts/seed-admin.ts)
 
 No test runner is configured. Type-check via `npm run build` or `npx tsc --noEmit`.
 
-Required env: `DB_URL` (postgres), `SESSION_SECRET` (JWT signing). Seeder reads optional `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME`.
+Required env: `DB_URL` (postgres), `SESSION_SECRET` (JWT signing). Prod also needs `NEXT_PUBLIC_SITE_URL` (the proxy treats any other host as a café's own menu domain) and, on Vercel, `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID`) so saving a café domain registers it with the project. Seeder reads optional `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME`.
 
 ## Architecture
 

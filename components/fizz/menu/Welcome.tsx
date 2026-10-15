@@ -1,3 +1,4 @@
+import { menuPath } from "@/lib/store/menu-path";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
 import { DEFAULT_WELCOME, type WelcomeConfig, type WelcomeCard } from "@/lib/store/welcome";
 import { WifiCard, CardShell, CardIcon, SocialIcon, ParallaxDriver } from "./WelcomeCards";
@@ -54,8 +55,8 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
   const qs = new URLSearchParams();
   if (table) qs.set("t", table);
   if (viewOnly) qs.set("viewOnly", viewOnly);
-  const menuHref = `/m/${slug}/menu${qs.size ? `?${qs}` : ""}`;
-  const gamesHref = `/m/${slug}/games${qs.size ? `?${qs}` : ""}`;
+  const menuHref = `${menuPath(slug, "/menu")}${qs.size ? `?${qs}` : ""}`;
+  const gamesHref = `${menuPath(slug, "/games")}${qs.size ? `?${qs}` : ""}`;
 
   // Where each card goes. null = nothing to point at (no phone saved…): skip it.
   const hrefFor = (c: WelcomeCard): string | null => {
@@ -117,7 +118,7 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
       <ShareButton
         title={store.name}
         text={store.menuTagline ? `${store.name} — ${store.menuTagline}` : `${store.name} menu`}
-        path={`/m/${slug}`}
+        path={menuPath(slug)}
         accent={accent}
         glass={L !== "minimal"}
       />

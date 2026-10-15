@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
 import { fields } from "@/lib/trpc/fields";
@@ -47,6 +47,9 @@ export default function PublicMenuModal({
 
   const [slug, setSlug] = useState(store.menuSlug ?? (slugify(store.name) || "menu"));
   const [published, setPublished] = useState(store.menuPublished);
+  const [domain, setDomain] = useState(store.menuDomain ?? "");
+  const dns = useQuery({ ...trpc.menu.domainStatus.queryOptions(), enabled: isOpen && Boolean(store.menuDomain), refetchInterval: 30_000 });
+  const managed = useQuery({ ...trpc.menu.domainsManaged.queryOptions(), enabled: isOpen });
   const [scale, setScale] = useState(store.menuFontScale);
   const [accent, setAccent] = useState(store.menuAccent);
   const [theme, setTheme] = useState(store.menuTheme);
@@ -157,6 +160,52 @@ export default function PublicMenuModal({
                   <span className="truncate">{url}</span>
                   <ExternalIcon className="h-3.5 w-3.5 shrink-0" />
                 </a>
+              )}
+            </label>
+
+            <label className="flex flex-col gap-2 sm:col-span-2">
+              <span className={labelCls}>Your own domain</span>
+              <input
+                name="menuDomain"
+                value={domain}
+                onChange={(e) => setDomain(e.target.value.trim().toLowerCase())}
+                placeholder="menu.yourcafe.com"
+                className={inputCls}
+              />
+              <span className="text-xs text-steam">
+                Optional. Guests open <span className="text-cream">{domain || "menu.yourcafe.com"}</span> instead of the link above. Leave blank to use ours.
+              </span>
+              {dns.data && dns.data.domain === domain && (
+                <div className="mt-1 rounded-fizz border border-ink-line bg-ink-soft p-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${dns.data.live ? "bg-fizz" : "bg-[#E2655A]"}`} />
+                    <span className="font-semibold text-cream">{dns.data.live ? "Live — DNS is pointing here." : "Waiting for DNS"}</span>
+                  </div>
+                  {!dns.data.live && (
+                    <>
+                      <p className="mt-2 text-xs text-steam">
+                        {dns.data.managed
+                          ? "Add these records at your domain registrar. Can take up to an hour to show up; we re-check every 30s."
+                          : "Point this hostname at this server (A record to its IP, or CNAME to its hostname) and serve it under HTTPS."}
+                      </p>
+                      {dns.data.records.length > 0 && (
+                        <table className="mt-3 w-full font-mono text-xs">
+                          <thead className="text-steam">
+                            <tr><th className="text-left font-medium">Type</th><th className="text-left font-medium">Name</th><th className="text-left font-medium">Value</th></tr>
+                          </thead>
+                          <tbody className="text-cream">
+                            {dns.data.records.map((r) => (
+                              <tr key={r.type + r.name}><td className="pr-3">{r.type}</td><td className="pr-3">{r.name}</td><td className="break-all">{r.value}</td></tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              {managed.data === false && !store.menuDomain && domain && (
+                <span className="text-xs text-steam">Domains aren&apos;t auto-managed on this install: after saving, point the hostname at this server yourself.</span>
               )}
             </label>
 

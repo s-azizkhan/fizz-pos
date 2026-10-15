@@ -4,6 +4,8 @@ import { headers } from "next/headers";
 import { trpc } from "@/lib/trpc/server";
 import type { PublicMenu } from "@/lib/store/menu";
 import { formatMoney } from "@/lib/store/format";
+import { DOMAIN_SLUG, menuPath } from "@/lib/store/menu-path";
+import type { Store } from "@/lib/db/schema";
 
 // Shared by /m/[slug], /m/[slug]/menu and /m/[slug]/games.
 export type PublicSearch = Promise<{ viewOnly?: string; t?: string }>;
@@ -23,6 +25,13 @@ export async function siteOrigin(): Promise<string> {
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   return `${proto}://${host}`;
+}
+
+// Where the menu canonically lives: the café's own domain when one is saved,
+// else our /m/<slug>. Used for canonical, OG and JSON-LD URLs.
+export async function publicUrl(store: Store, slug: string, sub: "" | "/menu" | "/games" = ""): Promise<string> {
+  if (store.menuDomain) return `https://${store.menuDomain}${menuPath(DOMAIN_SLUG, sub)}`;
+  return `${await siteOrigin()}${menuPath(slug, sub)}`;
 }
 
 // One-line pitch for <meta description> and OG: tagline, then what's on the
@@ -46,12 +55,13 @@ export function menuDescription(menu: PublicMenu): string {
 // keeps low-value pages (games) out of results without hiding the links.
 export async function menuMetadata(
   slug: string,
-  opts: { path: string; title?: string; noindex?: boolean } = { path: `/m/${slug}` },
+  opts: { sub?: "" | "/menu" | "/games"; title?: string; noindex?: boolean } = {},
 ): Promise<Metadata> {
   const menu = await (await trpc()).menu.public(slug);
   if (!menu) return { title: "Menu not found", robots: { index: false } };
   const { store } = menu;
-  const origin = await siteOrigin();
+  const canonical = await publicUrl(store, slug, opts.sub ?? "");
+  const origin = new URL(canonical).origin;
   const title = opts.title ?? `${store.name} — Menu${store.city ? ` · ${store.city}` : ""}`;
   const description = menuDescription(menu);
   const image = absolute(origin, store.menuWelcome?.coverUrl) ?? (store.logoUrl ? `${origin}/api/logo` : null);
@@ -60,7 +70,7 @@ export async function menuMetadata(
     title,
     description,
     applicationName: store.name,
-    alternates: { canonical: opts.path },
+    alternates: { canonical },
     robots: opts.noindex ? { index: false, follow: true } : { index: true, follow: true },
     keywords: [
       store.name,
@@ -75,7 +85,7 @@ export async function menuMetadata(
       siteName: store.name,
       title,
       description,
-      url: opts.path,
+      url: canonical,
       locale: "en_IN",
       ...(image ? { images: [{ url: image, alt: store.name }] } : {}),
     },
@@ -92,8 +102,8 @@ export async function menuMetadata(
 // items. Prices use the store's currency. Only what we actually know goes in.
 export async function menuJsonLd(slug: string, menu: PublicMenu): Promise<Record<string, unknown>> {
   const { store, categories } = menu;
-  const origin = await siteOrigin();
-  const url = `${origin}/m/${slug}`;
+  const url = await publicUrl(store, slug);
+  const origin = new URL(url).origin;
   const address =
     store.addressLine1 || store.city
       ? {

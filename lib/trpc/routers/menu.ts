@@ -18,6 +18,8 @@ import { STORE_ID } from "@/lib/store/constants";
 import { getFullMenu, getPublicMenu } from "@/lib/store/menu";
 import { getOrderSettings } from "@/lib/store/order-settings";
 import { bust } from "@/lib/store/cache";
+import { getStore } from "@/lib/store/data";
+import { addDomain, removeDomain, domainStatus, vercelEnabled } from "@/lib/vercel";
 import {
   router,
   protectedProcedure,
@@ -86,6 +88,17 @@ export const menuRouter = router({
         packagingFee,
         ...appearance
       } = input;
+      // Café domain changed: register the new one with Vercel before saving so
+      // a failed call leaves the old domain in place.
+      const prev = (await getStore()).menuDomain;
+      if (appearance.menuDomain !== prev) {
+        try {
+          if (appearance.menuDomain) await addDomain(appearance.menuDomain);
+          if (prev) await removeDomain(prev);
+        } catch (e) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Couldn't add that domain: ${(e as Error).message}` });
+        }
+      }
       try {
         await db.transaction(async (tx) => {
           await tx
@@ -138,6 +151,14 @@ export const menuRouter = router({
       if (input.menuSlug) revalidatePath(`/m/${input.menuSlug}`);
       return { ok: true as const };
     }),
+
+  // DNS state of the café's own domain for the settings modal.
+  domainStatus: protectedProcedure.query(async () => {
+    const { menuDomain } = await getStore();
+    if (!menuDomain) return null;
+    return { domain: menuDomain, ...(await domainStatus(menuDomain)) };
+  }),
+  domainsManaged: protectedProcedure.query(() => vercelEnabled),
 
   // ---- Categories -------------------------------------------------------
   createCategory: editorProcedure

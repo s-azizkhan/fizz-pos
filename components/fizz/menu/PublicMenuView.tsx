@@ -1,3 +1,4 @@
+import { menuPath } from "@/lib/store/menu-path";
 import { formatMoney } from "@/lib/store/format";
 import type { PublicMenu } from "@/lib/store/menu";
 import { MenuCategoryIconGlyph } from "@/components/fizz/menu/category-icons";
@@ -50,7 +51,7 @@ export default function PublicMenuView({
         <header className="flex items-center gap-4">
           {store.menuWelcome?.on ? (
             <a
-              href={`/m/${slug}${table ? `?t=${encodeURIComponent(table)}` : ""}`}
+              href={`${menuPath(slug)}${table ? `?t=${encodeURIComponent(table)}` : ""}`}
               aria-label="Back to welcome"
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--m-line)] bg-[var(--m-surface)] text-[var(--m-text)]"
             >
