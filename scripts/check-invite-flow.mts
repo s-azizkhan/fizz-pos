@@ -35,7 +35,7 @@ const sessionFrom = (res: Response) =>
 // --- sign in as the admin ----------------------------------------------------
 const login = await call("auth.login", {
   // Same fallbacks as scripts/seed-admin.mts, so `npm run db:seed` is enough setup.
-  email: process.env.ADMIN_EMAIL || "admin@fizz.local",
+  identifier: process.env.ADMIN_EMAIL || "admin@fizz.local",
   password: process.env.ADMIN_PASSWORD || "fizz1234",
 });
 assert.ok(login.ok, `admin login failed: ${login.error?.json?.message}`);
@@ -46,7 +46,7 @@ assert.ok(admin.startsWith("fizz_session="), "admin session cookie issued");
 assert.equal((await query("team.list", undefined)).error?.json?.data?.code, "UNAUTHORIZED");
 
 // --- invite asks for email + role only ---------------------------------------
-const invited = await call("team.invite", { email: EMAIL, role: "manager" }, admin);
+const invited = await call("team.invite", { contact: EMAIL, role: "manager" }, admin);
 assert.ok(invited.ok, `invite failed: ${invited.error?.json?.message}`);
 const token: string = invited.data.token;
 assert.ok(token.length > 20, "shareable token minted");
@@ -60,7 +60,7 @@ assert.ok(
 
 // --- the public link shows what's being accepted, and nothing more -----------
 const peeked = await query("team.peek", { token });
-assert.deepEqual(peeked.data, { email: EMAIL, role: "manager" });
+assert.deepEqual(peeked.data, { contact: EMAIL, role: "manager" });
 
 // --- the invitee supplies only name + password -------------------------------
 assert.ok(
@@ -86,14 +86,14 @@ assert.equal(me.data.role, "manager");
 // --- the link is single-use, and members can't be double-invited -------------
 assert.ok((await query("team.peek", { token })).error, "spent link is dead");
 assert.ok(
-  (await call("team.invite", { email: EMAIL, role: "staff" }, admin)).error,
+  (await call("team.invite", { contact: EMAIL, role: "staff" }, admin)).error,
   "existing member can't be re-invited",
 );
 
 // --- a manager is not an admin ----------------------------------------------
 const newUserId = me.data.id;
 assert.equal(
-  (await call("team.invite", { email: "nope@example.com", role: "staff" }, joined))
+  (await call("team.invite", { contact: "nope@example.com", role: "staff" }, joined))
     .error?.json?.data?.code,
   "FORBIDDEN",
 );

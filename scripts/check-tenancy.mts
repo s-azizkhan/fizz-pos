@@ -29,7 +29,7 @@ const sessionFrom = (res: Response) => (res.headers.get("set-cookie") ?? "").spl
 // --- two fresh counters --------------------------------------------------------
 async function openCounter(tag: string) {
   const email = `e2e.${tag}.${run}@example.com`;
-  const signed = await call("auth.signup", { storeName: `Counter ${tag}`, name: `Owner ${tag}`, email, password: "brew1234" });
+  const signed = await call("auth.signup", { storeName: `Counter ${tag}`, name: `Owner ${tag}`, contact: email, password: "brew1234" });
   assert.ok(signed.ok, `signup ${tag}: ${signed.error?.message}`);
   const cookie = sessionFrom(signed.res);
   const me = (await query("auth.me", undefined, cookie)).data;
@@ -60,7 +60,7 @@ const menuA = (await query("menu.full", undefined, A.cookie)).data;
 assert.deepEqual(menuA.map((c: { name: string }) => c.name), ["Hot a"], "A sees only A's categories");
 assert.equal((await query("store.get", undefined, B.cookie)).data.name, "Counter b");
 const teamA = (await query("team.list", undefined, A.cookie)).data;
-assert.deepEqual(teamA.members.map((m: { email: string }) => m.email), [A.email], "A's team is just A");
+assert.deepEqual(teamA.members.map((m: { contact: string }) => m.contact), [A.email], "A's team is just A");
 
 // --- writes by a guessed id are no-ops across stores ----------------------------
 const steal = await call("menu.updateItem", { id: B.itemId, categoryId: A.categoryId, name: "Hijacked", price: "1", cost: "0", available: "true", variants: "[]" }, A.cookie);
@@ -92,7 +92,7 @@ assert.equal((await query("orders.byId", mine[0].id, B.cookie)).data, null, "B c
 assert.equal((await call("orders.void", mine[0].id, B.cookie)).error?.data?.code, "NOT_FOUND", "B can't void A's order");
 
 // --- team: invites stay in their store ------------------------------------------
-const inv = await call("team.invite", { email: `e2e.staff.${run}@example.com`, role: "staff" }, A.cookie);
+const inv = await call("team.invite", { contact: `e2e.staff.${run}@example.com`, role: "staff" }, A.cookie);
 assert.ok(inv.ok, `invite: ${inv.error?.message}`);
 assert.equal((await query("team.list", undefined, B.cookie)).data.pending.length, 0, "B doesn't see A's invite");
 assert.ok((await call("team.revoke", { id: inv.data.id }, B.cookie)).ok, "revoke call succeeds…");
@@ -110,7 +110,7 @@ assert.equal(pubB.categories[0].items[0].name, "Chai b");
 assert.equal((await fetch(`${BASE}/m/${A.slug}/menu`)).status, 200);
 
 // --- dup email is refused, signup is otherwise open -----------------------------
-assert.equal((await call("auth.signup", { storeName: "X", name: "X", email: A.email, password: "brew1234" })).error?.data?.code, "CONFLICT");
+assert.equal((await call("auth.signup", { storeName: "X", name: "X", contact: A.email, password: "brew1234" })).error?.data?.code, "CONFLICT");
 
 // --- cleanup ----------------------------------------------------------------------
 const sql = postgres(process.env.DB_URL!, { prepare: false });

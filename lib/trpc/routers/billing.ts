@@ -101,7 +101,7 @@ export const billingRouter = router({
         planExpiresAt: store.planExpiresAt,
         trialEndsAt: store.trialEndsAt,
         createdAt: store.createdAt,
-        owner: sql<string | null>`(select email from users u where u.store_id = ${store.id} and u.role = 'admin' order by created_at limit 1)`,
+        owner: sql<string | null>`(select coalesce(email, '+' || phone) from users u where u.store_id = ${store.id} and u.role = 'admin' order by created_at limit 1)`,
         members: sql<number>`(select count(*)::int from users u where u.store_id = ${store.id})`,
       })
       .from(store)

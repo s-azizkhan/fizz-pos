@@ -34,7 +34,7 @@ const appearance = (menuDomain: string) => ({
 const DAY = 86_400_000;
 
 // --- signup: 14-day Pro trial, nothing locked --------------------------------
-const signed = await call("auth.signup", { storeName: "Bill Chai", name: "Owner", email: `e2e.bill.${run}@example.com`, password: "brew1234" });
+const signed = await call("auth.signup", { storeName: "Bill Chai", name: "Owner", contact: `e2e.bill.${run}@example.com`, password: "brew1234" });
 assert.ok(signed.ok, signed.error?.message);
 const owner = sessionFrom(signed.res);
 const storeId: string = (await query("auth.me", undefined, owner)).data.storeId;
@@ -57,7 +57,7 @@ const off: string[] = (await query("store.get", undefined, owner)).data.disabled
 for (const k of ["inventory", "margins", "expenses", "analytics", "report"]) assert.ok(off.includes(k), `${k} locked on free`);
 assert.ok(!off.includes("publicMenu"), "QR menu stays free");
 assert.equal((await query("inventory.list", undefined, owner)).error?.data?.code, "FORBIDDEN", "locked feature's procedures refuse");
-assert.equal((await call("team.invite", { email: `e2e.bill.staff.${run}@example.com`, role: "staff" }, owner)).error?.data?.code, "FORBIDDEN", "free = owner only");
+assert.equal((await call("team.invite", { contact: `e2e.bill.staff.${run}@example.com`, role: "staff" }, owner)).error?.data?.code, "FORBIDDEN", "free = owner only");
 assert.equal((await call("menu.updateAppearance", appearance("menu.billchai.in"), owner)).error?.data?.code, "FORBIDDEN", "own domain needs Counter");
 assert.ok((await call("menu.updateAppearance", appearance(""), owner)).ok, "appearance without a domain still saves");
 // a locked key posted from the settings form isn't persisted as the café's own choice
@@ -81,7 +81,7 @@ assert.equal(st.plan, "free", "requesting alone changes nothing");
 
 // --- an owner can't confirm their own request; a platform admin can ----------
 assert.equal((await call("billing.confirm", { id: r2.data.id, note: "" }, owner)).error?.data?.code, "FORBIDDEN");
-const login = await call("auth.login", { email: process.env.ADMIN_EMAIL || "admin@fizz.local", password: process.env.ADMIN_PASSWORD || "fizz1234" });
+const login = await call("auth.login", { identifier: process.env.ADMIN_EMAIL || "admin@fizz.local", password: process.env.ADMIN_PASSWORD || "fizz1234" });
 assert.ok(login.ok, "seeded admin signs in");
 const op = sessionFrom(login.res);
 const board = (await query("billing.stores", undefined, op));
@@ -98,7 +98,7 @@ const until1 = new Date(st.until).getTime();
 assert.ok(until1 - Date.now() > 360 * DAY, "a year of Pro");
 assert.equal(st.history[0].reference, r2.data.reference);
 assert.deepEqual((await query("store.get", undefined, owner)).data.disabledFeatures, ["kot"], "locks lifted, own switch kept");
-assert.ok((await call("team.invite", { email: `e2e.bill.staff.${run}@example.com`, role: "staff" }, owner)).ok, "Pro seats 5");
+assert.ok((await call("team.invite", { contact: `e2e.bill.staff.${run}@example.com`, role: "staff" }, owner)).ok, "Pro seats 5");
 assert.equal((await call("billing.confirm", { id: r2.data.id, note: "" }, op)).error?.data?.code, "CONFLICT", "can't confirm twice");
 
 // renewal stacks on the current end date

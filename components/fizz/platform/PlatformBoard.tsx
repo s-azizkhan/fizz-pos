@@ -55,7 +55,7 @@ export default function PlatformBoard({ stores }: { stores: Row[] }) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search counter, owner email or FZ- reference…"
+          placeholder="Search counter, owner email/phone or FZ- reference…"
           className={`${inputCls} w-full sm:w-96 rounded-full`}
         />
         <span className="text-sm text-steam">

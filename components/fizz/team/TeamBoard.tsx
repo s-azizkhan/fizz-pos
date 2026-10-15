@@ -11,7 +11,7 @@ import type { UserRole } from "@/lib/db/schema";
 
 export type Member = {
   id: string;
-  email: string;
+  contact: string;
   name: string;
   role: UserRole;
   createdAt: Date;
@@ -19,7 +19,7 @@ export type Member = {
 
 export type PendingInvite = {
   id: string;
-  email: string;
+  contact: string;
   role: UserRole;
   token: string;
   expiresAt: Date;
@@ -67,14 +67,14 @@ function CopyLinkButton({ token, label = "Copy link" }: { token: string; label?:
   );
 }
 
-function InviteLinkCard({ token, email }: { token: string; email: string }) {
+function InviteLinkCard({ token, contact }: { token: string; contact: string }) {
   return (
     <div className="mt-5 rounded-fizz border border-fizz/40 bg-fizz/5 p-5">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
         Invite ready
       </p>
       <p className="mt-2 text-sm text-cream">
-        Send this link to <span className="font-semibold">{email}</span>. They pick
+        Send this link to <span className="font-semibold">{contact}</span>. They pick
         their name and password when they open it. Expires in 7 days.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -89,13 +89,13 @@ function InviteLinkCard({ token, email }: { token: string; email: string }) {
 
 function InviteForm() {
   const trpc = useTRPC();
-  const [fresh, setFresh] = useState<{ token: string; email: string } | null>(null);
+  const [fresh, setFresh] = useState<{ token: string; contact: string } | null>(null);
   const [role, setRole] = useState<UserRole>("staff");
 
   const invite = useMutation(
     trpc.team.invite.mutationOptions({
       meta: { silentError: true },
-      onSuccess: (row) => setFresh({ token: row.token, email: row.email }),
+      onSuccess: (row) => setFresh({ token: row.token, contact: row.contact }),
     }),
   );
   const error = invite.error?.message ?? null;
@@ -104,7 +104,7 @@ function InviteForm() {
     <div className="rounded-fizz border border-ink-line bg-ink-soft p-7">
       <h2 className="font-display text-xl font-bold tracking-tight">Invite someone</h2>
       <p className="mt-2 max-w-[60ch] text-sm text-steam">
-        Pick the email and what they&apos;re allowed to do. We don&apos;t send mail
+        Pick their email or phone and what they&apos;re allowed to do. We don&apos;t send mail
         yet — you&apos;ll get a link to pass along.
       </p>
 
@@ -118,13 +118,14 @@ function InviteForm() {
       >
         <label className="flex flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-            Email
+            Email or phone
           </span>
           <input
-            type="email"
-            name="email"
+            type="text"
+            inputMode="email"
+            name="contact"
             required
-            placeholder="new.hire@yourshop.in"
+            placeholder="new.hire@yourshop.in or 98765 43210"
             className="rounded-fizz border border-ink-line bg-ink px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
           />
         </label>
@@ -177,7 +178,7 @@ function InviteForm() {
         </button>
       </form>
 
-      {fresh && <InviteLinkCard token={fresh.token} email={fresh.email} />}
+      {fresh && <InviteLinkCard token={fresh.token} contact={fresh.contact} />}
     </div>
   );
 }
@@ -285,7 +286,7 @@ export default function TeamBoard({
                 key={p.id}
                 className="flex flex-wrap items-center gap-3 rounded-fizz border border-ink-line bg-ink-soft px-4 py-3"
               >
-                <span className="font-semibold text-cream">{p.email}</span>
+                <span className="font-semibold text-cream">{p.contact}</span>
                 <span className="rounded-full border border-ink-line px-3 py-1 text-xs text-steam">
                   {ROLE_LABEL[p.role]}
                 </span>
@@ -311,7 +312,7 @@ export default function TeamBoard({
             <thead className="border-b border-ink-line text-xs uppercase tracking-[0.12em] text-steam">
               <tr>
                 <th className={cell}>Name</th>
-                <th className={cell}>Email</th>
+                <th className={cell}>Contact</th>
                 <th className={cell}>Permissions</th>
                 <th className={cell}>Joined</th>
                 <th className={cell} />
@@ -323,7 +324,7 @@ export default function TeamBoard({
                 return (
                   <tr key={m.id} className="border-b border-ink-line/60 last:border-0">
                     <td className={`${cell} font-semibold text-cream`}>{m.name}</td>
-                    <td className={`${cell} text-steam`}>{m.email}</td>
+                    <td className={`${cell} text-steam`}>{m.contact}</td>
                     <td className={cell}>
                       <RoleSelect member={m} self={self} />
                     </td>

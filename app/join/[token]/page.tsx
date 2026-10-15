@@ -66,7 +66,7 @@ export default async function JoinPage({
               </h1>
               <p className="mt-2 text-steam">
                 Invited as{" "}
-                <span className="font-semibold text-cream">{invite.email}</span>.
+                <span className="font-semibold text-cream">{invite.contact}</span>.
               </p>
 
               <div className="mt-5 rounded-fizz border border-ink-line bg-ink-soft p-4">

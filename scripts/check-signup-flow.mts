@@ -27,7 +27,7 @@ const hop = async (path: string, cookie = "") => {
 };
 const sessionFrom = (res: Response) => (res.headers.get("set-cookie") ?? "").split(";")[0];
 
-const owner = { storeName: "E2E Chai", name: "E2E Owner", email: `e2e.owner.${Date.now()}@example.com`, password: "brew1234" };
+const owner = { storeName: "E2E Chai", name: "E2E Owner", contact: `e2e.owner.${Date.now()}@example.com`, password: "brew1234" };
 
 // --- a new counter: first account is its admin and lands on onboarding -------
 assert.equal((await hop("/signup")).status, 200, "/signup renders");
@@ -69,8 +69,22 @@ assert.deepEqual(store.disabledFeatures, ["inventory"]);
 assert.equal((await hop("/dashboard", cookie)).status, 200, "dashboard opens after onboarding");
 assert.ok((await hop("/onboarding", cookie)).to?.endsWith("/dashboard"), "wizard is one-shot");
 
+// --- phone-only owner: signs up with a bare 10-digit number, logs in with any spelling
+const digits = String(7000000000 + (Date.now() % 1000000000));
+const byPhone = await call("auth.signup", { storeName: "Phone Chai", name: "P", contact: digits, password: "brew1234" });
+assert.ok(byPhone.ok, `phone signup: ${byPhone.error?.json?.message}`);
+const pc = sessionFrom(byPhone.res);
+const pm = (await query("auth.me", pc)).data;
+assert.equal(pm.email, null);
+assert.equal(pm.phone, `91${digits}`, "stored canonical with country code");
+assert.ok((await call("auth.login", { identifier: `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`, password: "brew1234" })).ok, "formatted number logs in");
+assert.ok((await call("auth.login", { identifier: `0${digits}`, password: "brew1234" })).ok, "0-prefixed logs in");
+assert.equal((await call("auth.signup", { storeName: "X", name: "X", contact: `91${digits}`, password: "brew1234" })).error?.json?.data?.code, "CONFLICT", "same number can't sign up twice");
+assert.ok((await call("auth.signup", { storeName: "X", name: "X", contact: "12345", password: "brew1234" })).error, "junk contact rejected");
+assert.ok((await call("auth.login", { identifier: digits, password: "wrong" })).error, "wrong password");
+
 // --- cleanup -------------------------------------------------------------------
 const sql = postgres(process.env.DB_URL!, { prepare: false });
-await sql`delete from store where id = ${storeId}`;
+await sql`delete from store where id in ${sql([storeId, pm.storeId])}`;
 await sql.end();
 console.log("signup flow OK");

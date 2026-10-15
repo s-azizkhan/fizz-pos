@@ -41,6 +41,7 @@ Signup (`/signup`, `auth.signup`) creates a store + its admin; `/onboarding` is 
 - `proxy.ts` is the Next 16 middleware (renamed from `middleware.ts`). It does an **optimistic** check only — verifies the JWT signature with no DB hit, redirecting `/dashboard/*` ↔ `/login`. Must stay Edge-compatible: no `next/headers`, no `server-only` imports.
 - Real authorization lives in the **DAL** (`lib/auth/dal.ts`), close to the data. `verifySession()` / `getCurrentUser()` read the cookie, verify the JWT, and confirm the user still exists in the DB. Both are `react`-`cache`d (one DB hit per render) and `server-only`. Server Actions call `getCurrentUser()` before doing work.
 - Session = `jose` HS256 JWT in the `fizz_session` httpOnly cookie, 7-day expiry (`lib/auth/session.ts`). Passwords are scrypt `<saltHex>.<hashHex>` (`lib/auth/password.ts`).
+- Identity is an email OR a phone (`users.email` / `users.phone`, both nullable+unique, CHECK one is set). Forms post one `contact` / `identifier` field; `contactSchema` in `lib/db/schema/user.ts` parses it (phones canonical: digits with country code, bare 10 digits → `91…`). Display with `contactLabel()`.
 - Roles: `admin` > `manager` > `staff` (`lib/db/schema/user.ts`).
 
 ### Data flow

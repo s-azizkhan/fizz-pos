@@ -63,13 +63,14 @@ export default function SignupForm() {
       </label>
 
       <label className="flex flex-col gap-2">
-        <span className={labelCls}>Email</span>
+        <span className={labelCls}>Email or phone</span>
         <input
-          type="email"
-          name="email"
+          type="text"
+          inputMode="email"
+          name="contact"
           required
-          autoComplete="email"
-          placeholder="you@yourshop.in"
+          autoComplete="username"
+          placeholder="you@yourshop.in or 98765 43210"
           aria-invalid={error ? true : undefined}
           className={inputCls}
         />

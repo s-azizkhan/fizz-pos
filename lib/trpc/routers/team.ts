@@ -5,10 +5,12 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import {
   acceptInviteSchema,
+  contactLabel,
   inviteSchema,
   invites,
   updateRoleSchema,
   users,
+  type Contact,
 } from "@/lib/db/schema";
 import { hashPassword } from "@/lib/auth/password";
 import { createSession } from "@/lib/auth/session";
@@ -27,6 +29,9 @@ function expiry(): Date {
 // same email clears the row anyway.
 const live = () => and(isNull(invites.acceptedAt), gt(invites.expiresAt, new Date()));
 
+const userByContact = (c: Contact) => (c.email ? eq(users.email, c.email) : eq(users.phone, c.phone!));
+const inviteByContact = (c: Contact) => (c.email ? eq(invites.email, c.email) : eq(invites.phone, c.phone!));
+
 export const teamRouter = router({
   list: adminProcedure.query(async ({ ctx }) => {
     const sid = ctx.user.storeId;
@@ -35,6 +40,7 @@ export const teamRouter = router({
         .select({
           id: users.id,
           email: users.email,
+          phone: users.phone,
           name: users.name,
           role: users.role,
           createdAt: users.createdAt,
@@ -46,6 +52,7 @@ export const teamRouter = router({
         .select({
           id: invites.id,
           email: invites.email,
+          phone: invites.phone,
           role: invites.role,
           token: invites.token,
           expiresAt: invites.expiresAt,
@@ -55,24 +62,27 @@ export const teamRouter = router({
         .where(and(eq(invites.storeId, sid), live()))
         .orderBy(desc(invites.createdAt)),
     ]);
-    return { members, pending };
+    return {
+      members: members.map((m) => ({ ...m, contact: contactLabel(m) })),
+      pending: pending.map((p) => ({ ...p, contact: contactLabel(p) })),
+    };
   }),
 
   // No mail transport — the procedure mints the token and the admin copies the
-  // link by hand. Re-inviting the same email replaces the outstanding invite so
-  // an old link can't linger alongside a new one.
+  // link by hand. Re-inviting the same contact replaces the outstanding invite
+  // so an old link can't linger alongside a new one.
   invite: adminProcedure
     .input(inviteSchema)
     .mutation(async ({ ctx, input }) => {
       const existing = await db
         .select({ id: users.id })
         .from(users)
-        .where(eq(users.email, input.email))
+        .where(userByContact(input.contact))
         .limit(1);
       if (existing[0]) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "That email is already on the team.",
+          message: "That email or phone already has an account.",
         });
       }
 
@@ -96,12 +106,12 @@ export const teamRouter = router({
       const row = await db.transaction(async (tx) => {
         await tx
           .delete(invites)
-          .where(and(eq(invites.email, input.email), isNull(invites.acceptedAt)));
+          .where(and(eq(invites.storeId, ctx.user.storeId), inviteByContact(input.contact), isNull(invites.acceptedAt)));
         const [created] = await tx
           .insert(invites)
           .values({
             storeId: ctx.user.storeId,
-            email: input.email,
+            ...input.contact,
             role: input.role,
             token,
             invitedBy: ctx.user.id,
@@ -110,7 +120,7 @@ export const teamRouter = router({
           .returning();
         return created;
       });
-      return row;
+      return { ...row, contact: contactLabel(row) };
     }),
 
   revoke: adminProcedure
@@ -156,13 +166,13 @@ export const teamRouter = router({
     }),
 
   // --- Public: the invite link ---------------------------------------------
-  // Shows the invitee what they're accepting. Returns email + role only —
+  // Shows the invitee what they're accepting. Returns contact + role only —
   // never the token or who invited them.
   peek: publicProcedure
     .input(z.object({ token: z.string().min(1) }))
     .query(async ({ input }) => {
       const invite = await findLiveInvite(input.token);
-      return { email: invite.email, role: invite.role };
+      return { contact: contactLabel(invite), role: invite.role };
     }),
 
   accept: publicProcedure
@@ -175,12 +185,12 @@ export const teamRouter = router({
         const taken = await tx
           .select({ id: users.id })
           .from(users)
-          .where(eq(users.email, invite.email))
+          .where(userByContact(invite))
           .limit(1);
         if (taken[0]) {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "That email already has an account. Sign in instead.",
+            message: "That email or phone already has an account. Sign in instead.",
           });
         }
         const [created] = await tx
@@ -189,6 +199,7 @@ export const teamRouter = router({
             // Store and role both ride the invite, never the invitee's form.
             storeId: invite.storeId,
             email: invite.email,
+            phone: invite.phone,
             name: input.name,
             passwordHash,
             // Role comes from the invite, never from the invitee's form.

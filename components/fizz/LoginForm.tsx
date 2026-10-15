@@ -37,15 +37,16 @@ export default function LoginForm() {
     >
       <label className="flex flex-col gap-2">
         <span className="text-xs font-semibold uppercase tracking-[0.18em] text-fizz">
-          Email
+          Email or phone
         </span>
         <input
-          type="email"
-          name="email"
+          type="text"
+          inputMode="email"
+          name="identifier"
           required
-          autoComplete="email"
+          autoComplete="username"
           autoFocus
-          placeholder="you@yourshop.in"
+          placeholder="you@yourshop.in or 98765 43210"
           aria-invalid={error ? true : undefined}
           className="rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
         />

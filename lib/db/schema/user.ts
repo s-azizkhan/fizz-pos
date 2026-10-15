@@ -1,4 +1,5 @@
-import { boolean, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, check, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { store } from "./store";
@@ -8,14 +9,19 @@ import { store } from "./store";
 export const userRole = pgEnum("user_role", ["admin", "manager", "staff"]);
 export type UserRole = (typeof userRole.enumValues)[number];
 
-export const users = pgTable("users", {
+// Identity is an email OR a phone (many counter staff have no email). Both
+// are global, not per-store: one contact = one account = one counter. Phone
+// is stored canonical: digits only with country code, e.g. 919876543210.
+export const users = pgTable(
+  "users",
+  {
   id: uuid("id").primaryKey().defaultRandom(),
   // The counter this person works at. Every authed read/write is scoped by it.
   storeId: uuid("store_id")
     .notNull()
     .references(() => store.id, { onDelete: "cascade" }),
-  // Global, not per-store: login is email-only, so one email = one counter.
-  email: text("email").notNull().unique(),
+  email: text("email").unique(),
+  phone: text("phone").unique(),
   name: text("name").notNull(),
   passwordHash: text("password_hash").notNull(),
   role: userRole("role").notNull().default("staff"),
@@ -25,20 +31,63 @@ export const users = pgTable("users", {
   // could be claimed by whoever registers that address first.
   isPlatformAdmin: boolean("is_platform_admin").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+  },
+  (t) => [check("users_contact_chk", sql`${t.email} is not null or ${t.phone} is not null`)],
+);
 
 export type User = typeof users.$inferSelect;
 
-// Login is email + password only — never trust a role/hash from the client.
+// --- Contact: one field, email or phone ---------------------------------------
+export type Contact = { email: string | null; phone: string | null };
+
+// Canonical phone: digits only, country code included. A bare 10-digit
+// number is Indian (the counters we serve); anything else must bring its
+// own code. null = not a phone.
+export function canonicalPhone(raw: string): string | null {
+  let d = raw.replace(/\D/g, "");
+  if (/^0\d{10}$/.test(d)) d = d.slice(1); // 09876543210
+  if (/^\d{10}$/.test(d)) d = "91" + d;
+  return /^\d{11,15}$/.test(d) ? d : null;
+}
+
+// "+91 98765 43210" for Indian numbers, "+<digits>" otherwise.
+export function formatPhone(p: string): string {
+  return /^91\d{10}$/.test(p) ? `+91 ${p.slice(2, 7)} ${p.slice(7)}` : `+${p}`;
+}
+
+export function parseContact(raw: string): Contact | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (v.includes("@")) {
+    const r = z.email().safeParse(v.toLowerCase());
+    return r.success ? { email: r.data, phone: null } : null;
+  }
+  const phone = canonicalPhone(v);
+  return phone ? { email: null, phone } : null;
+}
+
+export const contactLabel = (c: Contact) => c.email ?? (c.phone ? formatPhone(c.phone) : "");
+
+export const contactSchema = z
+  .string()
+  .trim()
+  .min(1, "Enter an email or phone number")
+  .transform((v, ctx) => {
+    const c = parseContact(v);
+    if (c) return c;
+    ctx.addIssue({ code: "custom", message: "Enter a valid email or a phone number with country code" });
+    return z.NEVER;
+  });
+
+// Login is contact + password only — never trust a role/hash from the client.
 export const loginForm = z.object({
-  email: z.email("Enter a valid email").trim().toLowerCase(),
+  identifier: contactSchema,
   password: z.string().min(1, "Password is required"),
 });
 export type LoginInput = z.infer<typeof loginForm>;
 
 // Server-side schema for minting a user (seeder, future admin invite flow).
 const baseUserInsert = createInsertSchema(users).pick({
-  email: true,
   name: true,
   role: true,
 });
@@ -59,15 +108,15 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 export const signupForm = z.object({
   storeName: z.string().trim().min(1, "Name your counter").max(120),
   name: z.string().trim().min(1, "Enter your name").max(120),
-  email: z.email("Enter a valid email").trim().toLowerCase(),
+  contact: contactSchema,
   password: createUserSchema.shape.password,
 });
 export type SignupInput = z.infer<typeof signupForm>;
 
 // --- Invites -----------------------------------------------------------------
 // No mail transport yet, so an invite is just a shareable link the admin copies
-// and sends by hand. The admin picks email + role; the invitee sets their own
-// name + password when they open the link.
+// and sends by hand. The admin picks a contact (email or phone) + role; the
+// invitee sets their own name + password when they open the link.
 // ponytail: token stored raw so a pending link can be re-copied later. Hash it
 // if DB-read-only leaks become part of the threat model (kills re-copy).
 export const invites = pgTable("invites", {
@@ -75,7 +124,8 @@ export const invites = pgTable("invites", {
   storeId: uuid("store_id")
     .notNull()
     .references(() => store.id, { onDelete: "cascade" }),
-  email: text("email").notNull(),
+  email: text("email"),
+  phone: text("phone"),
   role: userRole("role").notNull().default("staff"),
   token: text("token").notNull().unique(),
   invitedBy: uuid("invited_by").references(() => users.id, {
@@ -89,7 +139,7 @@ export const invites = pgTable("invites", {
 export type Invite = typeof invites.$inferSelect;
 
 export const inviteSchema = z.object({
-  email: z.email("Enter a valid email").trim().toLowerCase(),
+  contact: contactSchema,
   role: z.enum(userRole.enumValues).default("staff"),
 });
 export type InviteInput = z.infer<typeof inviteSchema>;

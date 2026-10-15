@@ -29,6 +29,7 @@ export const getSessionUser = cache(async () => {
       id: users.id,
       storeId: users.storeId,
       email: users.email,
+      phone: users.phone,
       name: users.name,
       role: users.role,
       isPlatformAdmin: users.isPlatformAdmin,
