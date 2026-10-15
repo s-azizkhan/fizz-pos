@@ -27,8 +27,7 @@ export function CardShell({
   subtitle: string;
   trailing?: ReactNode;
 }) {
-  const cls =
-    "flex w-full items-center gap-4 border p-4 text-left transition-transform active:scale-[0.98]";
+  const cls = `wl-card ${primary ? "wl-primary" : ""} flex w-full items-center gap-4 border p-4 text-left`;
   const style = {
     borderRadius: "var(--m-radius)",
     backgroundColor: primary ? `${accent}1F` : "var(--m-surface)",
@@ -37,7 +36,7 @@ export function CardShell({
   const inner = (
     <>
       <span
-        className="flex h-14 w-14 shrink-0 items-center justify-center"
+        className="wl-tile flex h-14 w-14 shrink-0 items-center justify-center"
         style={{ borderRadius: "calc(var(--m-radius) - 4px)", backgroundColor: `${accent}26`, color: accent }}
       >
         {icon}
@@ -46,7 +45,7 @@ export function CardShell({
         <span className="block truncate text-[18px] font-bold leading-tight">{title}</span>
         {subtitle && <span className="mt-0.5 block truncate text-[13px] text-[var(--m-muted)]">{subtitle}</span>}
       </span>
-      <span className="shrink-0 text-[var(--m-muted)]">{trailing ?? <Chevron />}</span>
+      <span className="wl-chev shrink-0 text-[var(--m-muted)]">{trailing ?? <Chevron />}</span>
     </>
   );
   if (onClick) {
@@ -64,7 +63,7 @@ export function CardShell({
 }
 
 // Tap to reveal the network + password; copy with one more tap.
-export function WifiCard({ card, accent }: { card: WelcomeCard; accent: string }) {
+export function WifiCard({ card, accent, index }: { card: WelcomeCard; accent: string; index: number }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -75,7 +74,7 @@ export function WifiCard({ card, accent }: { card: WelcomeCard; accent: string }
     } catch {}
   };
   return (
-    <li>
+    <li className="wl-in" style={{ "--i": index } as React.CSSProperties}>
       <CardShell
         onClick={() => setOpen((v) => !v)}
         accent={accent}
@@ -86,7 +85,7 @@ export function WifiCard({ card, accent }: { card: WelcomeCard; accent: string }
       />
       {open && (
         <div
-          className="mt-2 flex items-center justify-between gap-3 border px-4 py-3"
+          className="wl-in mt-2 flex items-center justify-between gap-3 border px-4 py-3"
           style={{ borderRadius: "var(--m-radius)", borderColor: "var(--m-line)", backgroundColor: "var(--m-surface)" }}
         >
           <span className="min-w-0">

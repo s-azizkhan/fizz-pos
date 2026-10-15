@@ -53,23 +53,24 @@ export default function Welcome({
       <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-8 pt-4 sm:pt-8">
         {/* Hero card: cover image (or a quiet accent wash), logo, name, tagline, table. */}
         <section
-          className="relative overflow-hidden"
-          style={{ borderRadius: `calc(var(--m-radius) + 6px)`, backgroundColor: "var(--m-surface)" }}
+          className="wl-in relative overflow-hidden"
+          style={{ "--i": 0, borderRadius: `calc(var(--m-radius) + 6px)`, backgroundColor: "var(--m-surface)" } as React.CSSProperties}
         >
           <div className="relative aspect-[4/3] w-full">
             {w.coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={w.coverUrl} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <img src={w.coverUrl} alt="" className="wl-cover absolute inset-0 h-full w-full object-cover" />
             ) : (
               <div
                 className="absolute inset-0"
                 style={{ background: `radial-gradient(120% 90% at 80% 10%, ${accent}55, transparent 60%), var(--m-surface)` }}
               />
             )}
+            <Bubbles />
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
             <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-5">
               <div
-                className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-[var(--m-bg)] text-2xl font-bold"
+                className="wl-logo flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-[var(--m-bg)] text-2xl font-bold"
                 style={{ borderColor: accent, fontFamily: theme.display }}
               >
                 {store.logoUrl ? (
@@ -86,7 +87,7 @@ export default function Welcome({
                 {store.menuTagline && <p className="mt-0.5 truncate text-[15px] italic text-white/80">{store.menuTagline}</p>}
                 {table && (
                   <span
-                    className="mt-2 inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--m-bg)]"
+                    className="wl-badge mt-2 inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--m-bg)]"
                     style={{ backgroundColor: accent }}
                   >
                     Table {table}
@@ -101,9 +102,9 @@ export default function Welcome({
         <ul className="mt-4 flex flex-col gap-3">
           {cards.map(([c, href], i) =>
             c.kind === "wifi" ? (
-              <WifiCard key={c.id} card={c} accent={accent} />
+              <WifiCard key={c.id} card={c} accent={accent} index={i + 1} />
             ) : (
-              <li key={c.id}>
+              <li key={c.id} className="wl-in" style={{ "--i": i + 1 } as React.CSSProperties}>
                 <CardShell
                   href={href!}
                   primary={i === 0}
@@ -117,22 +118,22 @@ export default function Welcome({
             ),
           )}
           {cards.length === 0 && (
-            <li>
+            <li className="wl-in" style={{ "--i": 1 } as React.CSSProperties}>
               <CardShell href={menuHref} primary accent={accent} icon={<CardIcon kind="menu" />} title="View Menu" subtitle="See what's pouring" />
             </li>
           )}
         </ul>
 
         {w.socials.length > 0 && (
-          <div className="mt-8 flex justify-center gap-3">
-            {w.socials.map((u) => (
+          <div className="wl-in mt-8 flex justify-center gap-3" style={{ "--i": cards.length + 1 } as React.CSSProperties}>
+            {w.socials.map((u, i) => (
               <a
                 key={u}
                 href={u}
                 target="_blank"
                 rel="noreferrer"
-                className="flex h-12 w-12 items-center justify-center rounded-full border transition-transform hover:scale-105"
-                style={{ borderColor: "var(--m-line)", color: "var(--m-text)" }}
+                className="wl-social flex h-12 w-12 items-center justify-center rounded-full border transition-colors hover:border-[var(--m-accent)] hover:text-[var(--m-accent)]"
+                style={{ "--i": i, borderColor: "var(--m-line)", color: "var(--m-text)" } as React.CSSProperties}
               >
                 <SocialIcon url={u} />
               </a>
@@ -140,7 +141,7 @@ export default function Welcome({
           </div>
         )}
 
-        <footer className="mt-auto pt-10 text-center text-[11px] uppercase tracking-[0.2em] text-[var(--m-muted)]">
+        <footer className="wl-in mt-auto pt-10 text-center text-[11px] uppercase tracking-[0.2em] text-[var(--m-muted)]" style={{ "--i": cards.length + 2 } as React.CSSProperties}>
           {store.name} · Powered by{" "}
           <span className="font-wordmark font-bold normal-case tracking-normal text-[var(--m-text)]">
             Fi<span style={{ color: accent }}>zz</span>
@@ -149,5 +150,33 @@ export default function Welcome({
         </footer>
       </div>
     </main>
+  );
+}
+
+// Deterministic spread so SSR and client markup agree; the rise is pure CSS.
+const BUBBLES = Array.from({ length: 14 }, (_, i) => ({
+  size: 5 + ((i * 37) % 18),
+  left: (i * 53) % 100,
+  duration: 5 + ((i * 31) % 6),
+  delay: (i * 17) % 7,
+}));
+
+function Bubbles() {
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+      {BUBBLES.map((b, i) => (
+        <span
+          key={i}
+          className="wl-bubble"
+          style={{
+            width: b.size,
+            height: b.size,
+            left: `${b.left}%`,
+            animationDuration: `${b.duration}s`,
+            animationDelay: `-${b.delay}s`,
+          }}
+        />
+      ))}
+    </div>
   );
 }
