@@ -143,10 +143,16 @@ const ICON: Record<CardKind, ReactNode> = {
       <path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.5-2-1-.8.7c-.9-.4-1.6-1.1-2-2l.7-.8-1-2L9 9.5z" />
     </>
   ),
-  link: (
+  games: (
     <>
       <rect x="2" y="7" width="20" height="12" rx="4" />
       <path d="M7 11v4M5 13h4M15 12h.01M18 14h.01" />
+    </>
+  ),
+  link: (
+    <>
+      <path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5" />
+      <path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5" />
     </>
   ),
 };
@@ -213,7 +219,7 @@ const PIECES = Array.from({ length: 18 }, (_, i) => {
   return { cx: Math.cos(a) * d, cy: Math.sin(a) * d - 24, cr: ((i * 137) % 360) - 180, hue: i % 3 };
 });
 
-function Confetti({ accent }: { accent: string }) {
+export function Confetti({ accent }: { accent: string }) {
   return (
     <span className="pointer-events-none absolute inset-0 overflow-visible" aria-hidden>
       {PIECES.map((p, i) => (

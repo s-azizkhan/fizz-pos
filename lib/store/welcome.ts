@@ -5,7 +5,7 @@ import { z } from "zod";
 // in one `store.menu_welcome` jsonb so the admin form saves it in one field.
 // Client-safe: no server imports.
 
-export const CARD_KINDS = ["menu", "review", "wifi", "call", "whatsapp", "link"] as const;
+export const CARD_KINDS = ["menu", "review", "wifi", "call", "whatsapp", "games", "link"] as const;
 export type CardKind = (typeof CARD_KINDS)[number];
 
 const url = z.string().trim().max(500).regex(/^https?:\/\/\S+$/, "Paste a full link (https://…)");
@@ -17,7 +17,7 @@ export const welcomeCard = z.object({
   subtitle: z.string().trim().max(60).default(""),
   on: z.boolean().default(true),
   // kind-specific. `review` and `link` open href; `wifi` reveals ssid/password;
-  // `menu`, `call`, `whatsapp` need nothing — they read the store.
+  // `menu`, `call`, `whatsapp`, `games` need nothing — they read the store.
   href: z.union([url, z.literal("")]).optional(),
   ssid: z.string().trim().max(60).optional(),
   password: z.string().trim().max(80).optional(),
@@ -44,7 +44,8 @@ export const CARD_PRESETS: Record<CardKind, { label: string; title: string; subt
   wifi: { label: "Wi-Fi", title: "Connect to Wi-Fi", subtitle: "Tap for the password" },
   call: { label: "Call", title: "Call Us", subtitle: "Ask about today's specials" },
   whatsapp: { label: "WhatsApp", title: "Chat on WhatsApp", subtitle: "We reply fast" },
-  link: { label: "Custom link", title: "Play Games", subtitle: "While you wait" },
+  games: { label: "Games", title: "Play Games", subtitle: "While you wait" },
+  link: { label: "Custom link", title: "Our Website", subtitle: "See what's new" },
 };
 
 export function newCard(kind: CardKind, id = crypto.randomUUID().slice(0, 8)): WelcomeCard {

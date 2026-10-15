@@ -33,12 +33,15 @@ export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedd
   if (table) qs.set("t", table);
   if (viewOnly) qs.set("viewOnly", viewOnly);
   const menuHref = `/m/${slug}/menu${qs.size ? `?${qs}` : ""}`;
+  const gamesHref = `/m/${slug}/games${qs.size ? `?${qs}` : ""}`;
 
   // Where each card goes. null = nothing to point at (no phone saved…): skip it.
   const hrefFor = (c: WelcomeCard): string | null => {
     switch (c.kind) {
       case "menu":
         return menuHref;
+      case "games":
+        return gamesHref;
       case "call":
         return store.phone ? `tel:${store.phone.replace(/[^\d+]/g, "")}` : null;
       case "whatsapp":

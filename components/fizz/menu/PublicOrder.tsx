@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Confetti } from "./WelcomeCards";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -283,6 +284,8 @@ export function FloatingCart({
   const clientId = useRef<string | null>(null);
   const [note, setNote] = useState("");
   const [address, setAddress] = useState("");
+  // Confetti burst on the send tap, keyed so every tap is a fresh burst.
+  const [burst, setBurst] = useState(0);
   // Only for the no-signal fallback, where no order exists to track.
   const [sent, setSent] = useState(false);
   const { data: status } = useQuery(
@@ -359,6 +362,7 @@ export function FloatingCart({
   const send = async () => {
     if (blocked) return;
     setError(null);
+    setBurst((b) => b + 1);
     try {
       localStorage.setItem("fizz-customer", JSON.stringify({ name: name.trim(), phone: phone.trim() }));
     } catch {}
@@ -659,6 +663,8 @@ export function FloatingCart({
                 <span>Total</span>
                 <span className="tabular-nums">{formatMoney(due, currency)}</span>
               </div>
+              <span className="relative block">
+              {burst > 0 && <Confetti key={burst} accent={accent} />}
               <button
                 type="button"
                 onClick={send}
@@ -679,6 +685,7 @@ export function FloatingCart({
                   </>
                 )}
               </button>
+              </span>
               {error && (
                 <p role="alert" className="mt-3 text-center text-[0.85em] text-[#E2655A]">
                   {error}
