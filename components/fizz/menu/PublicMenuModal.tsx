@@ -210,8 +210,11 @@ export default function PublicMenuModal({
               </span>
             </label>
 
-            {ordering && (
-              <div className="flex flex-col gap-5 rounded-fizz border border-ink-line bg-ink-soft p-5 sm:col-span-2">
+            {/* Stay mounted when off so the fields still submit (else deliveryFee is undefined → invalid). */}
+              <div
+                hidden={!ordering}
+                className="flex flex-col gap-5 rounded-fizz border border-ink-line bg-ink-soft p-5 sm:col-span-2 [&[hidden]]:hidden"
+              >
                 <label className="flex flex-col gap-2">
                   <span className={labelCls}>WhatsApp number</span>
                   <input
@@ -262,7 +265,6 @@ export default function PublicMenuModal({
                 </label>
                 </div>
               </div>
-            )}
           </div>
           </div>
 
