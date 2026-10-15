@@ -117,8 +117,7 @@ body {
 }
 .fizz-orbit { animation: orbit 9s linear infinite; }
 
-/* Hero chat: bubbles arrive one by one (delay set inline), then the thread
-   holds. Typing dots breathe while the next reply is "being written". */
+/* Hero report cards arrive one by one (delay set inline), then hold. */
 @keyframes chat-in {
   from { opacity: 0; transform: translateY(10px) scale(0.98); }
   to { opacity: 1; transform: none; }
@@ -127,13 +126,6 @@ body {
   opacity: 0;
   animation: chat-in 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
-@keyframes typing {
-  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-3px); }
-}
-.fizz-typing > span { animation: typing 1.2s ease-in-out infinite; }
-.fizz-typing > span:nth-child(2) { animation-delay: 0.15s; }
-.fizz-typing > span:nth-child(3) { animation-delay: 0.3s; }
 
 /* KOT board: a ticket landing in the queue, and an overdue ticket's heartbeat. */
 @keyframes ticket-in {
