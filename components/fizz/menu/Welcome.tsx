@@ -1,23 +1,30 @@
-import type { PublicMenu } from "@/lib/store/menu";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
-import { DEFAULT_WELCOME, type WelcomeCard } from "@/lib/store/welcome";
+import { DEFAULT_WELCOME, type WelcomeConfig, type WelcomeCard } from "@/lib/store/welcome";
 import { WifiCard, CardShell, CardIcon, SocialIcon } from "./WelcomeCards";
 
 // The welcome screen at /m/[slug]: cover, name, table badge, a stack of cards
-// (menu, review, Wi-Fi, call, WhatsApp, custom), socials. Server-rendered;
-// only the Wi-Fi reveal needs JS. Painted with the same theme vars as the menu.
-export default function Welcome({
-  slug,
-  menu,
-  table,
-  viewOnly,
-}: {
+// (menu, review, Wi-Fi, call, WhatsApp, custom), socials. Plain props (no
+// server imports) so the admin modal can render the same component as a live
+// preview of unsaved settings. Painted with the same theme vars as the menu.
+export type WelcomeProps = {
   slug: string;
-  menu: PublicMenu;
+  store: {
+    name: string;
+    menuTagline: string | null;
+    logoUrl: string | null;
+    phone: string | null;
+    menuTheme: string;
+    menuAccent: string;
+    menuWelcome: WelcomeConfig | null;
+  };
+  whatsapp: string | null;
   table: string | null;
   viewOnly?: string;
-}) {
-  const { store, ordering: cfg } = menu;
+  /** Admin preview: fills its box instead of the viewport, links go nowhere. */
+  embedded?: boolean;
+};
+
+export default function Welcome({ slug, store, whatsapp, table, viewOnly, embedded }: WelcomeProps) {
   const w = store.menuWelcome ?? DEFAULT_WELCOME;
   const theme = getMenuTheme(store.menuTheme);
   const accent = store.menuAccent || theme.accent;
@@ -34,8 +41,8 @@ export default function Welcome({
       case "call":
         return store.phone ? `tel:${store.phone.replace(/[^\d+]/g, "")}` : null;
       case "whatsapp":
-        return cfg?.whatsapp
-          ? `https://wa.me/${cfg.whatsapp}?text=${encodeURIComponent(`Hi ${store.name}!${table ? ` Table ${table}.` : ""}`)}`
+        return whatsapp
+          ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi ${store.name}!${table ? ` Table ${table}.` : ""}`)}`
           : null;
       case "wifi":
         return c.ssid ? "#" : null;
@@ -47,10 +54,10 @@ export default function Welcome({
 
   return (
     <main
-      className="min-h-dvh bg-[var(--m-bg)] text-[var(--m-text)]"
+      className={`${embedded ? "min-h-full [&_a]:pointer-events-none" : "min-h-dvh"} bg-[var(--m-bg)] text-[var(--m-text)]`}
       style={themeVars(theme, accent)}
     >
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-8 pt-4 sm:pt-8">
+      <div className={`mx-auto flex max-w-md flex-col px-4 pb-8 pt-4 ${embedded ? "min-h-full" : "min-h-dvh sm:pt-8"}`}>
         {/* Hero card: cover image (or a quiet accent wash), logo, name, tagline, table. */}
         <section
           className="wl-in relative overflow-hidden"

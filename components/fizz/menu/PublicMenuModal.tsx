@@ -11,7 +11,9 @@ import { useSavedFlag } from "@/lib/hooks/useSavedFlag";
 import type { OrderSettings, Store } from "@/lib/db/schema";
 import NumberInput from "@/components/fizz/ui/NumberInput";
 import WelcomeEditor from "@/components/fizz/menu/WelcomeEditor";
-import { CheckIcon, CloseIcon, ExternalIcon } from "@/components/fizz/dashboard/icons";
+import Welcome from "@/components/fizz/menu/Welcome";
+import { DEFAULT_WELCOME, type WelcomeConfig } from "@/lib/store/welcome";
+import { CheckIcon, CloseIcon, ExternalIcon, EyeIcon } from "@/components/fizz/dashboard/icons";
 
 
 const inputCls =
@@ -51,6 +53,20 @@ export default function PublicMenuModal({
   const [ordering, setOrdering] = useState(settings.ordering);
   const [delivery, setDelivery] = useState(settings.delivery);
   const [whatsapp, setWhatsapp] = useState(settings.whatsapp ?? "");
+  const [welcome, setWelcome] = useState<WelcomeConfig>(store.menuWelcome ?? DEFAULT_WELCOME);
+  // Phone: the preview is a full-screen overlay behind this flag. Desktop: a
+  // column beside the form, always on.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const waDigits = whatsapp.replace(/\D/g, "");
+  const preview = (
+    <Welcome
+      embedded
+      slug={slug}
+      store={{ ...store, menuTheme: theme, menuAccent: accent, menuWelcome: { ...welcome, on: true } }}
+      whatsapp={waDigits.length >= 8 ? waDigits : null}
+      table="5"
+    />
+  );
 
   const url = `${origin}/m/${slug}`;
 
@@ -58,7 +74,7 @@ export default function PublicMenuModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 sm:p-4">
-      <div className="flex h-dvh w-full max-w-2xl flex-col bg-ink sm:h-auto sm:max-h-[90vh] sm:rounded-fizz sm:shadow-lg">
+      <div className={`flex h-dvh w-full flex-col bg-ink sm:h-auto sm:max-h-[90vh] sm:rounded-fizz sm:shadow-lg ${welcome.on ? "max-w-2xl lg:max-w-5xl" : "max-w-2xl"}`}>
         <div className="flex items-start justify-between gap-4 p-5 pb-0 sm:p-8 sm:pb-0">
           <div>
             <h2 className="font-display text-2xl font-bold tracking-tight">Public menu</h2>
@@ -80,7 +96,8 @@ export default function PublicMenuModal({
           e.preventDefault();
           save.mutate(fields(e.currentTarget));
         }} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-8">
+          <div className={`min-h-0 flex-1 ${welcome.on ? "lg:grid lg:grid-cols-[1fr_360px]" : ""}`}>
+          <div className="min-h-0 overflow-y-auto p-5 sm:p-8 lg:h-full">
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="flex flex-col gap-2 sm:col-span-2">
               <span className={labelCls}>Menu link</span>
@@ -177,9 +194,10 @@ export default function PublicMenuModal({
             </label>
 
             <WelcomeEditor
-              initial={store.menuWelcome}
+              value={welcome}
+              onChange={setWelcome}
               hasPhone={!!store.phone}
-              hasWhatsapp={whatsapp.replace(/\D/g, "").length >= 8}
+              hasWhatsapp={waDigits.length >= 8}
             />
 
             <label className="flex items-center gap-3 sm:col-span-2">
@@ -248,7 +266,29 @@ export default function PublicMenuModal({
           </div>
           </div>
 
+          {/* Live preview — desktop column. Scaled phone so it fits without scrolling. */}
+          {welcome.on && (
+            <aside className="hidden min-h-0 border-l border-ink-line bg-ink-soft/40 p-5 lg:flex lg:flex-col">
+              <span className={labelCls}>Live preview</span>
+              <p className="mt-1 text-xs text-steam">What a guest sees scanning table 5. Updates as you type.</p>
+              <div className="mt-4 flex min-h-0 flex-1 items-start justify-center overflow-hidden">
+                <PhoneFrame>{preview}</PhoneFrame>
+              </div>
+            </aside>
+          )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-3 border-t border-ink-line px-5 py-4 sm:gap-4 sm:px-8 sm:py-6">
+            {welcome.on && (
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-4 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz lg:hidden"
+              >
+                <EyeIcon className="h-4 w-4 shrink-0" />
+                Preview
+              </button>
+            )}
             <button type="submit" disabled={save.isPending} className="inline-flex items-center justify-center gap-2 rounded-fizz bg-fizz px-6 py-3 font-semibold text-ink transition-transform hover:scale-105 disabled:opacity-60">
               <CheckIcon className="h-4 w-4 shrink-0" />
               {save.isPending ? "Saving…" : "Save menu settings"}
@@ -265,6 +305,38 @@ export default function PublicMenuModal({
             </button>
           </div>
         </form>
+      </div>
+
+      {/* Phone: full-screen preview overlay. */}
+      {previewOpen && welcome.on && (
+        <div className="fixed inset-0 z-[60] flex flex-col bg-ink lg:hidden" role="dialog" aria-label="Welcome screen preview">
+          <div className="flex items-center justify-between gap-3 border-b border-ink-line px-5 py-3">
+            <span className="text-sm font-semibold text-cream">
+              Live preview <span className="text-xs text-steam">· table 5 · unsaved changes included</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setPreviewOpen(false)}
+              className="inline-flex items-center gap-2 rounded-fizz bg-fizz px-4 py-2 text-sm font-semibold text-ink"
+            >
+              <CloseIcon className="h-4 w-4" />
+              Back to edit
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">{preview}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A 390px-wide phone, scaled down to fit the column. The inner page scrolls
+// on its own so long card lists stay reachable.
+function PhoneFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="origin-top scale-[0.78] xl:scale-[0.85]">
+      <div className="h-[760px] w-[390px] overflow-hidden rounded-[40px] border-[6px] border-ink-line bg-ink shadow-lg">
+        <div className="h-full overflow-y-auto [scrollbar-width:none]">{children}</div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CARD_KINDS, CARD_PRESETS, DEFAULT_WELCOME, newCard, type CardKind, type WelcomeCard, type WelcomeConfig } from "@/lib/store/welcome";
+import { CARD_KINDS, CARD_PRESETS, newCard, type CardKind, type WelcomeCard, type WelcomeConfig } from "@/lib/store/welcome";
 import { applyOrder, useDragSort } from "./useDragSort";
 import { CardIcon } from "./WelcomeCards";
 import { EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
@@ -10,31 +10,32 @@ const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink px-3 py-2 text-sm text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
 const labelCls = "text-xs font-semibold uppercase tracking-[0.18em] text-fizz";
 
-// Admin editor for the welcome screen. Holds the config in state and ships it
-// as one hidden JSON field (`menuWelcome`) with the rest of the modal's form.
-// Hints under each card say what the public page needs to show it.
+// Admin editor for the welcome screen. Controlled: the modal owns the config
+// (it also feeds the live preview) and this ships it as one hidden JSON field
+// (`menuWelcome`) with the rest of the form. Hints under each card say what
+// the public page needs to show it.
 export default function WelcomeEditor({
-  initial,
+  value: cfg,
+  onChange,
   hasPhone,
   hasWhatsapp,
 }: {
-  initial: WelcomeConfig | null;
+  value: WelcomeConfig;
+  onChange: (next: WelcomeConfig) => void;
   hasPhone: boolean;
   hasWhatsapp: boolean;
 }) {
-  const [cfg, setCfg] = useState<WelcomeConfig>(initial ?? DEFAULT_WELCOME);
+  // The textarea keeps its raw text (blank lines while typing); the config
+  // gets the cleaned list.
   const [socials, setSocials] = useState(cfg.socials.join("\n"));
-  const patch = (p: Partial<WelcomeConfig>) => setCfg((c) => ({ ...c, ...p }));
+  const patch = (p: Partial<WelcomeConfig>) => onChange({ ...cfg, ...p });
   const patchCard = (id: string, p: Partial<WelcomeCard>) =>
     patch({ cards: cfg.cards.map((c) => (c.id === id ? { ...c, ...p } : c)) });
   const sort = useDragSort("welcome-cards", cfg.cards.map((c) => c.id), (ids) =>
     patch({ cards: applyOrder(cfg.cards, ids) }),
   );
   const shown = applyOrder(cfg.cards, sort.order);
-  const out: WelcomeConfig = {
-    ...cfg,
-    socials: socials.split(/\s+/).map((s) => s.trim()).filter(Boolean),
-  };
+  const out = cfg;
 
   const badLink = (u: string | undefined) => !!u && !/^https?:\/\/\S+$/.test(u);
   const needs = (c: WelcomeCard): string | null => {
@@ -183,7 +184,10 @@ export default function WelcomeEditor({
             <span className={labelCls}>Social links</span>
             <textarea
               value={socials}
-              onChange={(e) => setSocials(e.target.value)}
+              onChange={(e) => {
+                setSocials(e.target.value);
+                patch({ socials: e.target.value.split(/\s+/).map((s) => s.trim()).filter(Boolean) });
+              }}
               rows={3}
               placeholder={"https://instagram.com/yourcafe\nhttps://facebook.com/yourcafe\nhttps://tiktok.com/@yourcafe"}
               className={inputCls}

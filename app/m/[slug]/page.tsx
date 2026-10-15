@@ -24,6 +24,10 @@ export default async function PublicMenuPage({
   const menu = await api.menu.public(slug);
   if (!menu) notFound();
   const table = tableParam(sp.t);
-  if (menu.store.menuWelcome?.on) return <Welcome slug={slug} menu={menu} table={table} viewOnly={sp.viewOnly} />;
+  if (menu.store.menuWelcome?.on) {
+    return (
+      <Welcome slug={slug} store={menu.store} whatsapp={menu.ordering?.whatsapp ?? null} table={table} viewOnly={sp.viewOnly} />
+    );
+  }
   return <PublicMenuView slug={slug} menu={menu} viewOnly={sp.viewOnly} table={table} />;
 }
