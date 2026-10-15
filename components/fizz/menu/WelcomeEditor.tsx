@@ -40,6 +40,7 @@ export default function WelcomeEditor({
   const badLink = (u: string | undefined) => !!u && !/^https?:\/\/\S+$/.test(u);
   const needs = (c: WelcomeCard): string | null => {
     if ((c.kind === "review" || c.kind === "link") && badLink(c.href)) return "Link must start with https://";
+    if (badLink(c.lottie)) return "Link must start with https://";
     if (c.kind === "call" && !hasPhone) return "Add a phone number in Store settings to show this.";
     if (c.kind === "whatsapp" && !hasWhatsapp) return "Add a WhatsApp number below to show this.";
     if (c.kind === "wifi" && !c.ssid) return "Needs a network name to show.";
@@ -76,6 +77,22 @@ export default function WelcomeEditor({
               className={inputCls}
             />
             <span className="text-xs text-steam">Landscape works best. Blank = a wash of your accent color.</span>
+          </label>
+
+          <label className="flex flex-col gap-2">
+            <span className={labelCls}>Hero animation (Lottie)</span>
+            <input
+              value={cfg.heroLottie ?? ""}
+              onChange={(e) => patch({ heroLottie: e.target.value })}
+              placeholder="https://lottie.host/….lottie"
+              inputMode="url"
+              className={inputCls}
+            />
+            <span className={`text-xs ${badLink(cfg.heroLottie) ? "text-[#E2655A]" : "text-steam"}`}>
+              {badLink(cfg.heroLottie)
+                ? "Link must start with https://"
+                : "Plays over the cover. Paste a .lottie or .json link from lottiefiles.com (free ones work; pick a transparent background)."}
+            </span>
           </label>
 
           <div className="flex flex-col gap-2">
@@ -142,6 +159,13 @@ export default function WelcomeEditor({
                           className={`${inputCls} sm:col-span-2`}
                         />
                       )}
+                      <input
+                        value={c.lottie ?? ""}
+                        onChange={(e) => patchCard(c.id, { lottie: e.target.value })}
+                        placeholder="Lottie icon URL (optional) — replaces the line icon"
+                        inputMode="url"
+                        className={`${inputCls} sm:col-span-2`}
+                      />
                       {c.kind === "wifi" && (
                         <>
                           <input

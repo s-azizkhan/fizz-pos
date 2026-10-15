@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { CardKind, WelcomeCard } from "@/lib/store/welcome";
+import Lottie from "./Lottie";
 
 // Card + icon primitives for the welcome screen. Client file because the
 // Wi-Fi card toggles open; the rest is plain markup reused by the admin preview.
@@ -16,6 +17,7 @@ export function CardShell({
   title,
   subtitle,
   trailing,
+  lottie,
 }: {
   href?: string;
   onClick?: () => void;
@@ -26,6 +28,8 @@ export function CardShell({
   title: string;
   subtitle: string;
   trailing?: ReactNode;
+  /** Lottie URL; replaces the line icon when set. */
+  lottie?: string;
 }) {
   const cls = `wl-card ${primary ? "wl-primary" : ""} flex w-full items-center gap-4 border p-4 text-left`;
   const style = {
@@ -39,7 +43,7 @@ export function CardShell({
         className="wl-tile flex h-14 w-14 shrink-0 items-center justify-center"
         style={{ borderRadius: "calc(var(--m-radius) - 4px)", backgroundColor: `${accent}26`, color: accent }}
       >
-        {icon}
+        {lottie ? <Lottie src={lottie} className="h-12 w-12" fallback={icon} /> : icon}
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[18px] font-bold leading-tight">{title}</span>
@@ -82,6 +86,7 @@ export function WifiCard({ card, accent, index }: { card: WelcomeCard; accent: s
         onClick={() => setOpen((v) => !v)}
         accent={accent}
         icon={<CardIcon kind="wifi" />}
+        lottie={card.lottie || undefined}
         title={card.title}
         subtitle={open ? `Network: ${card.ssid}` : card.subtitle}
         trailing={<Chevron className={open ? "rotate-90" : ""} />}

@@ -21,12 +21,16 @@ export const welcomeCard = z.object({
   href: z.union([url, z.literal("")]).optional(),
   ssid: z.string().trim().max(60).optional(),
   password: z.string().trim().max(80).optional(),
+  // Optional Lottie (.lottie / .json URL) in place of the line icon.
+  lottie: z.union([url, z.literal("")]).optional(),
 });
 export type WelcomeCard = z.infer<typeof welcomeCard>;
 
 export const welcomeConfig = z.object({
   on: z.boolean().default(false),
   coverUrl: z.union([url, z.literal("")]).optional(),
+  // Optional Lottie played over the hero (on top of the cover or the cup art).
+  heroLottie: z.union([url, z.literal("")]).optional(),
   cards: z.array(welcomeCard).max(12, "That's a lot of cards"),
   // Any links; the icon comes from the host (instagram.com → Instagram…).
   socials: z.array(url).max(8),
