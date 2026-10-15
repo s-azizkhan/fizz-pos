@@ -79,6 +79,9 @@ export const store = pgTable("store", {
   // Feature keys the café switched off (lib/store/features.ts). Stored as the
   // OFF list so a new feature ships on. Check with featureOn().
   disabledFeatures: text("disabled_features").array().notNull().default(sql`'{}'::text[]`),
+  // Set when the owner finishes (or skips) the first-run wizard at /onboarding.
+  // null = a fresh counter; the dashboard sends admins to the wizard first.
+  onboardedAt: timestamp("onboarded_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -174,6 +177,23 @@ export const storeSettingsForm = z.object({
     }),
 });
 export type StoreSettingsInput = z.infer<typeof storeSettingsForm>;
+
+// First-run wizard: the handful of settings a counter can't trade without.
+// Everything else keeps its default and lives in Store settings.
+export const onboardingForm = storeSettingsForm.pick({
+  name: true,
+  phone: true,
+  country: true,
+  currency: true,
+  timezone: true,
+  taxLabel: true,
+  taxRate: true,
+  taxInclusive: true,
+  openingTime: true,
+  closingTime: true,
+  disabledFeatures: true,
+});
+export type OnboardingInput = z.infer<typeof onboardingForm>;
 
 // Public menu page customization. Fonts/scales are constrained to keep the
 // public renderer simple and SSR-safe.

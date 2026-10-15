@@ -2,11 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { store, storeSettingsForm, ticketLayoutInput } from "@/lib/db/schema";
+import { onboardingForm, store, storeSettingsForm, ticketLayoutInput } from "@/lib/db/schema";
 import { STORE_ID } from "@/lib/store/constants";
 import { getStore } from "@/lib/store/data";
 import { bust } from "@/lib/store/cache";
-import { router, featureGate, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
+import { router, adminProcedure, featureGate, protectedProcedure, editorProcedure } from "@/lib/trpc/init";
 
 export const storeRouter = router({
   get: protectedProcedure.query(() => getStore()),
@@ -29,6 +29,18 @@ export const storeRouter = router({
       bust("store");
       return { ok: true as const };
     }),
+
+  // First-run wizard. Stamps onboardedAt so the dashboard stops redirecting;
+  // "skip" is the same call with the form's defaults.
+  onboard: adminProcedure.input(onboardingForm).mutation(async ({ input }) => {
+    await db
+      .update(store)
+      .set({ ...input, onboardedAt: new Date(), updatedAt: new Date() })
+      .where(eq(store.id, STORE_ID));
+    bust("store");
+    revalidatePath("/", "layout");
+    return { ok: true as const, redirectTo: "/dashboard" };
+  }),
 
   update: protectedProcedure
     .input(storeSettingsForm)

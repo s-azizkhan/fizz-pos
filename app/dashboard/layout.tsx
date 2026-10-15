@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { getStore } from "@/lib/store/data";
 import { featureOn } from "@/lib/store/features";
@@ -12,6 +13,8 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [user, store] = await Promise.all([getCurrentUser(), getStore()]);
+  // A fresh counter: the owner sets it up before anyone runs the floor.
+  if (user.role === "admin" && !store.onboardedAt) redirect("/onboarding");
   const on = (k: Parameters<typeof featureOn>[1]) => featureOn(store.disabledFeatures, k);
   return (
     <DashboardShell user={{ name: user.name, role: user.role }} off={store.disabledFeatures}>

@@ -43,6 +43,16 @@ export const createUserSchema = baseUserInsert.extend({
 });
 export type CreateUserInput = z.infer<typeof createUserSchema>;
 
+// Owner signup: only valid while the counter has no users at all. The first
+// account becomes `admin`; everyone after arrives through an invite link.
+export const signupForm = z.object({
+  storeName: z.string().trim().min(1, "Name your counter").max(120),
+  name: z.string().trim().min(1, "Enter your name").max(120),
+  email: z.email("Enter a valid email").trim().toLowerCase(),
+  password: createUserSchema.shape.password,
+});
+export type SignupInput = z.infer<typeof signupForm>;
+
 // --- Invites -----------------------------------------------------------------
 // No mail transport yet, so an invite is just a shareable link the admin copies
 // and sends by hand. The admin picks email + role; the invitee sets their own

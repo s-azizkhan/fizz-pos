@@ -47,8 +47,8 @@ export async function proxy(req: NextRequest) {
     url.pathname = `/m/~${path === "/" ? "" : path}`;
     return NextResponse.rewrite(url);
   }
-  const isProtected = path.startsWith("/dashboard");
-  const isAuthPage = path === "/login";
+  const isProtected = path.startsWith("/dashboard") || path === "/onboarding";
+  const isAuthPage = path === "/login" || path === "/signup";
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const authed = await hasValidSession(token);
