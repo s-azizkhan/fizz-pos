@@ -9,11 +9,11 @@ import { FEATURE_KEYS } from "@/lib/store/features";
 import { welcomeConfig, type WelcomeConfig } from "@/lib/store/welcome";
 import { IMG_PATH } from "./image";
 
-// Single café = single store row (id = 1). Holds profile + invoice/hours config.
+// Single store = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
   id: uuid("id").primaryKey().defaultRandom(),
   // Profile
-  name: text("name").notNull().default("My Café"),
+  name: text("name").notNull().default("My Counter"),
   legalName: text("legal_name"),
   email: text("email"),
   phone: text("phone"),
@@ -35,7 +35,7 @@ export const store = pgTable("store", {
   // Whether menu prices already include tax (inclusive) or tax is added on top.
   taxInclusive: boolean("tax_inclusive").notNull().default(false),
   timezone: text("timezone").notNull().default("UTC"),
-  // Online payments. UPI VPA (e.g. cafe@okhdfcbank) + the payee name shown in
+  // Online payments. UPI VPA (e.g. shop@okhdfcbank) + the payee name shown in
   // the customer's UPI app. Both set = the POS can render a pay-by-QR code.
   upiId: text("upi_id"),
   upiName: text("upi_name"),
@@ -57,7 +57,7 @@ export const store = pgTable("store", {
   nextOrderSeq: integer("next_order_seq").notNull().default(1),
   // Public menu page. `menuSlug` is the shareable URL token; null = not shared.
   menuSlug: text("menu_slug").unique(),
-  // The café's own hostname (menu.cafe.com) serving the public menu at "/".
+  // The store's own hostname (menu.yourshop.in) serving the public menu at "/".
   // proxy.ts rewrites requests on it to /m/~; null = fizz link only.
   menuDomain: text("menu_domain").unique(),
   // Printed ticket layouts (Printers → Ticket design), shared by every POS.
@@ -76,7 +76,7 @@ export const store = pgTable("store", {
   // defaults in lib/store/welcome.ts, with the screen off.
   menuWelcome: jsonb("menu_welcome").$type<WelcomeConfig>(),
   // Ordering config (cart, WhatsApp, delivery) lives in `order_settings`.
-  // Feature keys the café switched off (lib/store/features.ts). Stored as the
+  // Feature keys the store switched off (lib/store/features.ts). Stored as the
   // OFF list so a new feature ships on. Check with featureOn().
   disabledFeatures: text("disabled_features").array().notNull().default(sql`'{}'::text[]`),
   // Set when the owner finishes (or skips) the first-run wizard at /onboarding.
@@ -149,7 +149,7 @@ export const storeSettingsForm = z.object({
     .transform((v) => v || null)
     .refine(
       (v) => v === null || /^[\w.\-]{2,}@[a-zA-Z]{2,}$/.test(v),
-      "Use a VPA like cafe@okhdfcbank",
+      "Use a VPA like shop@okhdfcbank",
     ),
   upiName: optionalText(60),
   currency: z.enum(CURRENCY_CODES, "Pick a currency"),
@@ -213,7 +213,7 @@ export const menuAppearanceShape = {
     .trim()
     .toLowerCase()
     .transform((v) => v.replace(/^https?:\/\//, "").split("/")[0])
-    .refine((v) => !v || /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(v), "Use a hostname like menu.yourcafe.com")
+    .refine((v) => !v || /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/.test(v), "Use a hostname like menu.yourshop.in")
     .transform((v) => v || null),
   menuTagline: optionalText(160),
   menuTheme: z.enum(MENU_THEME_KEYS, "Pick a theme"),

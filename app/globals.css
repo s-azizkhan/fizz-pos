@@ -520,7 +520,7 @@ html[data-nav], html[data-nav] * { cursor: progress; }
   to { transform: scale(1.12) translate3d(-1.5%, -2%, 0); }
 }
 .wl-cover { animation: wl-drift 18s ease-in-out infinite alternate; will-change: transform; }
-/* Bubbles rising inside the hero, tinted with the café's accent. */
+/* Bubbles rising inside the hero, tinted with the store's accent. */
 @keyframes wl-rise {
   0% { transform: translateY(0) scale(0.6); opacity: 0; }
   12% { opacity: 0.85; }

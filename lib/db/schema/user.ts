@@ -2,7 +2,7 @@ import { pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Roles for the café floor. `admin` owns everything; `manager` runs a shift;
+// Roles for the shop floor. `admin` owns everything; `manager` runs a shift;
 // `staff` rings orders. Order matters — first value is the column default.
 export const userRole = pgEnum("user_role", ["admin", "manager", "staff"]);
 export type UserRole = (typeof userRole.enumValues)[number];

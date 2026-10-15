@@ -16,7 +16,7 @@ const SORTS: { value: SortKey; label: string }[] = [
 ];
 
 // Colour a margin percentage by health: green = healthy, amber = thin,
-// red = losing money. Café rule of thumb: aim for 65%+ gross margin.
+// red = losing money. Rule of thumb: aim for 65%+ gross margin.
 function marginClass(pct: number, hasCost: boolean): string {
   if (!hasCost) return "text-steam";
   if (pct < 0) return "text-[#E2655A]";

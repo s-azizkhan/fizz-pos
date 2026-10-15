@@ -92,7 +92,7 @@ export default function PublicMenuModal({
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 className="font-display text-2xl font-bold tracking-tight">Public menu</h2>
-              <p className="mt-1 text-sm text-steam">Your café on a link: menu, welcome screen, web orders.</p>
+              <p className="mt-1 text-sm text-steam">Your counter on a link: menu, welcome screen, web orders.</p>
             </div>
             <button
               onClick={onClose}
@@ -169,11 +169,11 @@ export default function PublicMenuModal({
                 name="menuDomain"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value.trim().toLowerCase())}
-                placeholder="menu.yourcafe.com"
+                placeholder="menu.yourshop.in"
                 className={inputCls}
               />
               <span className="text-xs text-steam">
-                Optional. Guests open <span className="text-cream">{domain || "menu.yourcafe.com"}</span> instead of the link above. Leave blank to use ours.
+                Optional. Guests open <span className="text-cream">{domain || "menu.yourshop.in"}</span> instead of the link above. Leave blank to use ours.
               </span>
               {dns.data && dns.data.domain === domain && (
                 <div className="mt-1 rounded-fizz border border-ink-line bg-ink-soft p-4 text-sm">

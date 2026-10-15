@@ -7,7 +7,7 @@ import { toPng } from "html-to-image";
 import { CheckIcon, CloseIcon, DownloadIcon, LinkIcon } from "@/components/fizz/dashboard/icons";
 
 // Print frames. Colors are literal because this leaves the app as a PNG the
-// café prints — brand tokens don't exist on paper, and scanners need the QR
+// store prints — brand tokens don't exist on paper, and scanners need the QR
 // itself dark-on-light whatever the frame does.
 const FRAMES = [
   {
@@ -306,7 +306,7 @@ export default function MenuQrModal({
   // Per-table QR: the welcome screen shows "Table N" and orders carry it.
   const [table, setTable] = useState("");
   const url = table.trim() ? `${baseUrl}?t=${encodeURIComponent(table.trim())}` : baseUrl;
-  // null = show the menu link; any string = the café's own footer line.
+  // null = show the menu link; any string = the store's own footer line.
   const [footer, setFooter] = useState<string | null>(saved.footer ?? null);
   const [busy, setBusy] = useState(false);
   const [qr, setQr] = useState<string | null>(null);

@@ -1,4 +1,4 @@
-// Common currencies for the café floor. code = ISO 4217, used as the stored
+// Common currencies for the shop floor. code = ISO 4217, used as the stored
 // value; label/symbol shown in the picker.
 export const CURRENCIES = [
   { code: "USD", label: "US Dollar", symbol: "$" },

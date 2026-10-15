@@ -1,0 +1,1 @@
+ALTER TABLE "store" ALTER COLUMN "name" SET DEFAULT 'My Counter';

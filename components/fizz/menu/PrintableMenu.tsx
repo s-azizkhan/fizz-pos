@@ -73,7 +73,7 @@ export default function PrintableMenu({
 }: {
   store: Store;
   categories: MenuCategoryWithItems[];
-  /** null until the café saves ordering settings once. */
+  /** null until the store saves ordering settings once. */
   ordering: OrderSettings | null;
   schemeId: string; // color scheme (palette + type)
   layoutId: string; // appearance / layout
@@ -406,7 +406,7 @@ function Cover({
   return (
     <div className="pdf-cover-inner">
       <p className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
-        {store.legalName || "Café"}
+        {store.legalName || "Counter"}
       </p>
       {store.logoUrl ? (
         // Served through /api/logo so it is same-origin — the PNG export

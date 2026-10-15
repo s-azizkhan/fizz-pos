@@ -97,7 +97,7 @@ export const MENU_LAYOUTS: MenuLayout[] = [
   },
   {
     id: "cards",
-    name: "Café Cards",
+    name: "Counter Cards",
     blurb: "Every item in its own rounded card, two across.",
     cover: "band",
     itemRow: "card",

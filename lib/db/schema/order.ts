@@ -70,7 +70,7 @@ export const orders = pgTable("orders", {
   // Kept off the KOT board until someone opens it in the POS and saves or
   // settles it — anyone with the menu link can place one.
   webPending: boolean("web_pending").notNull().default(false),
-  // Optional link to the café's customer book (lib/db/schema/customer.ts).
+  // Optional link to the store's customer book (lib/db/schema/customer.ts).
   customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
   subtotal: numeric("subtotal", { precision: 12, scale: 2 }).notNull().default("0"),
   discount: numeric("discount", { precision: 12, scale: 2 }).notNull().default("0"),
@@ -220,7 +220,7 @@ export const saveOrderSchema = z.object({
 export type SaveOrderInput = z.infer<typeof saveOrderSchema>;
 
 // A guest's order from the public menu. Prices are NOT accepted — the server
-// looks every line up on the live menu. Name + phone are required so the café
+// looks every line up on the live menu. Name + phone are required so the store
 // can call back; the caps keep a prank cart from burying the Orders page.
 export const WEB_ORDER_MODES = ["Dine-in", "Takeaway", "Delivery"] as const;
 export const webOrderSchema = z.object({

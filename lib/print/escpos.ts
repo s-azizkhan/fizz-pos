@@ -17,7 +17,7 @@ export const RUPEE = "~";
 export const INSTA = "\uE000\uE001";
 export const INSTA_SLOTS = "|}";
 
-// Strip accents ("café" → "cafe"), then swap anything still outside
+// Strip accents ("résumé" → "resume"), then swap anything still outside
 // printable ASCII for "?" so the printer never renders codepage garbage.
 export function ascii(s: string): string {
   return s

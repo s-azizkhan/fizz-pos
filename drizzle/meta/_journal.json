@@ -162,6 +162,13 @@
       "when": 1792094208942,
       "tag": "0022_drop_waitlist",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1792094407264,
+      "tag": "0023_store_default_name",
+      "breakpoints": true
     }
   ]
 }

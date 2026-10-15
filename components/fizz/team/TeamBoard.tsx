@@ -124,7 +124,7 @@ function InviteForm() {
             type="email"
             name="email"
             required
-            placeholder="new.hire@cafe.com"
+            placeholder="new.hire@yourshop.in"
             className="rounded-fizz border border-ink-line bg-ink px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
           />
         </label>

@@ -69,7 +69,7 @@ export async function resolveCustomer(
 
 // The whole customer book, for on-device search at the POS.
 // ponytail: newest 5000 only (~400KB worst case, cached on the device). Page it
-// or fall back to a server search if a café ever outgrows that.
+// or fall back to a server search if a store ever outgrows that.
 export async function customerBook() {
   return db
     .select({ id: customers.id, name: customers.name, phone: customers.phone })
@@ -100,7 +100,7 @@ export async function getCustomer(id: string) {
 // orders don't count; spend is paid orders only.
 // Search happens on the device (lib/store/customer-match.ts), so this ships
 // the lot once. ponytail: capped at 2000 rows, newest activity first; add
-// paging + server search when a café outgrows that.
+// paging + server search when a store outgrows that.
 export async function listCustomers() {
   const live = sql`${orders.status} <> 'void'`;
   return db

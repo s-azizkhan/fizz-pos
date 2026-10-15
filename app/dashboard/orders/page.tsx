@@ -36,7 +36,7 @@ export default async function OrdersPage({
       // Page-wide receipt bits, sent once rather than on every paid order.
       receiptHeader={header}
       taxLabel={store.taxLabel}
-      cafeWhatsapp={ordering.whatsapp}
+      storeWhatsapp={ordering.whatsapp}
       kot={featureOn(store.disabledFeatures, "kot")}
     />
   );

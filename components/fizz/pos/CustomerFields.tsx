@@ -34,12 +34,12 @@ export function useCustomerBook() {
   return data ?? [];
 }
 
-// `id` is set once picked from the café's customer book; null = new / unknown
+// `id` is set once picked from the store's customer book; null = new / unknown
 // (the server matches it by phone, or creates it, when the order lands).
 export type Customer = { id: string | null; name: string; phone: string };
 
 // Optional customer name + phone, folded behind a chip until asked for. Typing
-// in either field searches the café's regulars; pick one to link the order.
+// in either field searches the store's regulars; pick one to link the order.
 // Always starts folded; the chip shows who's linked when there's a customer.
 export default function CustomerFields({
   value,

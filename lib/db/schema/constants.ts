@@ -18,7 +18,7 @@ export const INVENTORY_UNIT_LABELS: Record<InventoryUnit, string> = {
   bag: "bag",
 };
 
-// Broad stock categories for the café floor.
+// Broad stock categories for the shop floor.
 export const INVENTORY_CATEGORIES = [
   "Coffee",
   "Dairy",
@@ -48,7 +48,7 @@ export const STOCK_MOVEMENT_LABELS: Record<StockMovementType, string> = {
 export const EXPENSE_METHODS = ["cash", "online", "credit", "other"] as const;
 export type ExpenseMethod = (typeof EXPENSE_METHODS)[number];
 
-// Spend categories for the café floor. Keep broad — descriptions add detail.
+// Spend categories for the shop floor. Keep broad — descriptions add detail.
 export const EXPENSE_CATEGORIES = [
   "Inventory",
   "Supplies",
@@ -77,7 +77,7 @@ export const MENU_FONT_SCALES = ["sm", "md", "lg"] as const;
 export type MenuFontScale = (typeof MENU_FONT_SCALES)[number];
 
 // Where an order came from. `counter` (walk-in at the POS) is the default;
-// `web` is set by the public menu; the rest are picked at the POS so the café
+// `web` is set by the public menu; the rest are picked at the POS so the store
 // can see which channel actually sells.
 export const ORDER_SOURCES = ["counter", "phone", "whatsapp", "web", "zomato", "swiggy", "other"] as const;
 export type OrderSource = (typeof ORDER_SOURCES)[number];

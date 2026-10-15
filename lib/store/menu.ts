@@ -77,7 +77,7 @@ export const getFullMenu = cache(cached("menu-tree", "menu", buildMenu));
 export type PublicMenu = {
   store: Store;
   categories: MenuCategoryWithItems[];
-  /** Ordering config; ordering stays off until the café saves it once. */
+  /** Ordering config; ordering stays off until the store saves it once. */
   ordering: OrderSettings | null;
 };
 
@@ -86,7 +86,7 @@ export type PublicMenu = {
 // must match the one store row. Every read here is cached.
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const row = await getStore();
-  // "~" = the café's own domain (proxy.ts rewrite): the host must be the one saved.
+  // "~" = the store's own domain (proxy.ts rewrite): the host must be the one saved.
   if (slug === DOMAIN_SLUG) {
     const h = await headers();
     const host = (h.get("x-forwarded-host") ?? h.get("host") ?? "").split(":")[0].toLowerCase();

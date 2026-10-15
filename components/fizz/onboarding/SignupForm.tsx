@@ -69,7 +69,7 @@ export default function SignupForm() {
           name="email"
           required
           autoComplete="email"
-          placeholder="you@cafe.com"
+          placeholder="you@yourshop.in"
           aria-invalid={error ? true : undefined}
           className={inputCls}
         />

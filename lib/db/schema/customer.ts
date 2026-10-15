@@ -2,8 +2,8 @@ import { index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/
 import { sql } from "drizzle-orm";
 import { store } from "./store";
 
-// A café's regulars. Scoped per store; the phone number is the identity, so the
-// same number never lands twice in one café. Name-only customers are allowed
+// A store's regulars. Scoped per store; the phone number is the identity, so the
+// same number never lands twice in one store. Name-only customers are allowed
 // (walk-ins who won't share a number).
 export const customers = pgTable("customers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -16,7 +16,7 @@ export const customers = pgTable("customers", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (t) => [
-  // One customer per number per café. Nulls don't collide in Postgres.
+  // One customer per number per store. Nulls don't collide in Postgres.
   uniqueIndex("customers_store_phone_uq").on(t.storeId, t.phone),
   // POS search matches name by prefix/substring, case-insensitive.
   index("customers_store_name_idx").on(t.storeId, sql`lower(${t.name})`),

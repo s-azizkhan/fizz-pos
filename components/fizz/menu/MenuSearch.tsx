@@ -78,7 +78,7 @@ export default function MenuSearch({
   };
 
   // Empty search is the moment a guest is closest to leaving: keep them on the
-  // menu (category chips) or route the want to the café (WhatsApp / call).
+  // menu (category chips) or route the want to the store (WhatsApp / call).
   const term = q.trim();
   const ask = whatsapp
     ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(`Hi ${storeName}! Do you have "${term}"?`)}`

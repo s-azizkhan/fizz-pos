@@ -23,7 +23,7 @@ export const DOC_SECTIONS: DocSection[] = [
     id: "overview",
     title: "Overview",
     intro:
-      "Fizz is your café operating system: take orders at the POS, manage your menu and stock, track money in and out, and see exactly what's selling. This guide explains every page and the common things you'll do.",
+      "Fizz is your Counter Operating System: take orders at the POS, manage your menu and stock, track money in and out, and see exactly what's selling. This guide explains every page and the common things you'll do.",
     blocks: [
       {
         kind: "p",
@@ -44,7 +44,7 @@ export const DOC_SECTIONS: DocSection[] = [
     title: "Dashboard",
     href: "/dashboard",
     roles: "Everyone",
-    intro: "Your home screen — a quick snapshot of the café and shortcuts to every page.",
+    intro: "Your home screen — a quick snapshot of the counter and shortcuts to every page.",
     blocks: [
       {
         kind: "list",
@@ -345,7 +345,7 @@ export const DOC_SECTIONS: DocSection[] = [
     title: "Store settings",
     href: "/dashboard/store",
     roles: "Owner only",
-    intro: "Your café's profile and how bills are numbered and taxed.",
+    intro: "Your counter's profile and how bills are numbered and taxed.",
     blocks: [
       {
         kind: "list",

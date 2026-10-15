@@ -70,7 +70,7 @@ export default async function TillPage({
           ? { vpa: store.upiId, name: store.upiName || store.name }
           : null
       }
-      cafeWhatsapp={ordering.whatsapp}
+      storeWhatsapp={ordering.whatsapp}
       customers={featureOn(store.disabledFeatures, "customers")}
       loaded={loaded}
       requestedOrderId={orderId ?? null}

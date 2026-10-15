@@ -6,7 +6,7 @@ import { kot, kotSeq, shortTime, printMoney, receipt, receiptDoc, row, RECEIPT_L
 import { kotDelta } from "../lib/print/print-order";
 import { NeedsPairingError, pair, print } from "../lib/print/bluetooth";
 
-assert.equal(ascii("Café ☕"), "Cafe ?");
+assert.equal(ascii("Résumé ☕"), "Resume ?");
 assert.deepEqual([...escpos().line("A").bytes()].slice(-2), [0x41, 0x0a]);
 const head = [...escpos().bytes()];
 assert.deepEqual(head.slice(0, 7), [0x1b, 0x40, 0x1b, 0x26, 3, 0x7c, 0x7e], "reset + define Insta + ₹");
@@ -29,7 +29,7 @@ assert.ok(wrapped[0].endsWith("$4.00"));
 assert.equal(wrapped.slice(1).join(""), "Very long oat milk latte".slice(14));
 
 const base = {
-  store: { name: "Fizz Café", website: "https://www.fizz.cafe/" },
+  store: { name: "Fizz Counter", website: "https://www.fizz.in/" },
   currency: "INR",
   orderNumber: "A-7",
   createdAt: "2026-10-11T09:30:00",
@@ -44,8 +44,8 @@ const base = {
   total: "252.00",
 };
 const text = body(receipt(base, { paper: 58 }));
-assert.ok(text.includes("Fizz Cafe"));
-assert.ok(text.includes("fizz.cafe\n"), "website, no scheme");
+assert.ok(text.includes("Fizz Counter"));
+assert.ok(text.includes("fizz.in\n"), "website, no scheme");
 assert.ok(text.includes("We look forward to serving you\nagain\n"), "default footer, word-wrapped on 58mm");
 const footer = (store: object) => body(receipt({ ...base, store: { name: "X", ...store } }, { paper: 58 }));
 assert.ok(footer({ delivery: true, instagram: "x" }).includes("Home delivery available"));

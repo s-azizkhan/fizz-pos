@@ -86,7 +86,7 @@ function stageOf(st: WebStatus): number {
 }
 const stageLabel = (i: number) => (i < 0 ? "Cancelled" : STEPS[i]);
 
-// Accent color is store-chosen (a theme suggests one, the café can override),
+// Accent color is store-chosen (a theme suggests one, the store can override),
 // so button labels pick black or white by luminance instead of assuming dark.
 export function contrastOn(hex: string): string {
   const h = hex.replace("#", "");
@@ -139,7 +139,7 @@ export function orderMessage({
   const out = [
     orderNumber ? `*NEW ORDER #${orderNumber}: ${mode.toUpperCase()}*` : `*NEW ORDER: ${mode.toUpperCase()}*`,
     RULE,
-    // Bold on the parts the café acts on: what, how many, how much.
+    // Bold on the parts the store acts on: what, how many, how much.
     ...bill.lines.map((l) => `• *${l.name}* [x${l.quantity}] = *${m(l.amount)}*`),
     RULE,
   ];
@@ -258,11 +258,11 @@ export function FloatingCart({
   whatsapp: string;
   currency: string;
   accent: string;
-  /** Fulfilment modes the café offers, in display order. Never empty. */
+  /** Fulfilment modes the store offers, in display order. Never empty. */
   modes: string[];
   deliveryFee: number;
   packagingFee: number;
-  /** Café's UPI payee, when set — enables pay-by-QR on the status sheet. */
+  /** Store's UPI payee, when set — enables pay-by-QR on the status sheet. */
   upi: { vpa: string; name: string | null } | null;
   /** Table number from a table QR (?t=5). Rides along in the note. */
   table?: string | null;
@@ -300,10 +300,10 @@ export function FloatingCart({
   const n = count(lines);
   const isDelivery = mode === "Delivery";
   const fee = isDelivery ? deliveryFee : 0;
-  // Packaging is charged on anything leaving the café, not on dine-in.
+  // Packaging is charged on anything leaving the store, not on dine-in.
   const packaging = mode === "Dine-in" ? 0 : packagingFee * n;
   const due = total(lines) + packaging + fee;
-  // The café needs to know who and how to reach them; delivery needs where.
+  // The store needs to know who and how to reach them; delivery needs where.
   const missing =
     !name.trim()
       ? "Add your name"
@@ -404,14 +404,14 @@ export function FloatingCart({
       setStatusOpen(true);
       tracked = true;
     } catch (e) {
-      // The café refused it (ordering off, item gone): say why, send nothing.
+      // The store refused it (ordering off, item gone): say why, send nothing.
       if (!isNetworkError(e)) {
         win?.close();
         setError(e instanceof Error ? e.message : "Something fizzled. Try again.");
         return;
       }
       // Weak signal: don't strand the guest — send the order without a number
-      // and the café keys it in from the chat, the way it always worked.
+      // and the store keys it in from the chat, the way it always worked.
       text = orderMessage({
         ...details,
         orderNumber: null,

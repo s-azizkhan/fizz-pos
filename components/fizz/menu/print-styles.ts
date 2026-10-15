@@ -41,7 +41,7 @@ export const MENU_COLOR_SCHEMES: MenuColorScheme[] = [
   {
     id: "cream",
     name: "Classic Cream",
-    blurb: "Warm paper, serif type. Timeless café.",
+    blurb: "Warm paper, serif type. Timeless bakery.",
     bg: "#F4F1E9",
     fg: "#2A241B",
     muted: "#7A6E5A",
@@ -80,7 +80,7 @@ export const MENU_COLOR_SCHEMES: MenuColorScheme[] = [
   {
     id: "chalk",
     name: "Chalkboard",
-    blurb: "Dark slate with chalk-gold accents. The café board look.",
+    blurb: "Dark slate with chalk-gold accents. The chalkboard look.",
     bg: "#1C2422",
     fg: "#ECEEE6",
     muted: "#9AA39C",

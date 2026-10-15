@@ -27,7 +27,7 @@ export async function siteOrigin(): Promise<string> {
   return `${proto}://${host}`;
 }
 
-// Where the menu canonically lives: the café's own domain when one is saved,
+// Where the menu canonically lives: the store's own domain when one is saved,
 // else our /m/<slug>. Used for canonical, OG and JSON-LD URLs.
 export async function publicUrl(store: Store, slug: string, sub: "" | "/menu" | "/games" = ""): Promise<string> {
   if (store.menuDomain) return `https://${store.menuDomain}${menuPath(DOMAIN_SLUG, sub)}`;
@@ -75,8 +75,8 @@ export async function menuMetadata(
     keywords: [
       store.name,
       "menu",
-      "café",
-      "cafe menu",
+      "food counter",
+      "menu online",
       store.city ?? "",
       ...menu.categories.slice(0, 6).map((c) => c.name),
     ].filter(Boolean),
@@ -98,7 +98,7 @@ export async function menuMetadata(
   };
 }
 
-// schema.org Restaurant + Menu so Google can show the café card and menu
+// schema.org Restaurant + Menu so Google can show the store card and menu
 // items. Prices use the store's currency. Only what we actually know goes in.
 export async function menuJsonLd(slug: string, menu: PublicMenu): Promise<Record<string, unknown>> {
   const { store, categories } = menu;
@@ -123,7 +123,7 @@ export async function menuJsonLd(slug: string, menu: PublicMenu): Promise<Record
   ].filter(Boolean);
   return {
     "@context": "https://schema.org",
-    "@type": "CafeOrCoffeeShop",
+    "@type": "FoodEstablishment",
     "@id": url,
     name: store.name,
     url,

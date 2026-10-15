@@ -56,7 +56,7 @@ const checks = {
   "social rendered": html.includes("instagram.com/e2e"),
   "jsonld sameAs has social": html.includes('"sameAs":["https://instagram.com/e2e"'),
   "table badge": html.includes("Table <!-- -->9"),
-  "share button": html.includes("Share this café"),
+  "share button": html.includes("Share this place"),
 };
 // Bad link must be rejected with the card named.
 let rejected = "";

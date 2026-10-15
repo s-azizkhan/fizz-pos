@@ -45,7 +45,7 @@ export default function LoginForm() {
           required
           autoComplete="email"
           autoFocus
-          placeholder="you@cafe.com"
+          placeholder="you@yourshop.in"
           aria-invalid={error ? true : undefined}
           className="rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40"
         />

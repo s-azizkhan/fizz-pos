@@ -30,7 +30,7 @@ export type WelcomeProps = {
   embedded?: boolean;
 };
 
-// "Open · till 22:00" / "Opens at 08:00", in the café's own timezone.
+// "Open · till 22:00" / "Opens at 08:00", in the store's own timezone.
 function openStatus(opening: string, closing: string, tz: string): { open: boolean; label: string } {
   let hm = "";
   try {
@@ -305,7 +305,7 @@ function Bubbles() {
   );
 }
 
-// Cup with steam for cafés with no cover photo yet — still looks dressed.
+// Cup with steam for stores with no cover photo yet — still looks dressed.
 function CupArt({ accent }: { accent: string }) {
   return (
     <svg viewBox="0 0 320 240" className="absolute inset-0 h-full w-full" aria-hidden>

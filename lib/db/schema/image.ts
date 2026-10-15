@@ -2,8 +2,8 @@ import { customType, integer, pgTable, text, timestamp, uuid } from "drizzle-orm
 import { store } from "./store";
 
 // Uploaded images (logo, cover). Stored in Postgres — two small images per
-// café don't justify an object store. Served at /api/img/<id>.
-// ponytail: bytea in the DB; move to S3/R2 if cafés start uploading galleries.
+// store don't justify an object store. Served at /api/img/<id>.
+// ponytail: bytea in the DB; move to S3/R2 if stores start uploading galleries.
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => "bytea",
 });

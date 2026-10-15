@@ -67,7 +67,7 @@ function Terminal({
   currency,
   tax,
   upi,
-  cafeWhatsapp,
+  storeWhatsapp,
   customers,
   loaded,
 }: {
@@ -76,8 +76,8 @@ function Terminal({
   currency: string;
   tax: TaxConfig;
   upi: UpiConfig | null;
-  /** The café's WhatsApp number; lends its country code to customer links. */
-  cafeWhatsapp: string | null;
+  /** The store's WhatsApp number; lends its country code to customer links. */
+  storeWhatsapp: string | null;
   /** Customers feature on: show the name/phone picker. */
   customers: boolean;
   loaded: LoadedOrder | null;
@@ -684,7 +684,7 @@ function Terminal({
             receipt.customer
               ? waLink(
                   receipt.customer.phone,
-                  cafeWhatsapp,
+                  storeWhatsapp,
                   orderShareText({
                     storeName,
                     orderNumber: receipt.orderNumber,

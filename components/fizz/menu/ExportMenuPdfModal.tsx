@@ -31,12 +31,12 @@ type Combo = {
 // Curated one-tap combos — the fast path. Mixing your own is still one row away.
 const PRESETS: { name: string; combo: Combo }[] = [
   { name: "One-Page Red", combo: { scheme: "punch", layout: "onepage", pack: "none", op: 0, fs: 95 } },
-  { name: "One-Page Sheet", combo: { scheme: "cream", layout: "onepage-sheet", pack: "cafe", op: 12, fs: 95 } },
+  { name: "One-Page Sheet", combo: { scheme: "cream", layout: "onepage-sheet", pack: "food", op: 12, fs: 95 } },
   { name: "Fizz Classic", combo: { scheme: "fizz", layout: "modern", pack: "bubbles", op: 14, fs: 100 } },
-  { name: "Diner Cards", combo: { scheme: "diner", layout: "cards", pack: "cafe", op: 12, fs: 100 } },
+  { name: "Diner Cards", combo: { scheme: "diner", layout: "cards", pack: "food", op: 12, fs: 100 } },
   { name: "Neon Receipt", combo: { scheme: "vapor", layout: "receipt", pack: "none", op: 0, fs: 95 } },
   { name: "Fine Dining", combo: { scheme: "cream", layout: "elegant", pack: "none", op: 0, fs: 105 } },
-  { name: "Street Poster", combo: { scheme: "punch", layout: "poster", pack: "cafe", op: 18, fs: 100 } },
+  { name: "Street Poster", combo: { scheme: "punch", layout: "poster", pack: "food", op: 18, fs: 100 } },
   { name: "Chalk Board", combo: { scheme: "chalk", layout: "bistro", pack: "brew", op: 16, fs: 100 } },
   { name: "Sepia Press", combo: { scheme: "sepia", layout: "boutique", pack: "bakery", op: 14, fs: 100 } },
 ];

@@ -21,7 +21,7 @@ export default function ComingSoon({
         <div className="text-center">
           <p className="font-display text-2xl font-bold text-fizz">Brewing ●</p>
           <p className="mt-2 text-sm text-steam">
-            This corner of the café is still warming up.
+            This corner of the counter is still warming up.
           </p>
         </div>
       </div>

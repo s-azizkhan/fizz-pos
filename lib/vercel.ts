@@ -39,7 +39,7 @@ export type DomainStatus = {
   managed: boolean;
   /** DNS points here and (if needed) ownership is verified. */
   live: boolean;
-  /** Records the café must add at their registrar. */
+  /** Records the store must add at their registrar. */
   records: { type: "A" | "CNAME" | "TXT"; name: string; value: string }[];
 };
 

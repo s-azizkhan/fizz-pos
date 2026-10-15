@@ -19,11 +19,11 @@ npm run db:seed        # Seed/promote the admin user (scripts/seed-admin.ts)
 
 No test runner is configured. Type-check via `npm run build` or `npx tsc --noEmit`.
 
-Required env: `DB_URL` (postgres), `SESSION_SECRET` (JWT signing). Prod also needs `NEXT_PUBLIC_SITE_URL` (the proxy treats any other host as a café's own menu domain) and, on Vercel, `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID`) so saving a café domain registers it with the project. Seeder reads optional `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME`.
+Required env: `DB_URL` (postgres), `SESSION_SECRET` (JWT signing). Prod also needs `NEXT_PUBLIC_SITE_URL` (the proxy treats any other host as a store's own menu domain) and, on Vercel, `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` (+ `VERCEL_TEAM_ID`) so saving a store domain registers it with the project. Seeder reads optional `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME`.
 
 ## Architecture
 
-**Single-store café POS.** Public marketing/menu site + an authed `/dashboard` operating the POS, inventory, menu, expenses, and analytics.
+**Single-store POS.** Public marketing/menu site + an authed `/dashboard` operating the POS, inventory, menu, expenses, and analytics.
 
 ### Single-store model
 Every row links to one store identified by the fixed UUID `STORE_ID` in `lib/store/constants.ts`. `getStore()` (`lib/store/data.ts`) lazily creates that singleton row. The schema is multi-store-ready but the app is hardwired to one store — scope new queries by `STORE_ID`.

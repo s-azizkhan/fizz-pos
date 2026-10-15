@@ -16,7 +16,7 @@ export type MenuBgPack = {
   glyphs: Glyph[];
 };
 
-/* ---------- Café / food ---------- */
+/* ---------- Food & drink ---------- */
 const Pizza: Glyph = () => (
   <>
     <path d="M3 7l9 15 9-15z" />
@@ -150,7 +150,7 @@ const Bubble3: Glyph = () => (
 export const MENU_BG_PACKS: MenuBgPack[] = [
   { id: "none", name: "None", blurb: "Clean — no background graphics.", glyphs: [] },
   {
-    id: "cafe",
+    id: "food",
     name: "Street Food",
     blurb: "Pizza, burger, fries, wrap, mocktail.",
     glyphs: [Pizza, Burger, Fries, Wrap, Mocktail],

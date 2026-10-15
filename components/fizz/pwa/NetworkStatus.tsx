@@ -16,7 +16,7 @@ function subscribe(onChange: () => void) {
 // exactly what we use it for.
 const isOnline = () => navigator.onLine;
 
-// A café's wifi drops. Staff need to know before they ring an order they think
+// A store's wifi drops. Staff need to know before they ring an order they think
 // went through — so offline is loud and sticky, and coming back is a brief
 // confirmation that clears itself.
 export default function NetworkStatus() {

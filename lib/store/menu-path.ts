@@ -1,4 +1,4 @@
-// Public menu URLs. On the café's own domain (store.menuDomain) proxy.ts
+// Public menu URLs. On the store's own domain (store.menuDomain) proxy.ts
 // rewrites "/" → "/m/~", so links there drop the "/m/<slug>" prefix.
 export const DOMAIN_SLUG = "~";
 

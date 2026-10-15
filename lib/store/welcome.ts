@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 // The public menu's welcome screen (/m/[slug]): cover, name, table badge, a
-// stack of tappable cards, social icons. Everything the café can change lives
+// stack of tappable cards, social icons. Everything the store can change lives
 // in one `store.menu_welcome` jsonb so the admin form saves it in one field.
 // Client-safe: no server imports.
 

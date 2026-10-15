@@ -37,7 +37,7 @@ export default function ShareButton({
     <button
       type="button"
       onClick={share}
-      aria-label="Share this café"
+      aria-label="Share this place"
       className={`inline-flex touch-manipulation items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-semibold backdrop-blur-sm transition-transform active:scale-95 ${
         glass ? "border-white/25 bg-black/35 text-white" : "border-[var(--m-line)] bg-[var(--m-surface)] text-[var(--m-text)]"
       }`}

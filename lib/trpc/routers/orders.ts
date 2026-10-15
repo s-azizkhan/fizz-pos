@@ -227,7 +227,7 @@ export const ordersRouter = router({
     if (recent.n >= 3 || pending.n >= 25) {
       throw new TRPCError({
         code: "TOO_MANY_REQUESTS",
-        message: "Too many orders right now. Give it a few minutes, or call the café.",
+        message: "Too many orders right now. Give it a few minutes, or call the shop.",
       });
     }
 

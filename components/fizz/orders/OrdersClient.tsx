@@ -53,7 +53,7 @@ export default function OrdersClient({
   storeName,
   receiptHeader,
   taxLabel,
-  cafeWhatsapp,
+  storeWhatsapp,
   kot,
 }: {
   isAdmin: boolean;
@@ -63,7 +63,7 @@ export default function OrdersClient({
   storeName: string;
   receiptHeader: ReceiptData["store"];
   taxLabel: string;
-  cafeWhatsapp: string | null;
+  storeWhatsapp: string | null;
   kot: boolean;
 }) {
   const router = useRouter();
@@ -408,7 +408,7 @@ export default function OrdersClient({
                 <a
                   href={waLink(
                     o.customer.phone,
-                    cafeWhatsapp,
+                    storeWhatsapp,
                     orderShareText({
                       storeName,
                       orderNumber: o.number,

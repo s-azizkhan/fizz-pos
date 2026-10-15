@@ -1,6 +1,6 @@
-// Optional parts of Fizz a café can switch off (Store settings → Features).
+// Optional parts of Fizz a store can switch off (Store settings → Features).
 // Stored inverted as `store.disabledFeatures`, so anything added here later
-// starts ON for every café. Core floor work — POS, Orders, Menu, Team, Store
+// starts ON for every store. Core floor work — POS, Orders, Menu, Team, Store
 // settings — is never optional. Client-safe: no server imports.
 export const FEATURES = [
   { key: "kot", label: "KOT board", hint: "Kitchen queue. Off = orders go straight to Orders.", href: "/dashboard/kot" },

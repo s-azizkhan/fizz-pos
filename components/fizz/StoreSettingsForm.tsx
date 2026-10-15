@@ -117,14 +117,14 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
       <Section title="Store profile" hint="Name, contact, and where you pour.">
         <Field label="Store name" name="name" defaultValue={store.name} required />
         <Field label="Legal name" name="legalName" defaultValue={store.legalName} />
-        <Field label="Email" name="email" type="email" defaultValue={store.email} placeholder="hello@cafe.com" />
+        <Field label="Email" name="email" type="email" defaultValue={store.email} placeholder="hello@yourshop.in" />
         <Field label="Phone" name="phone" defaultValue={store.phone} placeholder="+1 555 0100" />
-        <Field label="Instagram" name="instagram" defaultValue={store.instagram} placeholder="@yourcafe" />
+        <Field label="Instagram" name="instagram" defaultValue={store.instagram} placeholder="@yourshop" />
         <div className="flex flex-col gap-2">
           <span className={labelCls}>Logo</span>
           <ImageField kind="logo" name="logoUrl" value={logo} onChange={setLogo} maxEdge={512} aspect="square" hint="Square works best. PNG keeps transparency." />
         </div>
-        <Field label="Website" name="website" defaultValue={store.website} placeholder="yourcafe.com" />
+        <Field label="Website" name="website" defaultValue={store.website} placeholder="yourshop.in" />
         <Field label="Address line 1" name="addressLine1" defaultValue={store.addressLine1} />
         <Field label="Address line 2" name="addressLine2" defaultValue={store.addressLine2} />
         <Field label="City" name="city" defaultValue={store.city} />
@@ -211,7 +211,7 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
       <section className="rounded-fizz border border-ink-line bg-ink-soft p-7">
         <h2 className="font-display text-xl font-bold tracking-tight">Features</h2>
         <p className="mt-1 max-w-[60ch] text-sm text-steam">
-          Switch off what your café doesn&apos;t use — its page, nav tab and
+          Switch off what your counter doesn&apos;t use — its page, nav tab and
           controls disappear for everyone. POS, Orders and Menu always stay on.
         </p>
         <input type="hidden" name="disabledFeatures" value={JSON.stringify(off)} />
@@ -264,14 +264,14 @@ export default function StoreSettingsForm({ store }: { store: Store }) {
                 name="upiId"
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
-                placeholder="cafe@okhdfcbank"
+                placeholder="shop@okhdfcbank"
                 autoCapitalize="none"
                 spellCheck={false}
                 className={inputCls}
               />
               {upiId.trim() !== "" && !upiValid && (
                 <span className="text-sm text-[#E2655A]">
-                  Use a VPA like cafe@okhdfcbank
+                  Use a VPA like shop@okhdfcbank
                 </span>
               )}
             </label>

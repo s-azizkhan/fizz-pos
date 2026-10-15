@@ -73,7 +73,7 @@ export function formatDate(
 
 // Timestamp → "16 Jun 2026, 14:05".
 // ponytail: still uses the runtime timezone; pin `timeZone` if the server
-// runs in a different zone from the POS (e.g. UTC host, IST café).
+// runs in a different zone from the POS (e.g. UTC host, IST store).
 export function formatDateTime(d: string | Date): string {
   return new Date(d).toLocaleString(DATE_LOCALE, {
     day: "2-digit",

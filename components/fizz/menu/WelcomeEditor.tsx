@@ -240,7 +240,7 @@ export default function WelcomeEditor({
                 patch({ socials: e.target.value.split(/\s+/).map((s) => s.trim()).filter(Boolean) });
               }}
               rows={3}
-              placeholder={"https://instagram.com/yourcafe\nhttps://facebook.com/yourcafe\nhttps://tiktok.com/@yourcafe"}
+              placeholder={"https://instagram.com/yourshop\nhttps://facebook.com/yourshop\nhttps://tiktok.com/@yourshop"}
               className={inputCls}
             />
             <span className={`text-xs ${out.socials.some(badLink) ? "text-[#E2655A]" : "text-steam"}`}>

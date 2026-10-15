@@ -66,7 +66,7 @@ export default function PublicMenuView({
             >
               {store.logoUrl ? (
                 /* ponytail: plain <img> via /api/logo — the logo is an arbitrary
-                   remote URL, so next/image would need a domain allowlist per café. */
+                   remote URL, so next/image would need a domain allowlist per store. */
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src="/api/logo" alt={`${store.name} logo`} className="h-full w-full object-cover" />
               ) : (

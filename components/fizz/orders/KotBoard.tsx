@@ -17,7 +17,7 @@ import RingAlarm from "./RingAlarm";
 export type KotOrder = inferRouterOutputs<AppRouter>["orders"]["kot"][number];
 export type LaneData = Record<KitchenStatus, KotOrder[]>;
 
-// How long a ticket may sit before the board starts shouting. Tuned for a cafe
+// How long a ticket may sit before the board starts shouting. Tuned for a counter
 // counter — a drink that's been waiting six minutes is already a complaint.
 const WARN_S = 180;
 const LATE_S = 360;

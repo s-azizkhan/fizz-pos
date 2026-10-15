@@ -88,7 +88,7 @@ export const menuRouter = router({
         packagingFee,
         ...appearance
       } = input;
-      // Café domain changed: register the new one with Vercel before saving so
+      // Store domain changed: register the new one with Vercel before saving so
       // a failed call leaves the old domain in place.
       const prev = (await getStore()).menuDomain;
       if (appearance.menuDomain !== prev) {
@@ -152,7 +152,7 @@ export const menuRouter = router({
       return { ok: true as const };
     }),
 
-  // DNS state of the café's own domain for the settings modal.
+  // DNS state of the store's own domain for the settings modal.
   domainStatus: protectedProcedure.query(async () => {
     const { menuDomain } = await getStore();
     if (!menuDomain) return null;

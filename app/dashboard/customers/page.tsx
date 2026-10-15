@@ -6,7 +6,7 @@ import { requireFeature } from "@/lib/store/data";
 
 export const metadata: Metadata = { title: "Customers — Fizz" };
 
-// The café's customer book. Ships once; search filters on the device.
+// The store's customer book. Ships once; search filters on the device.
 export default async function CustomersPage() {
   await requireFeature("customers");
   const [store, rows] = await Promise.all([getStore(), listCustomers()]);

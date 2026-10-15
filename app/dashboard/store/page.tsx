@@ -24,7 +24,7 @@ export default async function StorePage() {
           Store settings
         </h1>
         <p className="mt-3 max-w-[60ch] text-lg text-steam">
-          Your café&apos;s details, hours, and how invoices and orders are
+          Your counter&apos;s details, hours, and how invoices and orders are
           numbered.
         </p>
 
