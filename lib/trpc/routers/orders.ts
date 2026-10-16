@@ -30,6 +30,7 @@ import { receiptStore } from "@/lib/store/order-settings";
 import { applyRecipeDeductions } from "@/lib/store/inventory-deduct";
 import { resolveCustomer } from "@/lib/store/customers";
 import { getPublicMenu } from "@/lib/store/menu";
+import { comboSummary } from "@/lib/store/format";
 import { router, featureGate, protectedProcedure, adminProcedure, publicProcedure } from "@/lib/trpc/init";
 
 // The money columns every write shares, derived from computeTotals.
@@ -59,6 +60,7 @@ async function writeItems(
       orderId,
       menuItemId: l.menuItemId ?? null,
       variantId: l.variantId ?? null,
+      comboId: l.comboId ?? null,
       name: l.name,
       variantName: l.variantName ?? null,
       unitPrice: l.unitPrice.toFixed(2),
@@ -127,7 +129,27 @@ function priceWebCart(
   items: WebOrderInput["items"],
 ) {
   const byId = new Map(menu.categories.flatMap((c) => c.items).map((it) => [it.id, it]));
+  const combos = new Map(menu.combos.map((c) => [c.id, c]));
   return items.map((l) => {
+    if ("comboId" in l) {
+      // menu.combos holds only sellable combos, priced by the store.
+      const combo = combos.get(l.comboId);
+      if (!combo) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "That combo just came off the menu. Refresh and try again.",
+        });
+      }
+      return {
+        menuItemId: null,
+        variantId: null,
+        comboId: combo.id,
+        name: combo.name,
+        variantName: comboSummary(combo.items).slice(0, 120),
+        unitPrice: Number(combo.price),
+        quantity: l.quantity,
+      };
+    }
     const item = byId.get(l.menuItemId);
     const variant = l.variantId ? item?.variants.find((v) => v.id === l.variantId) : null;
     // Items with sizes are only orderable by size, same as the menu renders.
@@ -546,7 +568,7 @@ export const ordersRouter = router({
           // diff-based deduction if inventory accuracy on edits matters.
           // Inventory off = no stock to burn.
           if (!resettle && featureOn(store.disabledFeatures, "inventory"))
-            await applyRecipeDeductions(tx, totals.lines, ctx.user.id);
+            await applyRecipeDeductions(tx, totals.lines, ctx.user.id, ctx.user.storeId);
         });
       } catch (e) {
         if (e instanceof TRPCError) throw e;

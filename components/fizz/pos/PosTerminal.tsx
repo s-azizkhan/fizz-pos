@@ -156,6 +156,7 @@ function Terminal({
     cart.lines.map((l) => ({
       menuItemId: l.menuItemId || null,
       variantId: l.variantId,
+      comboId: l.comboId,
       name: l.name,
       variantName: l.variantName,
       unitPrice: l.unitPrice,

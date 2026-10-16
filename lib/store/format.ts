@@ -126,3 +126,21 @@ export function upiPayLink({
   if (note) q.push(`tn=${encodeURIComponent(note)}`);
   return `upi://pay?${q.join("&")}`;
 }
+
+// "2× Margherita (Large) + Fries" — a combo's contents in one line. Also the
+// combo order line's variantName, so the ticket and the kitchen see what to make.
+export const comboSummary = (items: { name: string; variantName: string | null; quantity: number }[]) =>
+  items
+    .map((p) => `${p.quantity > 1 ? `${p.quantity}× ` : ""}${p.name}${p.variantName ? ` (${p.variantName})` : ""}`)
+    .join(" + ");
+
+// Accent color is store-chosen (a theme suggests one, the store can override),
+// so button labels pick black or white by luminance instead of assuming dark.
+export function contrastOn(hex: string): string {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return "#0E1116";
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return L > 0.45 ? "#0E1116" : "#FFFFFF";
+}

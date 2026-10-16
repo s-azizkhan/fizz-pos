@@ -5,7 +5,7 @@ import { Confetti } from "./WelcomeCards";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { formatMoney, upiPayLink } from "@/lib/store/format";
+import { contrastOn, formatMoney, upiPayLink } from "@/lib/store/format";
 import UpiQr from "@/components/fizz/UpiQr";
 import { useTRPC } from "@/lib/trpc/client";
 import { isNetworkError } from "@/lib/store/outbox";
@@ -20,6 +20,8 @@ export type CartLine = {
   key: string;
   itemId: string;
   variantId: string | null;
+  /** itemId is a combo id. Optional: carts persisted before combos lack it. */
+  combo?: boolean;
   name: string;
   price: number;
   qty: number;
@@ -85,17 +87,6 @@ function stageOf(st: WebStatus): number {
   return st.webPending ? 0 : 1;
 }
 const stageLabel = (i: number) => (i < 0 ? "Cancelled" : STEPS[i]);
-
-// Accent color is store-chosen (a theme suggests one, the store can override),
-// so button labels pick black or white by luminance instead of assuming dark.
-export function contrastOn(hex: string): string {
-  const h = hex.replace("#", "");
-  if (h.length !== 6) return "#0E1116";
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
-  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  return L > 0.45 ? "#0E1116" : "#FFFFFF";
-}
 
 const total = (lines: CartLine[]) => lines.reduce((n, l) => n + l.price * l.qty, 0);
 const count = (lines: CartLine[]) => lines.reduce((n, l) => n + l.qty, 0);
@@ -164,6 +155,7 @@ export function AddToCart({
   itemKey,
   itemId,
   variantId,
+  combo,
   name,
   price,
   accent,
@@ -171,6 +163,7 @@ export function AddToCart({
   itemKey: string;
   itemId: string;
   variantId: string | null;
+  combo?: boolean;
   name: string;
   price: string | number;
   accent: string;
@@ -184,7 +177,7 @@ export function AddToCart({
       <button
         type="button"
         aria-label={`Add ${name}`}
-        onClick={() => add({ key: itemKey, itemId, variantId, name, price: Number(price) })}
+        onClick={() => add({ key: itemKey, itemId, variantId, combo, name, price: Number(price) })}
         className="grid size-8 shrink-0 place-items-center rounded-full border text-[1em] font-bold leading-none transition-transform hover:scale-110 active:scale-95"
         style={{ borderColor: accent, color: accent }}
       >
@@ -387,7 +380,11 @@ export function FloatingCart({
         phone,
         address: details.address,
         note: details.note,
-        items: lines.map((l) => ({ menuItemId: l.itemId, variantId: l.variantId, quantity: l.qty })),
+        items: lines.map((l) =>
+          l.combo
+            ? { comboId: l.itemId, quantity: l.qty }
+            : { menuItemId: l.itemId, variantId: l.variantId, quantity: l.qty },
+        ),
       });
       text = orderMessage({
         ...details,
@@ -547,7 +544,7 @@ export function FloatingCart({
                       <p className="text-[0.8em] text-[var(--m-muted)]">{formatMoney(l.price, currency)} each</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <AddToCart itemKey={l.key} itemId={l.itemId} variantId={l.variantId} name={l.name} price={l.price} accent={accent} />
+                      <AddToCart itemKey={l.key} itemId={l.itemId} variantId={l.variantId} combo={l.combo} name={l.name} price={l.price} accent={accent} />
                       <span className="w-16 shrink-0 text-right text-[0.95em] font-semibold tabular-nums">
                         {formatMoney(l.price * l.qty, currency)}
                       </span>

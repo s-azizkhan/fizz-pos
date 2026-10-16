@@ -8,6 +8,8 @@ import {
   menuCategories,
   menuItems,
   menuItemVariants,
+  menuCombos,
+  menuComboItems,
   type MenuCategory,
   type MenuItem,
   type MenuItemVariant,
@@ -20,6 +22,7 @@ import { cached, menuTag } from "@/lib/store/cache";
 import { getStoreById } from "@/lib/store/data";
 import { getOrderSettingsById } from "@/lib/store/order-settings";
 import { currentStoreId } from "@/lib/auth/dal";
+
 
 export type MenuItemWithVariants = MenuItem & { variants: MenuItemVariant[] };
 export type MenuCategoryWithItems = MenuCategory & {
@@ -87,9 +90,93 @@ export const getFullMenuById = cache((storeId: string) =>
 );
 export const getFullMenu = cache(async () => getFullMenuById(await currentStoreId()));
 
+export type ComboPart = {
+  menuItemId: string;
+  variantId: string | null;
+  quantity: number;
+  name: string;
+  variantName: string | null;
+  unitPrice: number;
+};
+export type ComboView = {
+  id: string;
+  name: string;
+  description: string | null;
+  price: string;
+  available: boolean;
+  items: ComboPart[];
+  /** What the parts cost bought one by one, at today's menu prices. */
+  worth: number;
+  /** Every part is still on the menu and on sale. */
+  sellable: boolean;
+};
+
+
+// Combos resolved against the menu tree, so names, prices and availability are
+// always today's. A part whose item/variant is gone or off makes it unsellable.
+async function buildCombos(storeId: string): Promise<ComboView[]> {
+  const [combos, parts, menu] = await Promise.all([
+    db
+      .select()
+      .from(menuCombos)
+      .where(and(eq(menuCombos.storeId, storeId), isNull(menuCombos.deletedAt)))
+      .orderBy(asc(menuCombos.position), asc(menuCombos.createdAt)),
+    db
+      .select({ part: menuComboItems })
+      .from(menuComboItems)
+      .innerJoin(menuCombos, eq(menuComboItems.comboId, menuCombos.id))
+      .where(and(eq(menuCombos.storeId, storeId), isNull(menuCombos.deletedAt)))
+      .orderBy(asc(menuComboItems.position))
+      .then((rows) => rows.map((r) => r.part)),
+    getFullMenuById(storeId),
+  ]);
+  const items = new Map(
+    menu.flatMap((c) => c.items.map((it) => [it.id, { it, on: c.available && it.available }] as const)),
+  );
+  return combos.map((c) => {
+    let sellable = c.available;
+    const resolved: ComboPart[] = [];
+    for (const p of parts.filter((x) => x.comboId === c.id)) {
+      const hit = items.get(p.menuItemId);
+      const variant = p.variantId ? hit?.it.variants.find((v) => v.id === p.variantId) : null;
+      if (!hit || (p.variantId && !variant)) {
+        sellable = false;
+        continue;
+      }
+      if (!hit.on) sellable = false;
+      resolved.push({
+        menuItemId: p.menuItemId,
+        variantId: p.variantId,
+        quantity: p.quantity,
+        name: hit.it.name,
+        variantName: variant?.name ?? null,
+        unitPrice: Number(variant?.price ?? hit.it.price),
+      });
+    }
+    const worth = Math.round(resolved.reduce((s, p) => s + p.unitPrice * p.quantity, 0) * 100) / 100;
+    return {
+      id: c.id,
+      name: c.name,
+      description: c.description,
+      price: c.price,
+      available: c.available,
+      items: resolved,
+      worth,
+      sellable: sellable && resolved.length > 0,
+    };
+  });
+}
+
+export const getCombosById = cache((storeId: string) =>
+  cached(`menu-combos:${storeId}`, menuTag(storeId), () => buildCombos(storeId))(),
+);
+export const getCombos = cache(async () => getCombosById(await currentStoreId()));
+
 export type PublicMenu = {
   store: Store;
   categories: MenuCategoryWithItems[];
+  /** Combos on sale right now, pinned above the categories. */
+  combos: ComboView[];
   /** Ordering config; ordering stays off until the store saves it once. */
   ordering: OrderSettings | null;
 };
@@ -111,10 +198,14 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   if (!hit) return null;
   const row = await getStoreById(hit.id);
   if (!row.menuSlug || !row.menuPublished || !featureOn(row.disabledFeatures, "publicMenu")) return null;
-  const [menu, ordering] = await Promise.all([getFullMenuById(row.id), getOrderSettingsById(row.id)]);
+  const [menu, ordering, combos] = await Promise.all([
+    getFullMenuById(row.id),
+    getOrderSettingsById(row.id),
+    getCombosById(row.id),
+  ]);
   // Unavailable items hide from guests; categories left empty drop out.
   const categories = menu
     .map((c) => ({ ...c, items: c.items.filter((it) => it.available) }))
     .filter((c) => c.items.length > 0);
-  return { store: row, categories, ordering };
+  return { store: row, categories, combos: combos.filter((c) => c.sellable), ordering };
 }

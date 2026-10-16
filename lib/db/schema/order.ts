@@ -117,6 +117,8 @@ export const orderItems = pgTable("order_items", {
   // Soft references — kept nullable so menu edits never orphan an order.
   menuItemId: uuid("menu_item_id"),
   variantId: uuid("variant_id"),
+  // Set on a combo line (menuItemId null); variantName carries what's in it.
+  comboId: uuid("combo_id"),
   name: text("name").notNull(),
   variantName: text("variant_name"),
   unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull(),
@@ -140,6 +142,7 @@ const money = z
 const lineSchema = z.object({
   menuItemId: z.uuid().nullable().optional(),
   variantId: z.uuid().nullable().optional(),
+  comboId: z.uuid().nullable().optional(),
   name: z.string().trim().min(1).max(160),
   variantName: z.string().trim().max(120).nullable().optional(),
   unitPrice: money,
@@ -238,11 +241,14 @@ export const webOrderSchema = z.object({
   note: z.string().trim().max(300).optional().default(""),
   items: z
     .array(
-      z.object({
-        menuItemId: z.uuid(),
-        variantId: z.uuid().nullable(),
-        quantity: z.number().int().min(1).max(20),
-      }),
+      z.union([
+        z.object({
+          menuItemId: z.uuid(),
+          variantId: z.uuid().nullable(),
+          quantity: z.number().int().min(1).max(20),
+        }),
+        z.object({ comboId: z.uuid(), quantity: z.number().int().min(1).max(20) }),
+      ]),
     )
     .min(1, "Your cart is empty")
     .max(30),

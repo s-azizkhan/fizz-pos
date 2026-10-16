@@ -8,7 +8,8 @@ import PublicMenuSectionsModal from "@/components/fizz/menu/PublicMenuSectionsMo
 import NewCategoryModal from "@/components/fizz/menu/NewCategoryModal";
 import ExportMenuPdfModal from "@/components/fizz/menu/ExportMenuPdfModal";
 import MenuQrModal from "@/components/fizz/menu/MenuQrModal";
-import type { MenuCategoryWithItems } from "@/lib/store/menu";
+import Combos from "@/components/fizz/menu/Combos";
+import type { ComboView, MenuCategoryWithItems } from "@/lib/store/menu";
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { OrderSettings, RecipeComponent, Store } from "@/lib/db/schema";
 import { GlobeIcon, LayersIcon, PlusIcon, PrinterIcon, QrIcon } from "@/components/fizz/dashboard/icons";
@@ -17,6 +18,7 @@ import { featureOn } from "@/lib/store/features";
 export default function MenuPageClient({
   store,
   categories,
+  combos,
   orderSettings,
   ingredients,
   recipes,
@@ -24,6 +26,7 @@ export default function MenuPageClient({
 }: {
   store: Store;
   categories: MenuCategoryWithItems[];
+  combos: ComboView[];
   orderSettings: OrderSettings;
   ingredients: RecipeIngredient[];
   recipes: Record<string, RecipeComponent[]>;
@@ -94,6 +97,10 @@ export default function MenuPageClient({
           <PrinterIcon className="h-4 w-4 shrink-0" />
           Printable PDF
         </button>
+      </div>
+
+      <div className="mt-6 sm:mt-10">
+        <Combos combos={combos} categories={categories} currency={store.currency} />
       </div>
 
       <div className="mt-6 sm:mt-10">

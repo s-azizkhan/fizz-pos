@@ -15,7 +15,7 @@ export function useCart(initial: CartLine[] = []) {
   const load = useCallback((next: CartLine[]) => setLines(next), []);
 
   const add = useCallback((item: PosItem, variant: PosVariant | null) => {
-    const key = lineKey(item.id, variant?.id ?? null);
+    const key = item.combo ? `combo:${item.id}` : lineKey(item.id, variant?.id ?? null);
     setLines((prev) => {
       const existing = prev.find((l) => l.key === key);
       if (existing) {
@@ -27,10 +27,11 @@ export function useCart(initial: CartLine[] = []) {
         ...prev,
         {
           key,
-          menuItemId: item.id,
+          menuItemId: item.combo ? "" : item.id,
           variantId: variant?.id ?? null,
+          comboId: item.combo ? item.id : null,
           name: item.name,
-          variantName: variant?.name ?? null,
+          variantName: item.combo?.summary ?? variant?.name ?? null,
           unitPrice: variant ? variant.price : item.price,
           quantity: 1,
         },

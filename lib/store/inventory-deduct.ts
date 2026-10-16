@@ -1,7 +1,13 @@
 import "server-only";
-import { inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { db } from "@/lib/db";
-import { inventoryItems, recipeComponents, stockMovements } from "@/lib/db/schema";
+import {
+  inventoryItems,
+  menuComboItems,
+  menuCombos,
+  recipeComponents,
+  stockMovements,
+} from "@/lib/db/schema";
 
 // The transaction handle Drizzle hands to a `db.transaction(async (tx) => …)`
 // callback. Same trick used in lib/trpc/routers/orders.ts#writeItems.
@@ -11,13 +17,36 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type SoldLine = {
   menuItemId?: string | null;
   variantId?: string | null;
+  comboId?: string | null;
   quantity: number;
 };
+
+// A combo line uses up its parts: swap it for one line per part, scaled by how
+// many combos sold. Parts are read live (scoped to the store), so a combo edited
+// later deducts what it holds at settle time.
+async function expandCombos(tx: Tx, lines: SoldLine[], storeId: string): Promise<SoldLine[]> {
+  const ids = [...new Set(lines.map((l) => l.comboId).filter((id): id is string => !!id))];
+  if (ids.length === 0) return lines;
+  const parts = await tx
+    .select({ part: menuComboItems })
+    .from(menuComboItems)
+    .innerJoin(menuCombos, eq(menuComboItems.comboId, menuCombos.id))
+    .where(and(inArray(menuComboItems.comboId, ids), eq(menuCombos.storeId, storeId)))
+    .then((rows) => rows.map((r) => r.part));
+  return lines.flatMap((l) =>
+    l.comboId
+      ? parts
+          .filter((p) => p.comboId === l.comboId)
+          .map((p) => ({ menuItemId: p.menuItemId, variantId: p.variantId, quantity: p.quantity * l.quantity }))
+      : [l],
+  );
+}
 
 // Deduct raw stock for a settled order from its menu recipes. Runs INSIDE the
 // checkout transaction so stock and the sale commit atomically.
 //
 // Design rules:
+//  - Combo lines deduct their parts' recipes (expandCombos).
 //  - Lines with no menuItemId (manual/custom rings) have no recipe → skipped.
 //  - A sold variant uses its own recipe rows; if it has none it falls back to
 //    the item's base recipe (variantId null).
@@ -27,9 +56,11 @@ type SoldLine = {
 //    for missing data — only a real DB error rolls the sale back.
 export async function applyRecipeDeductions(
   tx: Tx,
-  lines: SoldLine[],
+  sold: SoldLine[],
   enteredBy: string,
+  storeId: string,
 ): Promise<void> {
+  const lines = await expandCombos(tx, sold, storeId);
   const menuItemIds = [
     ...new Set(lines.map((l) => l.menuItemId).filter((id): id is string => !!id)),
   ];

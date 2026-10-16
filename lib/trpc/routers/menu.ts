@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray, isNull, max, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, max, min, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   store,
@@ -13,8 +13,12 @@ import {
   menuCategories,
   menuItems,
   menuItemVariants,
+  menuCombos,
+  menuComboItems,
+  comboForm,
+  type ComboInput,
 } from "@/lib/db/schema";
-import { getFullMenu, getPublicMenu } from "@/lib/store/menu";
+import { getCombos, getFullMenu, getPublicMenu } from "@/lib/store/menu";
 import { getOrderSettings } from "@/lib/store/order-settings";
 import { bust, menuTag, storeTag } from "@/lib/store/cache";
 import { getStore } from "@/lib/store/data";
@@ -64,6 +68,32 @@ async function requireCategory(storeId: string, categoryId: string) {
   if (!owner) throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown category." });
 }
 
+// Every part of a combo must be one of this store's live items, and a variant
+// must belong to its item.
+async function requireComboParts(storeId: string, parts: ComboInput["items"]) {
+  const ids = [...new Set(parts.map((p) => p.menuItemId))];
+  const [items, variants] = await Promise.all([
+    db
+      .select({ id: menuItems.id })
+      .from(menuItems)
+      .where(and(inArray(menuItems.id, ids), ownItems(storeId), isNull(menuItems.deletedAt))),
+    db
+      .select({ id: menuItemVariants.id, itemId: menuItemVariants.itemId })
+      .from(menuItemVariants)
+      .where(inArray(menuItemVariants.itemId, ids)),
+  ]);
+  const own = new Set(items.map((i) => i.id));
+  const ok = parts.every(
+    (p) =>
+      own.has(p.menuItemId) &&
+      (!p.variantId || variants.some((v) => v.id === p.variantId && v.itemId === p.menuItemId)),
+  );
+  if (!ok) throw new TRPCError({ code: "BAD_REQUEST", message: "Something in this combo is no longer on the menu." });
+}
+
+const comboRows = (comboId: string, parts: ComboInput["items"]) =>
+  parts.map((p, i) => ({ ...p, comboId, position: i + 1 }));
+
 // One modal edits both the look (store row) and the ordering config
 // (order_settings row), so the mutation takes both shapes in one object.
 const menuSettingsForm = z
@@ -81,6 +111,8 @@ const menuSettingsForm = z
 
 export const menuRouter = router({
   full: protectedProcedure.query(() => getFullMenu()),
+
+  combos: protectedProcedure.query(() => getCombos()),
 
   // Ordering config for the admin modal (own table, lazily created).
   orderSettings: protectedProcedure.query(() => getOrderSettings()),
@@ -343,11 +375,24 @@ export const menuRouter = router({
             .returning({ id: menuItems.id });
           if (!hit) throw new TRPCError({ code: "NOT_FOUND", message: "Unknown item." });
           // Replace variants wholesale — simplest correct sync for a small list.
-          await tx.delete(menuItemVariants).where(eq(menuItemVariants.itemId, id));
-          if (variants.length) {
-            await tx
-              .insert(menuItemVariants)
-              .values(variants.map((v, i) => ({ ...v, itemId: id, position: i + 1 })));
+          // Combos point at variant ids: move them to the same-named new row
+          // before the old ones go, or the cascade would drop them from combos.
+          const old = await tx
+            .select({ id: menuItemVariants.id, name: menuItemVariants.name })
+            .from(menuItemVariants)
+            .where(eq(menuItemVariants.itemId, id));
+          const fresh = variants.length
+            ? await tx
+                .insert(menuItemVariants)
+                .values(variants.map((v, i) => ({ ...v, itemId: id, position: i + 1 })))
+                .returning({ id: menuItemVariants.id, name: menuItemVariants.name })
+            : [];
+          for (const o of old) {
+            const to = fresh.find((f) => f.name === o.name);
+            if (to) await tx.update(menuComboItems).set({ variantId: to.id }).where(eq(menuComboItems.variantId, o.id));
+          }
+          if (old.length) {
+            await tx.delete(menuItemVariants).where(inArray(menuItemVariants.id, old.map((o) => o.id)));
           }
         });
       } catch (e) {
@@ -403,4 +448,77 @@ export const menuRouter = router({
       bump(ctx.user.storeId);
       return { ok: true as const };
     }),
+
+  // ---- Combos -------------------------------------------------------------
+  createCombo: editorProcedure.input(comboForm).mutation(async ({ ctx, input }) => {
+    const { items, ...combo } = input;
+    try {
+      await requireComboParts(ctx.user.storeId, items);
+      await db.transaction(async (tx) => {
+        // New combos go first — the latest deal is the one you're pushing.
+        const [{ value: minPos } = { value: null }] = await tx
+          .select({ value: min(menuCombos.position) })
+          .from(menuCombos)
+          .where(and(eq(menuCombos.storeId, ctx.user.storeId), isNull(menuCombos.deletedAt)));
+        const [created] = await tx
+          .insert(menuCombos)
+          .values({ ...combo, storeId: ctx.user.storeId, position: (minPos ?? 1) - 1 })
+          .returning({ id: menuCombos.id });
+        await tx.insert(menuComboItems).values(comboRows(created.id, items));
+      });
+    } catch (e) {
+      rethrow(e);
+    }
+    bump(ctx.user.storeId);
+    return { ok: true as const };
+  }),
+
+  updateCombo: editorProcedure
+    .input(comboForm.extend({ id: z.uuid("Invalid combo.") }))
+    .mutation(async ({ ctx, input }) => {
+      const { items, id, ...combo } = input;
+      try {
+        await requireComboParts(ctx.user.storeId, items);
+        await db.transaction(async (tx) => {
+          const [hit] = await tx
+            .update(menuCombos)
+            .set({ ...combo, updatedAt: new Date() })
+            .where(and(eq(menuCombos.id, id), eq(menuCombos.storeId, ctx.user.storeId), isNull(menuCombos.deletedAt)))
+            .returning({ id: menuCombos.id });
+          if (!hit) throw new TRPCError({ code: "NOT_FOUND", message: "Unknown combo." });
+          await tx.delete(menuComboItems).where(eq(menuComboItems.comboId, id));
+          await tx.insert(menuComboItems).values(comboRows(id, items));
+        });
+      } catch (e) {
+        rethrow(e);
+      }
+      bump(ctx.user.storeId);
+      return { ok: true as const };
+    }),
+
+  toggleCombo: editorProcedure.input(idInput("Invalid combo.")).mutation(async ({ ctx, input }) => {
+    try {
+      await db
+        .update(menuCombos)
+        .set({ available: sql`NOT ${menuCombos.available}`, updatedAt: new Date() })
+        .where(and(eq(menuCombos.id, input.id), eq(menuCombos.storeId, ctx.user.storeId), isNull(menuCombos.deletedAt)));
+    } catch {
+      throw fizzled;
+    }
+    bump(ctx.user.storeId);
+    return { ok: true as const };
+  }),
+
+  deleteCombo: editorProcedure.input(idInput("Invalid combo.")).mutation(async ({ ctx, input }) => {
+    try {
+      await db
+        .update(menuCombos)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(menuCombos.id, input.id), eq(menuCombos.storeId, ctx.user.storeId)));
+    } catch {
+      throw fizzled;
+    }
+    bump(ctx.user.storeId);
+    return { ok: true as const };
+  }),
 });

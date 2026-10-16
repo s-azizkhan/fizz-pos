@@ -12,6 +12,8 @@ export type PosItem = {
   name: string;
   price: number;
   variants: PosVariant[];
+  /** Set when this tile is a combo (id = combo id): what's in it + its à-la-carte worth. */
+  combo?: { summary: string; worth: number };
 };
 
 export type PosCategory = {
@@ -27,6 +29,7 @@ export type CartLine = {
   key: string;
   menuItemId: string;
   variantId: string | null;
+  comboId: string | null;
   name: string;
   variantName: string | null;
   unitPrice: number;

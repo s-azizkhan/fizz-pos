@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth/dal";
 import { getCustomer } from "@/lib/store/customers";
 import { toLoadedOrder } from "@/lib/store/orders";
 import { getOrderSettings } from "@/lib/store/order-settings";
+import { comboSummary } from "@/lib/store/format";
 import { featureOn } from "@/lib/store/features";
 import PosTerminal from "@/components/fizz/pos/PosTerminal";
 import type { LoadedOrder, PosCategory } from "@/components/fizz/pos/types";
@@ -17,10 +18,11 @@ export default async function TillPage({
 }) {
   const api = await trpc();
   const { order: orderId } = await searchParams;
-  const [user, store, menu, order, ordering] = await Promise.all([
+  const [user, store, menu, combos, order, ordering] = await Promise.all([
     getCurrentUser(),
     api.store.get(),
     api.menu.full(),
+    api.menu.combos(),
     orderId ? api.orders.byId(orderId) : Promise.resolve(null),
     getOrderSettings(),
   ]);
@@ -47,6 +49,23 @@ export default async function TillPage({
         })),
     }))
     .filter((c) => c.items.length > 0);
+
+  // Combos ride as the first section, so chips, search and 1-9 just work.
+  const deals = combos.filter((c) => c.sellable);
+  if (deals.length > 0) {
+    categories.unshift({
+      id: "combos",
+      name: "Combos",
+      icon: "🎁",
+      items: deals.map((c) => ({
+        id: c.id,
+        name: c.name,
+        price: Number(c.price),
+        variants: [],
+        combo: { summary: comboSummary(c.items), worth: c.worth },
+      })),
+    });
+  }
 
   // Hydrate an existing OPEN tab into the cart when ?order= is passed and the
   // order is still editable. Paid/void orders are read-only, except for admins.

@@ -47,9 +47,14 @@ export function toLoadedOrder(o: OrderWithItems, customer: LoadedOrder["customer
       delivery: Number(o.deliveryFee),
     },
     lines: o.items.map((it) => ({
-      key: it.variantId ? `${it.menuItemId}:${it.variantId}` : it.menuItemId ?? it.id,
+      key: it.comboId
+        ? `combo:${it.comboId}`
+        : it.variantId
+          ? `${it.menuItemId}:${it.variantId}`
+          : (it.menuItemId ?? it.id),
       menuItemId: it.menuItemId ?? "",
       variantId: it.variantId,
+      comboId: it.comboId,
       name: it.name,
       variantName: it.variantName,
       unitPrice: Number(it.unitPrice),

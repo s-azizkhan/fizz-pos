@@ -2,7 +2,8 @@
 // number, fees, tax and the guest's details all land in what gets sent. Run:
 //   npx tsx scripts/order-message.check.mts
 import assert from "node:assert/strict";
-import { orderMessage, contrastOn } from "../components/fizz/menu/PublicOrder";
+import { orderMessage } from "../components/fizz/menu/PublicOrder";
+import { contrastOn } from "../lib/store/format";
 
 const lines = [
   { name: "Flat White", quantity: 2, amount: 9 },

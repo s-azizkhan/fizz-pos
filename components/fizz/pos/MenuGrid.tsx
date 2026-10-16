@@ -57,6 +57,18 @@ export default function MenuGrid({
           )}
           {s.items.length === 0 ? (
             <p className="text-sm text-steam">Nothing on this tab yet.</p>
+          ) : s.id === "combos" ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {s.items.map((it, i) => (
+                <ComboCard
+                  key={it.id}
+                  item={it}
+                  hint={s.id === activeId && i < 9 ? i + 1 : null}
+                  onAdd={onAdd}
+                  money={money}
+                />
+              ))}
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
               {s.items.map((it, i) => {
@@ -68,6 +80,10 @@ export default function MenuGrid({
                       )
                     : it.price;
                 const hint = (!s.name || s.id === activeId) && i < 9;
+                if (it.combo) {
+                  // A combo matched by search: same card as the pinned row.
+                  return <ComboCard key={it.id} item={it} hint={hint ? i + 1 : null} onAdd={onAdd} money={money} />;
+                }
                 return (
                   <button
                     key={it.id}
@@ -93,5 +109,55 @@ export default function MenuGrid({
         </section>
       ))}
     </div>
+  );
+}
+
+// A combo tile: what's in it, the deal price, and what it saves against buying
+// the parts one by one — the number the cashier upsells with.
+function ComboCard({
+  item,
+  hint,
+  onAdd,
+  money,
+}: {
+  item: PosItem;
+  hint: number | null;
+  onAdd: (item: PosItem) => void;
+  money: (n: number) => string;
+}) {
+  const worth = item.combo?.worth ?? 0;
+  const save = Math.round((worth - item.price) * 100) / 100;
+  return (
+    <button
+      onClick={() => onAdd(item)}
+      className="group relative flex min-h-28 flex-col justify-between gap-3 rounded-fizz border border-fizz/40 bg-ink-soft p-4 text-left transition-all hover:-translate-y-0.5 hover:border-fizz focus:border-fizz focus:outline-none focus:ring-2 focus:ring-fizz/40"
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-fizz">
+            <span aria-hidden className="text-bubble">●</span> Combo
+          </span>
+          <span className="mt-1 line-clamp-1 font-display text-lg font-bold tracking-tight text-cream">
+            {item.name}
+          </span>
+        </span>
+        {save > 0 ? (
+          <span className="shrink-0 rounded-full bg-fizz px-2.5 py-1 font-display text-xs font-bold text-ink">
+            Save {money(save)}
+          </span>
+        ) : (
+          hint && (
+            <span className="shrink-0 rounded-md border border-ink-line px-1.5 py-0.5 font-display text-[10px] text-steam group-hover:border-fizz group-hover:text-fizz">
+              {hint}
+            </span>
+          )
+        )}
+      </span>
+      <span className="line-clamp-2 text-sm text-steam">{item.combo?.summary}</span>
+      <span className="flex items-baseline gap-2">
+        <span className="font-display text-xl font-bold text-fizz">{money(item.price)}</span>
+        {save > 0 && <span className="text-sm text-steam line-through">{money(worth)}</span>}
+      </span>
+    </button>
   );
 }

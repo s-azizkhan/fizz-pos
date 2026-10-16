@@ -18,8 +18,9 @@ export default async function MenuPage() {
   const store = await api.store.get();
   // Inventory off = no recipes; skip the reads (the recipe router refuses).
   const inventory = featureOn(store.disabledFeatures, "inventory");
-  const [categories, orderSettings, ingredients, recipes, hdrs] = await Promise.all([
+  const [categories, combos, orderSettings, ingredients, recipes, hdrs] = await Promise.all([
     api.menu.full(),
+    api.menu.combos(),
     api.menu.orderSettings(),
     inventory ? api.recipe.ingredients() : [],
     inventory ? api.recipe.byMenuItem() : {},
@@ -34,6 +35,7 @@ export default async function MenuPage() {
     <MenuPageClient
       store={store}
       categories={categories}
+      combos={combos}
       orderSettings={orderSettings}
       ingredients={ingredients}
       recipes={recipes}

@@ -1,10 +1,10 @@
 import { menuPath } from "@/lib/store/menu-path";
-import { formatMoney } from "@/lib/store/format";
-import type { PublicMenu } from "@/lib/store/menu";
+import { comboSummary, contrastOn, formatMoney } from "@/lib/store/format";
 import { MenuCategoryIconGlyph } from "@/components/fizz/menu/category-icons";
 import { AddToCart, FloatingCart } from "@/components/fizz/menu/PublicOrder";
 import MenuSearch from "@/components/fizz/menu/MenuSearch";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
+import type { ComboView, PublicMenu } from "@/lib/store/menu";
 
 // Base font-size per scale; the rest of the layout uses em so it scales with it.
 const SCALE_PX: Record<string, number> = { sm: 15, md: 17, lg: 19 };
@@ -22,7 +22,7 @@ export default function PublicMenuView({
   viewOnly?: string;
   table: string | null;
 }) {
-  const { store, categories, ordering: cfg } = menu;
+  const { store, categories, combos, ordering: cfg } = menu;
   const theme = getMenuTheme(store.menuTheme);
   // The store's own accent wins; the theme only suggests one at pick time.
   const accent = store.menuAccent || theme.accent;
@@ -97,7 +97,10 @@ export default function PublicMenuView({
         {categories.length > 0 && (
           <MenuSearch
             storeName={store.name}
-            categories={categories.map((c) => ({ id: c.id, name: c.name, icon: c.icon }))}
+            categories={[
+              ...(combos.length > 0 ? [{ id: "combos", name: "Combos", icon: "🎁" }] : []),
+              ...categories.map((c) => ({ id: c.id, name: c.name, icon: c.icon })),
+            ]}
             whatsapp={cfg?.whatsapp}
             phone={store.phone}
             accent={accent}
@@ -109,6 +112,15 @@ export default function PublicMenuView({
           <p className="mt-16 text-center text-[var(--m-muted)]">This menu is being plated. Check back soon.</p>
         ) : (
           <div className="mt-8 flex flex-col gap-10">
+            {combos.length > 0 && (
+              <ComboSection
+                combos={combos}
+                currency={store.currency}
+                accent={accent}
+                display={theme.display}
+                ordering={ordering}
+              />
+            )}
             {categories.map((cat) => (
               <section key={cat.id} data-cat={cat.id} className="scroll-mt-32">
                 <div className="flex items-baseline gap-3">
@@ -243,5 +255,99 @@ export default function PublicMenuView({
         />
       )}
     </main>
+  );
+}
+
+// Combos pinned above the menu: a swipeable row of deal cards on phones, a
+// grid from tablet up. Each card leads with the saving — the reason to tap.
+function ComboSection({
+  combos,
+  currency,
+  accent,
+  display,
+  ordering,
+}: {
+  combos: ComboView[];
+  currency: string;
+  accent: string;
+  display: string;
+  ordering: boolean;
+}) {
+  return (
+    <section data-cat="combos" className="scroll-mt-32">
+      <div className="flex items-baseline gap-3">
+        <span aria-hidden className="self-center" style={{ color: accent }}>🎁</span>
+        <h2 className="text-[1.35em] font-bold tracking-tight" style={{ fontFamily: display }}>
+          Combos
+        </h2>
+        <span className="text-[0.8em] text-[var(--m-muted)]">More for less</span>
+      </div>
+      <div className="-mx-6 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0">
+        {combos.map((c) => {
+          const price = Number(c.price);
+          const save = Math.round((c.worth - price) * 100) / 100;
+          const pct = c.worth > 0 ? Math.round((save / c.worth) * 100) : 0;
+          return (
+            <article
+              key={c.id}
+              data-q={["combo", c.name, c.description, ...c.items.map((p) => p.name)]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()}
+              className={`relative flex shrink-0 snap-start flex-col rounded-[18px] border-2 bg-[var(--m-surface)] p-5 ${
+                combos.length > 1 ? "w-[82%] sm:w-auto" : "w-full"
+              }`}
+              style={{ borderColor: accent }}
+            >
+              {save > 0 && (
+                <span
+                  className="absolute -top-3 right-4 rounded-full px-3 py-1 text-[0.7em] font-bold uppercase tracking-[0.12em]"
+                  style={{ backgroundColor: accent, color: contrastOn(accent) }}
+                >
+                  Save {pct >= 5 ? `${pct}%` : formatMoney(save, currency)}
+                </span>
+              )}
+              <h3 className="pr-16 text-[1.15em] font-bold leading-tight" style={{ fontFamily: display }}>
+                {c.name}
+              </h3>
+              {c.description && <p className="mt-1 text-[0.85em] text-[var(--m-muted)]">{c.description}</p>}
+              <ul className="mt-3 flex flex-col gap-1 text-[0.9em]">
+                {c.items.map((p) => (
+                  <li key={`${p.menuItemId}:${p.variantId}`} className="flex items-center gap-2">
+                    <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+                    <span className="min-w-0 truncate">
+                      {comboSummary([p])}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+                <span className="flex items-baseline gap-2">
+                  <span className="text-[1.3em] font-bold" style={{ color: accent, fontFamily: display }}>
+                    {formatMoney(price, currency)}
+                  </span>
+                  {save > 0 && (
+                    <span className="text-[0.85em] text-[var(--m-muted)] line-through">
+                      {formatMoney(c.worth, currency)}
+                    </span>
+                  )}
+                </span>
+                {ordering && (
+                  <AddToCart
+                    itemKey={`combo:${c.id}`}
+                    itemId={c.id}
+                    variantId={null}
+                    combo
+                    name={c.name}
+                    price={price}
+                    accent={accent}
+                  />
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
