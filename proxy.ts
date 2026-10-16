@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { RESERVED_SLUGS } from "@/lib/store/menu-path";
 
 const SESSION_COOKIE = "fizz_session";
 
@@ -46,6 +47,18 @@ export async function proxy(req: NextRequest) {
     const url = req.nextUrl.clone();
     url.pathname = `/m/~${path === "/" ? "" : path}`;
     return NextResponse.rewrite(url);
+  }
+  // <slug>.ourdomain → that café's public menu. Real slugs only: www/app/etc.
+  // fall through to the main site.
+  const primary = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/^https?:\/\//, "").split("/")[0].split(":")[0];
+  const bare = host.split(":")[0];
+  if (primary && bare.endsWith(`.${primary}`)) {
+    const sub = bare.slice(0, -primary.length - 1);
+    if (!sub.includes(".") && !RESERVED_SLUGS.includes(sub) && !path.startsWith("/m/")) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/m/${sub}${path === "/" ? "" : path}`;
+      return NextResponse.rewrite(url);
+    }
   }
   const isProtected = path.startsWith("/dashboard") || path === "/onboarding";
   const isAuthPage = path === "/login" || path === "/signup";

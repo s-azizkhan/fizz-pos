@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { trpc } from "@/lib/trpc/server";
 import type { PublicMenu } from "@/lib/store/menu";
 import { formatMoney } from "@/lib/store/format";
-import { DOMAIN_SLUG, menuPath } from "@/lib/store/menu-path";
+import { DOMAIN_SLUG, menuPath, menuUrl } from "@/lib/store/menu-path";
 import type { Store } from "@/lib/db/schema";
 
 // Shared by /m/[slug], /m/[slug]/menu and /m/[slug]/games.
@@ -31,7 +31,7 @@ export async function siteOrigin(): Promise<string> {
 // else our /m/<slug>. Used for canonical, OG and JSON-LD URLs.
 export async function publicUrl(store: Store, slug: string, sub: "" | "/menu" | "/games" = ""): Promise<string> {
   if (store.menuDomain) return `https://${store.menuDomain}${menuPath(DOMAIN_SLUG, sub)}`;
-  return `${await siteOrigin()}${menuPath(slug, sub)}`;
+  return `${menuUrl(await siteOrigin(), slug)}${sub}`;
 }
 
 // One-line pitch for <meta description> and OG: tagline, then what's on the

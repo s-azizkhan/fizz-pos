@@ -8,6 +8,7 @@ import { MENU_FONT_SCALES } from "./constants";
 import { FEATURE_KEYS } from "@/lib/store/features";
 import { welcomeConfig, type WelcomeConfig } from "@/lib/store/welcome";
 import { IMG_PATH } from "./image";
+import { RESERVED_SLUGS } from "@/lib/store/menu-path";
 
 // Single store = single store row (id = 1). Holds profile + invoice/hours config.
 export const store = pgTable("store", {
@@ -214,7 +215,8 @@ export const menuAppearanceShape = {
     .toLowerCase()
     .min(2, "At least 2 characters")
     .max(48)
-    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, and dashes only"),
+    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, and dashes only")
+    .refine((v) => !RESERVED_SLUGS.includes(v), "That name is reserved"),
   // Hostname only; "https://" and paths pasted in are stripped first.
   menuDomain: z
     .string()

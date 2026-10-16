@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { menuUrl } from "@/lib/store/menu-path";
 import MenuManager from "@/components/fizz/menu/MenuManager";
 import PublicMenuModal from "@/components/fizz/menu/PublicMenuModal";
 import PublicMenuSectionsModal from "@/components/fizz/menu/PublicMenuSectionsModal";
@@ -123,7 +124,7 @@ export default function MenuPageClient({
       />
       <MenuQrModal
         storeName={store.name}
-        url={`${origin}/m/${store.menuSlug ?? ""}`}
+        url={menuUrl(origin, store.menuSlug ?? "")}
         slug={store.menuSlug ?? ""}
         published={store.menuPublished}
         isOpen={isQrOpen}

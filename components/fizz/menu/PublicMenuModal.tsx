@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { menuUrl } from "@/lib/store/menu-path";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "@/lib/store/toast";
 import { useTRPC } from "@/lib/trpc/client";
@@ -81,7 +82,7 @@ export default function PublicMenuModal({
     />
   );
 
-  const url = `${origin}/m/${slug}`;
+  const url = menuUrl(origin, slug);
 
   if (!isOpen) return null;
 
