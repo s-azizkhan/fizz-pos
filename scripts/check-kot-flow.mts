@@ -25,7 +25,7 @@ async function query(path: string, input: unknown, cookie = "") {
 }
 
 const login = await call("auth.login", {
-  email: process.env.ADMIN_EMAIL || "admin@fizz.local",
+  identifier: process.env.ADMIN_EMAIL || "admin@fizz.local",
   password: process.env.ADMIN_PASSWORD || "fizz1234",
 });
 assert.ok(login.ok, `admin login failed: ${login.error?.json?.message}`);
