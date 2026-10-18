@@ -111,7 +111,7 @@ export default function PublicMenuView({
         {categories.length === 0 ? (
           <p className="mt-16 text-center text-[var(--m-muted)]">This menu is being plated. Check back soon.</p>
         ) : (
-          <div className="mt-8 flex flex-col gap-10">
+          <div className="mt-8 flex flex-col gap-6">
             {combos.length > 0 && (
               <ComboSection
                 combos={combos}
@@ -122,8 +122,10 @@ export default function PublicMenuView({
               />
             )}
             {categories.map((cat) => (
-              <section key={cat.id} data-cat={cat.id} className="scroll-mt-32">
-                <div className="flex items-baseline gap-3">
+              // Folded by default so the guest sees every category at a glance;
+              // MenuSearch opens sections on search / chip tap.
+              <details key={cat.id} data-cat={cat.id} className="group scroll-mt-32">
+                <summary className="flex cursor-pointer list-none items-baseline gap-3 [&::-webkit-details-marker]:hidden">
                   <span className="self-center" style={{ color: accent }}>
                     <MenuCategoryIconGlyph name={cat.icon} />
                   </span>
@@ -134,7 +136,10 @@ export default function PublicMenuView({
                     {cat.name}
                   </h2>
                   <span className="text-[0.8em] text-[var(--m-muted)]">{cat.items.length}</span>
-                </div>
+                  <svg viewBox="0 0 24 24" aria-hidden className="ml-auto h-5 w-5 self-center text-[var(--m-muted)] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </summary>
                 <div className="mt-3 flex flex-col divide-y divide-[var(--m-line)]">
                   {cat.items.map((item) => (
                     <div
@@ -213,7 +218,7 @@ export default function PublicMenuView({
                     </div>
                   ))}
                 </div>
-              </section>
+              </details>
             ))}
           </div>
         )}

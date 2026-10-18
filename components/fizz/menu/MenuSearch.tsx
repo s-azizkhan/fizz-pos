@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 // Sticky menu toolbar: search, veg / non-veg filter, category chips that
 // scroll-spy and jump. Filters the server-rendered menu in place: items carry
 // `data-q` (lowercased searchable text) + `data-diet`, sections carry
-// `data-cat={id}`. Toggling `hidden` on the DOM beats lifting the whole menu
+// `data-cat={id}` (category sections are folded <details>). Toggling `hidden` on the DOM beats lifting the whole menu
 // into a client component for a toolbar.
 type Diet = "all" | "veg" | "nonveg";
 
@@ -44,6 +44,8 @@ export default function MenuSearch({
         if (show) hits++;
       });
       cat.hidden = hits === 0;
+      // Categories are folded <details>: filtering unfolds the hits, clearing folds back.
+      if (cat instanceof HTMLDetailsElement) cat.open = (!!needle || d !== "all") && hits > 0;
       if (hits) any = true;
     });
     setNone(!any);
@@ -73,6 +75,7 @@ export default function MenuSearch({
     if (q || diet !== "all") apply("", "all");
     const el = document.querySelector<HTMLElement>(`[data-cat="${id}"]`);
     if (!el) return;
+    if (el instanceof HTMLDetailsElement) el.open = true;
     const y = el.getBoundingClientRect().top + window.scrollY - 128;
     window.scrollTo({ top: y, behavior: "smooth" });
   };
