@@ -287,7 +287,7 @@ function ComboSection({
         </h2>
         <span className="text-[0.8em] text-[var(--m-muted)]">More for less</span>
       </div>
-      <div className="-mx-6 mt-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0">
+      <div className="-mx-6 mt-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pt-3 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0">
         {combos.map((c) => {
           const price = Number(c.price);
           const save = Math.round((c.worth - price) * 100) / 100;
