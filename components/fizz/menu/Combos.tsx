@@ -236,7 +236,8 @@ function ComboBuilder({
   // Tapping an item again bumps its quantity instead of a duplicate row.
   function pick(itemId: string) {
     const it = items.get(itemId)!;
-    const variantId = it.variants[0]?.id ?? null;
+    // Base item (variant = null) first when it has its own price, like the POS picker.
+    const variantId = Number(it.price) > 0 ? null : (it.variants[0]?.id ?? null);
     setParts((ps) =>
       ps.some((p) => p.menuItemId === itemId && p.variantId === variantId)
         ? ps.map((p) => (p.menuItemId === itemId && p.variantId === variantId ? { ...p, quantity: Math.min(20, p.quantity + 1) } : p))
@@ -367,9 +368,10 @@ function ComboBuilder({
                         {it && it.variants.length > 0 && (
                           <select
                             value={p.variantId ?? ""}
-                            onChange={(e) => patch(i, { variantId: e.target.value })}
+                            onChange={(e) => patch(i, { variantId: e.target.value || null })}
                             className="rounded-fizz border border-ink-line bg-ink-soft px-3 py-1.5 text-sm text-cream outline-none focus:border-fizz"
                           >
+                            {Number(it.price) > 0 && <option value="">Regular · {money(it.price)}</option>}
                             {it.variants.map((v) => (
                               <option key={v.id} value={v.id}>
                                 {v.name} · {money(v.price)}
