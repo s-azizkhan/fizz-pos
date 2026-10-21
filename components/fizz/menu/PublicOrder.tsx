@@ -381,10 +381,12 @@ export function FloatingCart({
     });
   }, [setPlaced]);
 
-  // Prefill name/phone from the last order on this device.
+  // Prefill name/phone from the last order on this device. Runs after mount:
+  // reading localStorage during render would break SSR hydration.
   useEffect(() => {
     try {
       const c = JSON.parse(localStorage.getItem("fizz-customer") ?? "{}");
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (typeof c.name === "string") setName(c.name);
       if (typeof c.phone === "string") setPhone(c.phone);
       setKnown(typeof c.phone === "string" && guestPhone.safeParse(c.phone).success);
