@@ -8,6 +8,7 @@ import {
   kitchenMoveSchema,
   kitchenStatus,
   saveOrderSchema,
+  guestAddress,
   webOrderSchema,
   type WebOrderInput,
   normalisePhone,
@@ -189,7 +190,7 @@ export const ordersRouter = router({
       throw new TRPCError({ code: "FORBIDDEN", message: "Online ordering is off right now." });
     }
     const type = WEB_TYPE[input.mode];
-    if (type === "delivery" && input.address.length < 8) {
+    if (type === "delivery" && !guestAddress.safeParse(input.address).success) {
       throw new TRPCError({ code: "BAD_REQUEST", message: "Add a delivery address." });
     }
 
@@ -276,7 +277,7 @@ export const ordersRouter = router({
             type,
             reference,
             customerId: await resolveCustomer(tx, sid, {
-              customerName: input.name,
+              customerName: input.name || null,
               customerPhone: input.phone,
             }),
             ...moneyColumns(totals),

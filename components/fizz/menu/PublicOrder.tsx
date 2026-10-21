@@ -9,6 +9,8 @@ import { contrastOn, formatMoney, upiPayLink } from "@/lib/store/format";
 import UpiQr from "@/components/fizz/UpiQr";
 import { useTRPC } from "@/lib/trpc/client";
 import { isNetworkError } from "@/lib/store/outbox";
+import { guestAddress, guestName, guestPhone } from "@/lib/db/schema/order";
+import type { z } from "zod";
 
 // Cart for the public menu. Module-level zustand store so the per-item add
 // buttons (rendered inside the server page) and the floating cart share state
@@ -145,7 +147,8 @@ export function orderMessage({
     "*MY DETAILS:*",
   );
   if (address.trim()) out.push(`*Address:* ${address.trim()}`);
-  out.push(`*Name:* ${name.trim()}`, `*Phone:* ${phone.trim()}`);
+  if (name.trim()) out.push(`*Name:* ${name.trim()}`);
+  out.push(`*Phone:* ${phone.trim()}`);
   if (note.trim()) out.push(`*Note:* ${note.trim()}`);
   return out.join("\n");
 }
@@ -233,6 +236,60 @@ function QtyInput({ qty, onCommit }: { qty: number; onCommit: (q: number) => voi
   );
 }
 
+const FIELD =
+  "w-full resize-none rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] py-3.5 pl-11 pr-4 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)] aria-invalid:border-[#E2655A]";
+
+// First zod message for a value, or null when it passes.
+const issue = (schema: z.ZodType, v: string) => schema.safeParse(v).error?.issues[0]?.message ?? null;
+
+const FIELD_ICONS = {
+  user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+  phone: (
+    <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+  ),
+  pin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" /></>,
+  note: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>,
+};
+
+// Label notched into the top border, icon inside the box. The label's fill
+// matches the sheet so it cuts the border line.
+function Field({
+  label,
+  icon,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string | null;
+  icon: keyof typeof FIELD_ICONS;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="relative block">
+      <span className="absolute -top-2.5 left-3 z-10 bg-[var(--m-surface)] px-1.5 text-[0.8em] font-semibold leading-5 text-[var(--m-text)]">
+        {label}
+        {required && <span aria-hidden className="ml-0.5 text-[#E2655A]">*</span>}
+      </span>
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden
+        className="pointer-events-none absolute left-4 top-[1.05rem] h-5 w-5 text-[color:var(--m-accent)]"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {FIELD_ICONS[icon]}
+      </svg>
+      {children}
+      {error && <span role="alert" className="mt-1.5 block pl-1 text-[0.8em] text-[#E2655A]">{error}</span>}
+    </label>
+  );
+}
+
 // ---- Floating cart pill + order sheet -------------------------------------
 export function FloatingCart({
   slug,
@@ -277,6 +334,8 @@ export function FloatingCart({
   const clientId = useRef<string | null>(null);
   const [note, setNote] = useState("");
   const [address, setAddress] = useState("");
+  const [touched, setTouched] = useState<Partial<Record<"phone" | "name" | "address", boolean>>>({});
+  const touch = (k: "phone" | "name" | "address") => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
   // Confetti burst on the send tap, keyed so every tap is a fresh burst.
   const [burst, setBurst] = useState(0);
   // Only for the no-signal fallback, where no order exists to track.
@@ -297,14 +356,15 @@ export function FloatingCart({
   const packaging = mode === "Dine-in" ? 0 : packagingFee * n;
   const due = total(lines) + packaging + fee;
   // The store needs to know who and how to reach them; delivery needs where.
-  const missing =
-    !name.trim()
-      ? "Add your name"
-      : phone.replace(/\D/g, "").length < 8
-        ? "Add your phone number"
-        : isDelivery && address.trim().length < 8
-          ? "Add a delivery address"
-          : null;
+  const errors = {
+    phone: issue(guestPhone, phone),
+    name: issue(guestName, name),
+    address: isDelivery ? issue(guestAddress, address) : null,
+  };
+  // Inline errors wait for the guest to leave the field; the button always
+  // names the first problem.
+  const shown = (k: keyof typeof errors) => (touched[k] ? errors[k] : null);
+  const missing = errors.address ?? errors.phone ?? errors.name;
   const blocked = !!missing || place.isPending;
 
   // Bring back the saved cart / order after mount; drop an order from yesterday.
@@ -321,7 +381,7 @@ export function FloatingCart({
       const c = JSON.parse(localStorage.getItem("fizz-customer") ?? "{}");
       if (typeof c.name === "string") setName(c.name);
       if (typeof c.phone === "string") setPhone(c.phone);
-      setKnown(!!c.name?.trim() && String(c.phone ?? "").replace(/\D/g, "").length >= 8);
+      setKnown(typeof c.phone === "string" && guestPhone.safeParse(c.phone).success);
     } catch {}
   }, []);
 
@@ -571,23 +631,32 @@ export function FloatingCart({
                 ))}
               </div>
 
-              <div className="mt-4 grid gap-3">
+              <div className="mt-6 grid gap-5">
                 {isDelivery && (
-                  <textarea
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Delivery address — house, street, landmark"
-                    aria-label="Delivery address"
-                    rows={2}
-                    maxLength={300}
-                    required
-                    className="resize-none rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
-                  />
+                  <Field label="Delivery address" icon="pin" required error={shown("address")}>
+                    <textarea
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      onBlur={() => touch("address")}
+                      aria-invalid={!!shown("address")}
+                      placeholder="House, street, landmark"
+                      rows={2}
+                      maxLength={300}
+                      required
+                      className={FIELD}
+                    />
+                  </Field>
                 )}
                 {known ? (
                   <div className="flex items-center justify-between gap-3 rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em]">
                     <span className="min-w-0 truncate text-[var(--m-text)]">
-                      {name} · <span className="text-[var(--m-muted)]">{phone}</span>
+                      {name.trim() ? (
+                        <>
+                          {name} · <span className="text-[var(--m-muted)]">{phone}</span>
+                        </>
+                      ) : (
+                        phone
+                      )}
                     </span>
                     <button
                       type="button"
@@ -599,39 +668,45 @@ export function FloatingCart({
                   </div>
                 ) : (
                   <>
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name"
-                    aria-label="Your name"
-                    autoComplete="name"
-                    maxLength={60}
-                    required
-                    className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
-                  />
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\- ]/g, ""))}
-                    placeholder="Phone number"
-                    aria-label="Phone number"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    maxLength={20}
-                    required
-                    className="rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
-                  />
+                  <Field label="Phone number" icon="phone" required error={shown("phone")}>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9+\- ]/g, ""))}
+                      onBlur={() => touch("phone")}
+                      aria-invalid={!!shown("phone")}
+                      placeholder="Enter your phone number"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      maxLength={20}
+                      required
+                      className={FIELD}
+                    />
+                  </Field>
+                  <Field label="Name" icon="user" error={shown("name")}>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      onBlur={() => touch("name")}
+                      aria-invalid={!!shown("name")}
+                      placeholder="Optional"
+                      autoComplete="name"
+                      maxLength={60}
+                      className={FIELD}
+                    />
+                  </Field>
                   </>
                 )}
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Anything else? Table number, less sugar…"
-                  aria-label="Order note"
-                  rows={2}
-                  maxLength={300}
-                  className="resize-none rounded-[var(--m-radius)] border border-[var(--m-line)] bg-[var(--m-bg)] px-4 py-3 text-[0.95em] text-[var(--m-text)] outline-none placeholder:text-[var(--m-muted)] focus:border-[color:var(--m-accent)]"
-                />
+                <Field label="Note" icon="note">
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Anything else? Table number, less sugar…"
+                    rows={2}
+                    maxLength={300}
+                    className={FIELD}
+                  />
+                </Field>
               </div>
             </div>
 

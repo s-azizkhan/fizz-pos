@@ -10,6 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { z } from "zod";
+import { canonicalPhone } from "./user";
 import { users } from "./user";
 import { store } from "./store";
 import { customers } from "./customer";
@@ -223,20 +224,36 @@ export const saveOrderSchema = z.object({
 export type SaveOrderInput = z.infer<typeof saveOrderSchema>;
 
 // A guest's order from the public menu. Prices are NOT accepted — the server
-// looks every line up on the live menu. Name + phone are required so the store
-// can call back; the caps keep a prank cart from burying the Orders page.
+// looks every line up on the live menu. Phone is required so the store can
+// call back (name is optional); the caps keep a prank cart from burying the Orders page.
 export const WEB_ORDER_MODES = ["Dine-in", "Takeaway", "Delivery"] as const;
+// Guest contact fields, shared with the order sheet so both sides agree.
+// Phone: a bare 10-digit number is Indian and must be a mobile (6–9);
+// anything else brings its own country code.
+export const guestPhone = z
+  .string()
+  .trim()
+  .min(1, "Add your phone number")
+  .max(20, "That number is too long")
+  .refine((v) => {
+    const p = canonicalPhone(v);
+    return !!p && (!/^91\d{10}$/.test(p) || /^91[6-9]/.test(p));
+  }, "Enter a valid mobile number");
+// Optional, but if given it should look like a name, not a phone or emoji.
+export const guestName = z
+  .string()
+  .trim()
+  .max(60, "Keep your name under 60 characters")
+  .refine((v) => !v || /^[\p{L}\p{M} .'-]+$/u.test(v), "Use letters only")
+  .refine((v) => !v || (v.match(/\p{L}/gu)?.length ?? 0) >= 2, "Name is too short");
+export const guestAddress = z.string().trim().min(4, "Add a full address — house, street, landmark").max(300);
 export const webOrderSchema = z.object({
   slug: z.string().min(1).max(80),
   // Idempotency: a double tap or a retried request is one order.
   clientId: z.uuid(),
   mode: z.enum(WEB_ORDER_MODES),
-  name: z.string().trim().min(1, "Add your name").max(60),
-  phone: z
-    .string()
-    .trim()
-    .max(20)
-    .refine((v) => v.replace(/\D/g, "").length >= 8, "Add a phone number we can call"),
+  name: guestName.optional().default(""),
+  phone: guestPhone,
   address: z.string().trim().max(300).optional().default(""),
   note: z.string().trim().max(300).optional().default(""),
   items: z
