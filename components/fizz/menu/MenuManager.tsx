@@ -16,7 +16,7 @@ import type {
 import type { RecipeIngredient } from "@/lib/store/recipe";
 import type { RecipeComponent } from "@/lib/db/schema";
 import NumberInput from "@/components/fizz/ui/NumberInput";
-import { BoxIcon, CheckIcon, CloseIcon, EyeIcon, EyeOffIcon, GripIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
+import { BoxIcon, CheckIcon, CloseIcon, EyeIcon, EyeOffIcon, ChevronIcon, GripIcon, PencilIcon, PlusIcon, TrashIcon } from "@/components/fizz/dashboard/icons";
 
 const inputCls =
   "w-full rounded-fizz border border-ink-line bg-ink-soft px-4 py-3 text-cream outline-none placeholder:text-steam focus:border-fizz focus:ring-2 focus:ring-fizz/40";
@@ -346,6 +346,9 @@ function CategoryCard({
   const [name, setName] = useState(category.name);
   const [icon, setIcon] = useState(category.icon);
   const [adding, setAdding] = useState(false);
+  // Folded by default so long menus scan as a list of categories.
+  const [open, setOpen] = useState(false);
+  const folded = collapsed || !open;
   const trpc = useTRPC();
   const update = useMutation(
     // Error renders inline below; silence the duplicate global toast.
@@ -391,9 +394,17 @@ function CategoryCard({
           {editing ? (
             <input value={name} onChange={(e) => setName(e.target.value)} className={`${inputCls} min-w-0 sm:max-w-[220px]`} />
           ) : (
-            <h3 className="min-w-0 font-display text-lg font-bold tracking-tight sm:text-xl">{category.name}</h3>
+            <button
+              type="button"
+              onClick={() => setOpen((o) => !o)}
+              aria-expanded={open}
+              className="flex min-w-0 items-center gap-2 text-left transition-colors hover:text-fizz"
+            >
+              <h3 className="min-w-0 font-display text-lg font-bold tracking-tight sm:text-xl">{category.name}</h3>
+              <span className="shrink-0 text-sm text-steam">({category.items.length})</span>
+              <ChevronIcon className={`h-4 w-4 shrink-0 text-steam transition-transform ${open ? "-rotate-90" : "rotate-180"}`} />
+            </button>
           )}
-          <span className="shrink-0 text-sm text-steam">({category.items.length})</span>
         </div>
         <div className="flex items-center gap-3">
           {editing ? (
@@ -403,7 +414,7 @@ function CategoryCard({
             </>
           ) : (
             <>
-              <button type="button" onClick={() => setEditing(true)} className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-1.5 text-sm font-semibold sm:px-4 sm:py-2 text-cream transition-colors hover:border-fizz hover:text-fizz" aria-label="Edit category"><PencilIcon className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Edit</span></button>
+              <button type="button" onClick={() => { setEditing(true); setOpen(true); }} className="inline-flex items-center justify-center gap-2 rounded-fizz border border-ink-line px-3 py-1.5 text-sm font-semibold sm:px-4 sm:py-2 text-cream transition-colors hover:border-fizz hover:text-fizz" aria-label="Edit category"><PencilIcon className="h-4 w-4 shrink-0" /><span className="hidden sm:inline">Edit</span></button>
               <button
                 type="button"
                 onClick={() => del.mutate({ id: category.id })}
@@ -419,7 +430,7 @@ function CategoryCard({
         </div>
       </div>
 
-      {editing && !collapsed && (
+      {editing && !folded && (
         <div className="mt-4 flex flex-col gap-2">
           <IconPicker value={icon} onChange={setIcon} />
           {error && <span className="text-sm text-[#E2655A]">{error}</span>}
@@ -427,7 +438,7 @@ function CategoryCard({
       )}
 
       {/* Collapsed while any category is dragged, so tall cards are easy to move. */}
-      {!collapsed && (
+      {!folded && (
       <div className="mt-4 flex flex-col gap-3 sm:mt-5">
         {shownItems.map((it) => (
           <div
