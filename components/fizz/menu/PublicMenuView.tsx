@@ -2,6 +2,7 @@ import { menuPath } from "@/lib/store/menu-path";
 import { comboSummary, contrastOn, formatMoney } from "@/lib/store/format";
 import { MenuCategoryIconGlyph } from "@/components/fizz/menu/category-icons";
 import { AddToCart, FloatingCart } from "@/components/fizz/menu/PublicOrder";
+import ComboRail from "@/components/fizz/menu/ComboRail";
 import MenuSearch from "@/components/fizz/menu/MenuSearch";
 import { getMenuTheme, themeVars } from "@/lib/store/menu-themes";
 import type { ComboView, PublicMenu } from "@/lib/store/menu";
@@ -263,8 +264,15 @@ export default function PublicMenuView({
   );
 }
 
-// Combos pinned above the menu: a swipeable row of deal cards on phones, a
-// grid from tablet up. Each card leads with the saving — the reason to tap.
+// Scalloped left/right edges: round 5px bites every 14px, like a torn-off
+// ticket. One radial bite per tile, tiled down each half of the box.
+const TICKET_MASK =
+  "radial-gradient(circle 5px at left, #0000 96%, #000) left/51% 14px repeat-y," +
+  "radial-gradient(circle 5px at right, #0000 96%, #000) right/51% 14px repeat-y";
+
+// Combos pinned above the menu: a row of ticket cards that drifts on a loop
+// (ComboRail) and can be dragged. Copy reads like the counter talking ("X, Y &
+// Z — yours for ₹N"); a faded coupon glyph sits behind the card.
 function ComboSection({
   combos,
   currency,
@@ -285,54 +293,69 @@ function ComboSection({
         <h2 className="text-[1.35em] font-bold tracking-tight" style={{ fontFamily: display }}>
           Combos
         </h2>
-        <span className="text-[0.8em] text-[var(--m-muted)]">More for less</span>
+        <span className="text-[0.8em] text-[var(--m-muted)]">Hungry? Team up and save.</span>
       </div>
-      <div className="-mx-6 mt-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pt-3 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0">
-        {combos.map((c) => {
+      <ComboRail className="-mx-6 mt-1">
+        {/* Rendered three times (clone, original, clone) so the centred slider
+            always has a neighbour each side; the clones are decoration.
+            ponytail: the clones' buttons stay focusable — fine for a menu. */}
+        {(combos.length > 1 ? [...combos, ...combos, ...combos] : combos).map((c, i) => {
+          const clone = combos.length > 1 && (i < combos.length || i >= 2 * combos.length);
           const price = Number(c.price);
           const save = Math.round((c.worth - price) * 100) / 100;
           const pct = c.worth > 0 ? Math.round((save / c.worth) * 100) : 0;
+          const parts = c.items.map((p) => comboSummary([p]));
+          const said = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} & ${parts.at(-1)}` : parts[0];
           return (
             <article
-              key={c.id}
+              key={`${c.id}:${i}`}
+              aria-hidden={clone || undefined}
               data-q={["combo", c.name, c.description, ...c.items.map((p) => p.name)]
                 .filter(Boolean)
                 .join(" ")
                 .toLowerCase()}
-              className={`relative flex shrink-0 snap-start flex-col rounded-[18px] border-2 bg-[var(--m-surface)] p-5 ${
-                combos.length > 1 ? "w-[82%] sm:w-auto" : "w-full"
+              className={`relative flex shrink-0 flex-col overflow-hidden px-5 py-4 transition-[opacity,scale] duration-500 data-[dim]:scale-[0.92] data-[dim]:opacity-40 ${
+                combos.length > 1 ? "w-[74%] sm:w-[22em]" : "mx-6 w-[calc(100%-3rem)]"
               }`}
-              style={{ borderColor: accent }}
+              // Ticket: accent layer = the outline, the surface layer inset 2px over it.
+              style={{ backgroundColor: accent, mask: TICKET_MASK, WebkitMask: TICKET_MASK }}
             >
-              {save > 0 && (
-                <span
-                  className="absolute -top-3 right-4 rounded-full px-3 py-1 text-[0.7em] font-bold uppercase tracking-[0.12em]"
-                  style={{ backgroundColor: accent, color: contrastOn(accent) }}
-                >
-                  Save {pct >= 5 ? `${pct}%` : formatMoney(save, currency)}
-                </span>
+              <span aria-hidden className="absolute inset-[2px] bg-[var(--m-surface)]" style={{ mask: TICKET_MASK, WebkitMask: TICKET_MASK }} />
+              {/* Shimmer: accent-tinted light streak sweeping across the ticket. */}
+              <span aria-hidden className="fizz-sheen pointer-events-none absolute inset-0" style={{ color: accent }} />
+              {/* Background coupon: big, tilted, desaturated — texture, not content. */}
+              <span aria-hidden className="pointer-events-none absolute -bottom-4 -right-3 rotate-[-14deg] select-none text-[4.5em] leading-none opacity-[0.12] grayscale mix-blend-luminosity">
+                🎟️
+              </span>
+              <div className="relative flex items-start justify-between gap-3">
+                <h3 className="min-w-0 text-[1.05em] font-bold leading-tight" style={{ fontFamily: display }}>
+                  {c.name}
+                </h3>
+                {save > 0 && (
+                  <span
+                    className="shrink-0 rounded-full px-2 py-0.5 text-[0.65em] font-bold uppercase tracking-[0.12em]"
+                    style={{ backgroundColor: accent, color: contrastOn(accent) }}
+                  >
+                    -{pct >= 5 ? `${pct}%` : formatMoney(save, currency)}
+                  </span>
+                )}
+              </div>
+              {c.description && (
+                <p className="relative mt-1 line-clamp-2 text-[0.85em] text-[var(--m-muted)]">{c.description}</p>
               )}
-              <h3 className="pr-16 text-[1.15em] font-bold leading-tight" style={{ fontFamily: display }}>
-                {c.name}
-              </h3>
-              {c.description && <p className="mt-1 text-[0.85em] text-[var(--m-muted)]">{c.description}</p>}
-              <ul className="mt-3 flex flex-col gap-1 text-[0.9em]">
-                {c.items.map((p) => (
-                  <li key={`${p.menuItemId}:${p.variantId}`} className="flex items-center gap-2">
-                    <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
-                    <span className="min-w-0 truncate">
-                      {comboSummary([p])}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-auto flex items-end justify-between gap-3 pt-4">
+              {/* Never clipped: the guest has to see what's inside before adding. */}
+              <p className="relative mb-3 mt-1 text-[0.85em] leading-snug">
+                {said}
+                {!c.description && <span className="text-[var(--m-muted)]"> — yours for one price.</span>}
+              </p>
+              {/* Perforation: the tear line between what you get and what you pay. */}
+              <div className="relative mt-auto flex items-center justify-between gap-3 border-t-2 border-dashed pt-3" style={{ borderColor: `${accent}55` }}>
                 <span className="flex items-baseline gap-2">
-                  <span className="text-[1.3em] font-bold" style={{ color: accent, fontFamily: display }}>
+                  <span className="text-[1.15em] font-bold" style={{ color: accent, fontFamily: display }}>
                     {formatMoney(price, currency)}
                   </span>
                   {save > 0 && (
-                    <span className="text-[0.85em] text-[var(--m-muted)] line-through">
+                    <span className="text-[0.8em] text-[var(--m-muted)] line-through">
                       {formatMoney(c.worth, currency)}
                     </span>
                   )}
@@ -352,7 +375,7 @@ function ComboSection({
             </article>
           );
         })}
-      </div>
+      </ComboRail>
     </section>
   );
 }
