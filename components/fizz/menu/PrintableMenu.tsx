@@ -541,8 +541,11 @@ function Toolbar({
   busy: boolean;
   canvas: MenuCanvas;
 }) {
+  // Fold the controls up to one row so more of the sheet shows. Hidden via
+  // CSS, not unmounted, so the canvas keyboard shortcuts keep working.
+  const [folded, setFolded] = useState(false);
   return (
-    <div className="menu-pdf-toolbar">
+    <div className="menu-pdf-toolbar" data-folded={folded ? "1" : undefined}>
       <div className="menu-pdf-toolbar-inner">
         <Link href="/dashboard/menu" className="mpt-back">
           ← Menu
@@ -648,6 +651,18 @@ function Toolbar({
           {busy ? "Rendering…" : "Save PNG"}
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setFolded((f) => !f)}
+        className="mpt-fold"
+        aria-expanded={!folded}
+        aria-label={folded ? "Show menu controls" : "Hide menu controls"}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d={folded ? "m6 9 6 6 6-6" : "m18 15-6-6-6 6"} />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -682,6 +697,27 @@ const PRINT_CSS = `
   flex-wrap: wrap;
   font-family: var(--font-inter), system-ui, sans-serif;
 }
+.menu-pdf-toolbar[data-folded] .mpt-groups { display: none; }
+.menu-pdf-toolbar[data-folded] .menu-pdf-toolbar-inner { justify-content: flex-end; }
+.menu-pdf-toolbar[data-folded] .mpt-back { margin-right: auto; }
+.mpt-fold {
+  position: absolute;
+  left: 50%;
+  bottom: -15px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 22px;
+  background: #0E1116;
+  color: #8A93A1;
+  border: 1px solid #2A313C;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  cursor: pointer;
+}
+.mpt-fold:hover { color: #C6F432; }
 .mpt-back {
   color: #8A93A1;
   font-size: 14px;
