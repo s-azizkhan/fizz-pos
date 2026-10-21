@@ -9,6 +9,7 @@ import { useTRPC } from "@/lib/trpc/client";
 import { comboSummary, currencySymbol, formatMoney } from "@/lib/store/format";
 import type { ComboView, MenuCategoryWithItems } from "@/lib/store/menu";
 import {
+  ChevronIcon,
   CloseIcon,
   EyeIcon,
   EyeOffIcon,
@@ -43,6 +44,8 @@ export default function Combos({
 }) {
   // undefined = closed, null = new, combo = editing.
   const [editing, setEditing] = useState<ComboView | null | undefined>(undefined);
+  // Folded by default, like the categories below.
+  const [open, setOpen] = useState(false);
   const money = (n: number | string) => formatMoney(n, currency);
 
   return (
@@ -50,7 +53,16 @@ export default function Combos({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className={labelCls}>Combos</p>
-          <h2 className="mt-2 font-display text-2xl font-bold tracking-tight">Bundle it, sell more</h2>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="mt-2 flex items-center gap-2 text-left transition-colors hover:text-fizz"
+          >
+            <h2 className="font-display text-2xl font-bold tracking-tight">Bundle it, sell more</h2>
+            <span className="shrink-0 text-sm text-steam">({combos.length})</span>
+            <ChevronIcon className={`h-4 w-4 shrink-0 text-steam transition-transform ${open ? "-rotate-90" : "rotate-180"}`} />
+          </button>
           <p className="mt-1 max-w-[60ch] text-sm text-steam">
             Group items at one price. Combos pin to the top of the POS and your public menu, with the saving
             up front.
@@ -65,7 +77,7 @@ export default function Combos({
         </button>
       </div>
 
-      {combos.length === 0 ? (
+      {!open ? null : combos.length === 0 ? (
         <button
           onClick={() => setEditing(null)}
           className="mt-6 flex w-full flex-col items-center gap-1 rounded-fizz border border-dashed border-ink-line px-6 py-8 text-center transition-colors hover:border-fizz"
