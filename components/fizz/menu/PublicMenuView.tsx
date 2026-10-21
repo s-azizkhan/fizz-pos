@@ -350,13 +350,20 @@ function ComboSection({
               </p>
               {/* Perforation: the tear line between what you get and what you pay. */}
               <div className="relative mt-auto flex items-center justify-between gap-3 border-t-2 border-dashed pt-3" style={{ borderColor: `${accent}55` }}>
-                <span className="flex items-baseline gap-2">
-                  <span className="text-[1.15em] font-bold" style={{ color: accent, fontFamily: display }}>
-                    {formatMoney(price, currency)}
+                <span className="flex flex-col">
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-[1.15em] font-bold" style={{ color: accent, fontFamily: display }}>
+                      {formatMoney(price, currency)}
+                    </span>
+                    {save > 0 && (
+                      <span className="text-[0.8em] text-[var(--m-muted)] line-through">
+                        {formatMoney(c.worth, currency)}
+                      </span>
+                    )}
                   </span>
                   {save > 0 && (
-                    <span className="text-[0.8em] text-[var(--m-muted)] line-through">
-                      {formatMoney(c.worth, currency)}
+                    <span className="text-[0.75em] font-semibold" style={{ color: accent }}>
+                      You save {formatMoney(save, currency)}
                     </span>
                   )}
                 </span>
