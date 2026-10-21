@@ -252,7 +252,8 @@ const FIELD_ICONS = {
 };
 
 // Label notched into the top border, icon inside the box. The label's fill
-// matches the sheet so it cuts the border line.
+// is split at the border: sheet above, input below, so it cuts the line
+// without showing a box.
 function Field({
   label,
   icon,
@@ -268,7 +269,7 @@ function Field({
 }) {
   return (
     <label className="relative block">
-      <span className="absolute -top-2.5 left-3 z-10 bg-[var(--m-surface)] px-1.5 text-[0.8em] font-semibold leading-5 text-[var(--m-text)]">
+      <span className="absolute -top-2.5 left-3 z-10 bg-[linear-gradient(to_bottom,var(--m-surface)_50%,var(--m-bg)_50%)] px-1.5 text-[0.8em] font-semibold leading-5 text-[var(--m-text)]">
         {label}
         {required && <span aria-hidden className="ml-0.5 text-[#E2655A]">*</span>}
       </span>
