@@ -20,6 +20,13 @@ import {
   getMenuBgPack,
   MenuBgLayer,
 } from "@/components/fizz/menu/bg-packs";
+import {
+  CANVAS_CSS,
+  CanvasControls,
+  CanvasLayerHost,
+  useMenuCanvas,
+  type MenuCanvas,
+} from "@/components/fizz/menu/menu-canvas";
 import type { MenuCategoryWithItems } from "@/lib/store/menu";
 import type { OrderSettings, Store } from "@/lib/db/schema";
 
@@ -95,6 +102,7 @@ export default function PrintableMenu({
   const [fs, setFs] = useState(fontScale ?? 100);
   const [busy, setBusy] = useState(false);
   const pagesRef = useRef<HTMLDivElement>(null);
+  const canvas = useMenuCanvas(store.id);
 
   // PNG export: rasterize the page surface at 3x for print-grade pixels.
   // Multi-page layouts come out as one tall image; the one-page layout is a
@@ -108,6 +116,9 @@ export default function PrintableMenu({
     const pages = Array.from(root.querySelectorAll<HTMLElement>(".pdf-page"));
     if (pages.length === 0) return;
     setBusy(true);
+    // Drop the selection outline + resize handle before rasterizing.
+    canvas.setSel(null);
+    await new Promise(requestAnimationFrame);
     try {
       const base = store.menuSlug || "menu";
       for (const [i, page] of pages.entries()) {
@@ -128,7 +139,7 @@ export default function PrintableMenu({
     } finally {
       setBusy(false);
     }
-  }, [busy, scheme.bg, store.menuSlug]);
+  }, [busy, canvas, scheme.bg, store.menuSlug]);
 
   // Let the embedding preview modal trigger the same export.
   useEffect(() => {
@@ -211,7 +222,7 @@ export default function PrintableMenu({
       data-dash={layout.dashed ? "1" : undefined}
       data-single={layout.single ? layout.id : undefined}
     >
-      <style>{PRINT_CSS}</style>
+      <style>{PRINT_CSS + CANVAS_CSS}</style>
 
       {!embed && (
         <Toolbar
@@ -226,14 +237,20 @@ export default function PrintableMenu({
           onNavigate={navigate}
           onPng={savePng}
           busy={busy}
+          canvas={canvas}
         />
       )}
 
-      <div className="menu-pdf-pages" ref={pagesRef}>
+      <div
+        className="menu-pdf-pages"
+        ref={pagesRef}
+        onPointerDown={() => canvas.setSel(null)}
+      >
         {/* ---- COVER (skipped by single-page layouts) ---- */}
         {!layout.single && (
           <section className="pdf-page pdf-cover" data-cover={layout.cover}>
             <MenuBgLayer pack={pack} seed={0} />
+            <CanvasLayerHost page="cover" canvas={canvas} editable={!embed} />
             <div className="pdf-content">
               <Cover store={store} layout={layout} headStyle={headStyle} />
             </div>
@@ -243,6 +260,7 @@ export default function PrintableMenu({
         {/* ---- MENU BODY ---- */}
         <section className="pdf-page pdf-body">
           <MenuBgLayer pack={pack} seed={2} />
+          <CanvasLayerHost page="body" canvas={canvas} editable={!embed} />
           <div className="pdf-content">
           {layout.single ? (
             <div className="pdf-brand-head">
@@ -337,6 +355,7 @@ export default function PrintableMenu({
         {!layout.single && (
         <section className="pdf-page pdf-close">
           <MenuBgLayer pack={pack} seed={4} />
+          <CanvasLayerHost page="close" canvas={canvas} editable={!embed} />
           <div className="pdf-content">
           <div className="pdf-close-inner">
             <p className="pdf-eyebrow" style={{ fontFamily: "var(--pg-body)" }}>
@@ -507,6 +526,7 @@ function Toolbar({
   onNavigate,
   onPng,
   busy,
+  canvas,
 }: {
   schemeId: string;
   layoutId: string;
@@ -519,6 +539,7 @@ function Toolbar({
   onNavigate: (next: { scheme?: string; layout?: string; pack?: string }) => void;
   onPng: () => void;
   busy: boolean;
+  canvas: MenuCanvas;
 }) {
   return (
     <div className="menu-pdf-toolbar">
@@ -606,6 +627,8 @@ function Toolbar({
               />
             </div>
           )}
+
+          <CanvasControls canvas={canvas} />
         </div>
 
         <button
