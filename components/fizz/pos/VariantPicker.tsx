@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { PosItem, PosVariant } from "./types";
 
 // Quick variant chooser shown when an item has sizes/options. Number keys 1-9
@@ -17,8 +17,10 @@ export default function VariantPicker({
   onPick: (variant: PosVariant | null) => void;
   onClose: () => void;
 }) {
-  const options: (PosVariant | null)[] =
-    item.price > 0 ? [null, ...item.variants] : item.variants;
+  const options = useMemo<(PosVariant | null)[]>(
+    () => (item.price > 0 ? [null, ...item.variants] : item.variants),
+    [item],
+  );
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

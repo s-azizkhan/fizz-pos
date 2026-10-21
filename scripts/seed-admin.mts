@@ -1,7 +1,6 @@
 // Seed/promote the admin user — the store's admin AND a Fizz operator
 // (is_platform_admin), who confirms offline payments on /dashboard/platform.
 // Run: npm run db:seed
-import { eq } from "drizzle-orm";
 import { db } from "../lib/db";
 import { store } from "../lib/db/schema/store";
 import { users } from "../lib/db/schema/user";
