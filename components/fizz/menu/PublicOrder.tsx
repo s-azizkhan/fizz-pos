@@ -722,8 +722,18 @@ export function FloatingCart({
             </div>
 
             <div className="border-t border-[var(--m-line)] px-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5">
-              {(fee > 0 || packaging > 0) && (
-                <div className="mb-2 flex flex-col gap-1 text-[0.85em] text-[var(--m-muted)]">
+              {fee > 0 || packaging > 0 ? (
+                <details className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-[1.05em] font-bold [&::-webkit-details-marker]:hidden">
+                  <span className="flex items-center gap-1.5">
+                    Total
+                    <svg viewBox="0 0 24 24" aria-hidden className="size-4 text-[var(--m-muted)] transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </span>
+                  <span className="tabular-nums">{formatMoney(due, currency)}</span>
+                </summary>
+                <div className="mt-2 flex flex-col gap-1 text-[0.85em] text-[var(--m-muted)]">
                   <span className="flex justify-between">
                     <span>Subtotal</span>
                     <span className="tabular-nums">{formatMoney(total(lines), currency)}</span>
@@ -741,11 +751,13 @@ export function FloatingCart({
                     </span>
                   )}
                 </div>
+                </details>
+              ) : (
+                <div className="flex items-center justify-between text-[1.05em] font-bold">
+                  <span>Total</span>
+                  <span className="tabular-nums">{formatMoney(due, currency)}</span>
+                </div>
               )}
-              <div className="flex items-center justify-between text-[1.05em] font-bold">
-                <span>Total</span>
-                <span className="tabular-nums">{formatMoney(due, currency)}</span>
-              </div>
               <span className="relative block">
               {burst > 0 && <Confetti key={burst} accent={accent} />}
               <button
