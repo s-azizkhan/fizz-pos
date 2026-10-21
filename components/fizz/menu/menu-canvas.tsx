@@ -17,6 +17,7 @@ export type CanvasLayer = {
   x: number; // % of page width
   y: number; // % of page height
   w: number; // % of page width
+  rot?: number; // degrees, clockwise
   src?: string;
   text?: string;
   size?: number; // px
@@ -119,11 +120,11 @@ export function CanvasLayerHost({
   const { layers, sel, setSel, update } = canvas;
   const mine = layers.filter((l) => l.page === page);
 
-  // One pointer handler for move + resize: delta in px → delta in % of sheet.
+  // One pointer handler for move / resize / rotate: delta in px → % of sheet.
   const startDrag = (
     e: React.PointerEvent,
     layer: CanvasLayer,
-    mode: "move" | "resize",
+    mode: "move" | "resize" | "rotate",
   ) => {
     if (!editable) return;
     e.stopPropagation();
@@ -136,11 +137,27 @@ export function CanvasLayerHost({
     const start = { x: layer.x, y: layer.y, w: layer.w };
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
+    const rad = ((layer.rot ?? 0) * Math.PI) / 180;
+    // Bounding-box center stays the true center under rotation.
+    const box = (mode === "move" ? target : target.parentElement!).getBoundingClientRect();
+    const cx = box.left + box.width / 2;
+    const cy = box.top + box.height / 2;
     const move = (ev: PointerEvent) => {
-      const dx = ((ev.clientX - sx) / width) * 100;
-      const dy = ((ev.clientY - sy) / height) * 100;
-      if (mode === "move") update(layer.id, { x: start.x + dx, y: start.y + dy });
-      else update(layer.id, { w: Math.max(4, start.w + dx) });
+      const px = ev.clientX - sx;
+      const py = ev.clientY - sy;
+      if (mode === "move") {
+        update(layer.id, { x: start.x + (px / width) * 100, y: start.y + (py / height) * 100 });
+      } else if (mode === "resize") {
+        // Project the drag onto the layer's own (rotated) x-axis.
+        const along = px * Math.cos(rad) + py * Math.sin(rad);
+        update(layer.id, { w: Math.max(4, start.w + (along / width) * 100) });
+      } else {
+        // Handle sits above the layer, so "straight up" = 0°. Shift snaps to 15°.
+        let deg = (Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180) / Math.PI + 90;
+        if (ev.shiftKey) deg = Math.round(deg / 15) * 15;
+        deg = ((Math.round(deg) % 360) + 360) % 360;
+        update(layer.id, { rot: deg > 180 ? deg - 360 : deg });
+      }
     };
     const up = () => {
       target.removeEventListener("pointermove", move);
@@ -170,6 +187,7 @@ export function CanvasLayerHost({
             fontWeight: l.bold ? 700 : 400,
             textAlign: l.align,
             fontFamily: l.font === "body" ? "var(--pg-body)" : "var(--pg-head)",
+            transform: l.rot ? `rotate(${l.rot}deg)` : undefined,
           }}
           onPointerDown={(e) => startDrag(e, l, "move")}
         >
@@ -180,11 +198,19 @@ export function CanvasLayerHost({
             <p>{l.text}</p>
           )}
           {editable && sel === l.id && (
-            <span
-              className="cv-handle"
-              onPointerDown={(e) => startDrag(e, l, "resize")}
-              aria-hidden
-            />
+            <>
+              <span
+                className="cv-handle"
+                onPointerDown={(e) => startDrag(e, l, "resize")}
+                aria-hidden
+              />
+              <span
+                className="cv-rot"
+                onPointerDown={(e) => startDrag(e, l, "rotate")}
+                title="Drag to rotate · Shift snaps to 15°"
+                aria-hidden
+              />
+            </>
           )}
         </div>
       ))}
@@ -299,6 +325,18 @@ export function CanvasControls({ canvas }: { canvas: MenuCanvas }) {
               </select>
             </>
           )}
+          <label className="cv-field">
+            Rotate
+            <input
+              type="number"
+              min={-180}
+              max={180}
+              value={cur.rot ?? 0}
+              onChange={(e) => update(cur.id, { rot: Number(e.target.value) || 0 })}
+              className="cv-input cv-num"
+            />
+            °
+          </label>
           <button type="button" className="mpt-chip" onClick={() => restack(cur.id, true)}>
             Front
           </button>
@@ -316,13 +354,22 @@ export function CanvasControls({ canvas }: { canvas: MenuCanvas }) {
 
 export const CANVAS_CSS = `
 .cv-host { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.cv-layer { position: absolute; pointer-events: auto; line-height: 1.15; }
+.cv-layer { position: absolute; pointer-events: auto; line-height: 1.15; transform-origin: center; }
 .cv-host:not([data-editable]) .cv-layer { pointer-events: none; }
 .cv-host[data-editable] .cv-layer { cursor: move; touch-action: none; }
 .cv-host[data-editable] .cv-layer:hover { outline: 1px dashed #38E1D6; }
 .cv-layer.is-sel { outline: 2px solid #C6F432 !important; }
 .cv-layer img { display: block; width: 100%; height: auto; user-select: none; }
 .cv-layer p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; user-select: none; }
+.cv-rot {
+  position: absolute; left: 50%; top: -30px; width: 14px; height: 14px;
+  margin-left: -7px; background: #38E1D6; border: 2px solid #0E1116;
+  border-radius: 50%; cursor: grab; touch-action: none;
+}
+.cv-rot::after {
+  content: ""; position: absolute; left: 50%; top: 12px; width: 2px; height: 16px;
+  margin-left: -1px; background: #38E1D6;
+}
 .cv-handle {
   position: absolute; right: -7px; bottom: -7px; width: 14px; height: 14px;
   background: #C6F432; border: 2px solid #0E1116; border-radius: 4px;
@@ -342,6 +389,6 @@ textarea.cv-input { min-width: 220px; resize: vertical; }
 .cv-del:hover { border-color: #E2655A; color: #E2655A; }
 @media print {
   .cv-layer { outline: none !important; }
-  .cv-handle { display: none !important; }
+  .cv-handle, .cv-rot { display: none !important; }
 }
 `;
