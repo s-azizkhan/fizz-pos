@@ -249,7 +249,12 @@ const FIELD_ICONS = {
   ),
   pin: <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" /></>,
   note: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></>,
+  dine: <><path d="M3 2v7a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V2" /><path d="M6 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zm0 0v7" /></>,
+  bag: <><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></>,
+  scooter: <><circle cx="5.5" cy="17.5" r="2.5" /><circle cx="18.5" cy="17.5" r="2.5" /><path d="M8 17.5h7.5l2-6.5H21" /><path d="M15 6h2.5l2.5 5" /><path d="M3 11h6l2 6.5" /></>,
 };
+
+const MODE_ICONS: Record<string, keyof typeof FIELD_ICONS> = { "Dine-in": "dine", Takeaway: "bag", Delivery: "scooter" };
 
 // Label notched into the top border, icon inside the box. The label's fill
 // is split at the border: sheet above, input below, so it cuts the line
@@ -620,13 +625,18 @@ export function FloatingCart({
                     key={m}
                     type="button"
                     onClick={() => setMode(m)}
-                    className="flex-1 rounded-full border px-4 py-2.5 text-[0.85em] font-semibold transition-colors"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-full border px-4 py-2.5 text-[0.85em] font-semibold transition-colors"
                     style={
                       mode === m
                         ? { backgroundColor: accent, borderColor: accent, color: contrastOn(accent) }
                         : { borderColor: "var(--m-line)", color: "var(--m-muted)" }
                     }
                   >
+                    {MODE_ICONS[m] && (
+                      <svg viewBox="0 0 24 24" aria-hidden className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        {FIELD_ICONS[MODE_ICONS[m]]}
+                      </svg>
+                    )}
                     {m}
                   </button>
                 ))}
