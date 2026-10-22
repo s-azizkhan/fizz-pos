@@ -269,6 +269,17 @@ export function CloseIcon({ className }: P) {
   );
 }
 
+// Refresh — arrows spin round.
+export function RefreshIcon({ className }: P) {
+  return (
+    <Svg name="refresh" className={className}>
+      <g className="fz-spin">
+        <path d="M20 11a8 8 0 0 0-14.9-3.5M4 4v4h4M4 13a8 8 0 0 0 14.9 3.5M20 20v-4h-4" />
+      </g>
+    </Svg>
+  );
+}
+
 // Check / cross draw in on mount — good for list bullets and toasts.
 export function CheckIcon({ className }: P) {
   return (

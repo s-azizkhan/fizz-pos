@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { trpc } from "@/lib/trpc/server";
 import { getOrderSettings, receiptStore } from "@/lib/store/order-settings";
-import { currentMonth } from "@/lib/store/date-range";
 import { featureOn } from "@/lib/store/features";
 import OrdersClient from "@/components/fizz/orders/OrdersClient";
 
@@ -14,7 +13,8 @@ export default async function OrdersPage({
   searchParams: Promise<{ month?: string }>;
 }) {
   const { month: monthParam } = await searchParams;
-  const month = /^\d{4}-\d{2}$/.test(monthParam ?? "") ? monthParam! : currentMonth();
+  // No month picked: latest day with sales, older days on "load more".
+  const month = /^\d{4}-\d{2}$/.test(monthParam ?? "") ? monthParam : undefined;
   const api = await trpc();
   const [user, store, first, header, ordering] = await Promise.all([
     getCurrentUser(),
@@ -27,7 +27,7 @@ export default async function OrdersPage({
   return (
     <OrdersClient
       // Fresh state (older pages, filters) per month.
-      key={month}
+      key={month ?? "latest"}
       isAdmin={user.role === "admin"}
       first={first}
       month={month}

@@ -172,7 +172,7 @@ function priceWebCart(
 }
 
 // Closed orders per page on the Orders screen; open tabs always come whole.
-const ORDERS_PAGE = 60;
+const ORDERS_PAGE = 30;
 
 export const ordersRouter = router({
   // A guest's order from the public menu (/m/[slug]). PUBLIC — no session.
@@ -319,7 +319,7 @@ export const ordersRouter = router({
   list: protectedProcedure
     .input(
       z.object({
-        month: z.string().regex(/^\d{4}-\d{2}$/),
+        month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
         offset: z.number().int().min(0).default(0),
         limit: z.number().int().min(1).max(200).default(ORDERS_PAGE),
       }),

@@ -9,7 +9,7 @@ import {
   type KitchenStatus,
 } from "@/lib/db/schema";
 import { currentStoreId } from "@/lib/auth/dal";
-import { fromDateInput, monthBounds, resolvePreset } from "@/lib/store/date-range";
+import { fromDateInput, monthBounds, resolvePreset, toDateInput } from "@/lib/store/date-range";
 import { customersByIds } from "@/lib/store/customers";
 import type { LoadedOrder } from "@/components/fizz/pos/types";
 import type { OrderRow } from "@/components/fizz/orders/types";
@@ -82,12 +82,37 @@ async function withItems(rows: Order[]): Promise<OrderWithItems[]> {
 // the first page, then the month's closed orders newest first. Voided orders
 // only for admins — nobody else is shown them. Rows are client-ready and lean:
 // a busy month used to ship every order with its lines twice.
+// With a month: that month, paged. Without: the first page is the whole latest
+// day with sales (today, or the last day that had any); later pages walk back
+// through older days `limit` orders at a time.
 export async function listOrders(
-  month: string,
+  month: string | undefined,
   opts: { offset: number; limit: number; includeVoid: boolean },
 ): Promise<{ rows: OrderRow[]; hasMore: boolean }> {
   const sid = await currentStoreId();
-  const [start, end] = monthBounds(month).map(fromDateInput);
+  const closedOf = and(
+    eq(orders.storeId, sid),
+    ne(orders.status, "open"),
+    opts.includeVoid ? undefined : ne(orders.status, "void"),
+  );
+  const [start, end] = month ? monthBounds(month).map(fromDateInput) : [];
+  let limit = opts.limit;
+  if (!month && opts.offset === 0) {
+    const [latest] = await db
+      .select({ at: orders.createdAt })
+      .from(orders)
+      .where(closedOf)
+      .orderBy(desc(orders.createdAt))
+      .limit(1);
+    if (latest) {
+      const day = fromDateInput(toDateInput(latest.at));
+      const [{ n }] = await db
+        .select({ n: sql<number>`count(*)`.mapWith(Number) })
+        .from(orders)
+        .where(and(closedOf, gte(orders.createdAt, day)));
+      limit = n;
+    }
+  }
   const [open, closed] = await Promise.all([
     opts.offset === 0
       ? db
@@ -101,20 +126,18 @@ export async function listOrders(
       .from(orders)
       .where(
         and(
-          eq(orders.storeId, sid),
-          gte(orders.createdAt, start),
-          lt(orders.createdAt, end),
-          ne(orders.status, "open"),
-          opts.includeVoid ? undefined : ne(orders.status, "void"),
+          closedOf,
+          start ? gte(orders.createdAt, start) : undefined,
+          end ? lt(orders.createdAt, end) : undefined,
         ),
       )
       .orderBy(desc(orders.createdAt))
       .offset(opts.offset)
-      .limit(opts.limit + 1),
+      .limit(limit + 1),
   ]);
-  const hasMore = closed.length > opts.limit;
+  const hasMore = closed.length > limit;
   const [full, people] = await Promise.all([
-    withItems([...open, ...closed.slice(0, opts.limit)]),
+    withItems([...open, ...closed.slice(0, limit)]),
     customersByIds(
       [...open, ...closed].map((o) => o.customerId).filter((id): id is string => !!id),
     ),

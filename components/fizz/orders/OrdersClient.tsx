@@ -15,9 +15,10 @@ import { stashTab } from "@/components/fizz/pos/tab-stash";
 import { ORDER_SOURCE_LABELS } from "@/lib/db/schema/constants";
 import { orderShareText, waLink } from "@/lib/store/whatsapp";
 import MonthFilter from "@/components/fizz/MonthFilter";
+import { currentMonth, toDateInput } from "@/lib/store/date-range";
 import { startNav } from "@/components/fizz/NavProgress";
 import { confirmDialog } from "@/components/fizz/ConfirmDialog";
-import { CashIcon, ChefIcon, CloseIcon, PencilIcon, ReceiptIcon, TrashIcon, WhatsAppIcon } from "@/components/fizz/dashboard/icons";
+import { CashIcon, ChefIcon, CloseIcon, PencilIcon, ReceiptIcon, RefreshIcon, TrashIcon, WhatsAppIcon } from "@/components/fizz/dashboard/icons";
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine in",
@@ -58,7 +59,7 @@ export default function OrdersClient({
 }: {
   isAdmin: boolean;
   first: { rows: OrderRow[]; hasMore: boolean };
-  month: string;
+  month?: string;
   currency: string;
   storeName: string;
   receiptHeader: ReceiptData["store"];
@@ -95,6 +96,15 @@ export default function OrdersClient({
       setLoadingMore(false);
     }
   }
+
+  // Drop loaded older pages and their query cache, then re-run the server page.
+  const [refreshing, startRefresh] = useTransition();
+  const refresh = () =>
+    startRefresh(() => {
+      setOlder(null);
+      qc.removeQueries({ queryKey: trpc.orders.list.queryKey() });
+      router.refresh();
+    });
 
   // Older pages aren't covered by the post-mutation refresh; patch them here.
   const patchOlder = (id: string, fn: (o: OrderRow) => OrderRow | null) =>
@@ -141,6 +151,37 @@ export default function OrdersClient({
       ),
     [orders, filter],
   );
+
+  // Consecutive orders on the same day share a header with that day's sales.
+  const days = useMemo(() => {
+    const out: { key: string; label: string; sales: number; rows: OrderRow[] }[] = [];
+    const now = new Date();
+    const today = toDateInput(now);
+    now.setDate(now.getDate() - 1);
+    const yesterday = toDateInput(now);
+    for (const o of shown) {
+      const at = new Date(o.createdAt);
+      const key = toDateInput(at);
+      let day = out.at(-1);
+      if (day?.key !== key) {
+        day = {
+          key,
+          label:
+            key === today
+              ? "Today"
+              : key === yesterday
+                ? "Yesterday"
+                : at.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }),
+          sales: 0,
+          rows: [],
+        };
+        out.push(day);
+      }
+      day.rows.push(o);
+      if (o.status === "paid") day.sales += Number(o.total);
+    }
+    return out;
+  }, [shown]);
 
   const openTotal = useMemo(
     () =>
@@ -228,12 +269,23 @@ export default function OrdersClient({
             Revisit open tabs to add dishes or settle. Browse paid history.
           </p>
         </div>
-        <a
-          href="/dashboard/pos"
-          className="rounded-fizz bg-fizz px-5 py-3 font-semibold text-ink transition-transform hover:scale-105"
-        >
-          + New order
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={refresh}
+            disabled={refreshing}
+            aria-label="Refresh orders"
+            title="Refresh orders"
+            className="rounded-fizz border border-ink-line bg-ink-soft p-3 text-cream transition-colors hover:border-fizz hover:text-fizz disabled:opacity-60"
+          >
+            <RefreshIcon className={`h-5 w-5 ${refreshing ? "animate-spin" : ""}`} />
+          </button>
+          <a
+            href="/dashboard/pos"
+            className="rounded-fizz bg-fizz px-5 py-3 font-semibold text-ink transition-transform hover:scale-105"
+          >
+            + New order
+          </a>
+        </div>
       </div>
 
       {/* Open tabs summary */}
@@ -265,7 +317,7 @@ export default function OrdersClient({
             </Chip>
           ))}
         </ChipBar>
-        <MonthFilter month={month} />
+        <MonthFilter month={month ?? currentMonth()} />
       </div>
 
       {/* Order cards */}
@@ -283,162 +335,174 @@ export default function OrdersClient({
           </div>
         </div>
       ) : (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {shown.map((o) => (
-            <article
-              key={o.id}
-              className="flex flex-col rounded-fizz border border-ink-line bg-ink-soft p-5"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-display text-lg font-bold text-cream">
-                    {o.number}
-                  </p>
-                  <p className="text-xs text-steam">
-                    {TYPE_LABEL[o.type]}
-                    {o.source !== "counter" && (
-                      <span className="text-bubble"> · {ORDER_SOURCE_LABELS[o.source]}</span>
-                    )}
-                    {o.reference ? ` · ${o.reference}` : ""}
-                  </p>
-                </div>
-                <span
-                  className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
-                    o.status === "open"
-                      ? "border-fizz bg-fizz/15 text-fizz"
-                      : "border-ink-line bg-ink text-steam"
-                  }`}
-                >
-                  {o.tab?.webPending ? "New web order" : o.status === "open" ? "Open" : o.status === "paid" ? "Paid" : "Void"}
+        days.map((d, i) => (
+          <section key={`${d.key}-${i}`} className="mt-8">
+            <div className="flex items-baseline justify-between gap-3 border-b border-ink-line pb-2">
+              <h2 className="font-display text-lg font-bold text-cream">{d.label}</h2>
+              {d.sales > 0 && (
+                <span className="text-sm text-steam">
+                  Sales <span className="font-display font-bold text-cream">{money(d.sales.toFixed(2))}</span>
                 </span>
-              </div>
-
-              {/* Lines preview */}
-              <ul className="mt-3 flex-1 space-y-1 text-sm">
-                {o.items.slice(0, 4).map((it, i) => (
-                  <li key={i} className="flex justify-between gap-2 text-cream">
-                    <span className="truncate">
-                      <span className="text-steam">{it.quantity}×</span> {it.name}
-                      {it.variantName ? (
-                        <span className="text-bubble"> · {it.variantName}</span>
-                      ) : null}
+              )}
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {d.rows.map((o) => (
+                <article
+                  key={o.id}
+                  className="flex flex-col rounded-fizz border border-ink-line bg-ink-soft p-5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-display text-lg font-bold text-cream">
+                        {o.number}
+                      </p>
+                      <p className="text-xs text-steam">
+                        {TYPE_LABEL[o.type]}
+                        {o.source !== "counter" && (
+                          <span className="text-bubble"> · {ORDER_SOURCE_LABELS[o.source]}</span>
+                        )}
+                        {o.reference ? ` · ${o.reference}` : ""}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                        o.status === "open"
+                          ? "border-fizz bg-fizz/15 text-fizz"
+                          : "border-ink-line bg-ink text-steam"
+                      }`}
+                    >
+                      {o.tab?.webPending ? "New web order" : o.status === "open" ? "Open" : o.status === "paid" ? "Paid" : "Void"}
                     </span>
-                    <span className="shrink-0 text-steam">{money(it.lineTotal)}</span>
-                  </li>
-                ))}
-                {o.items.length > 4 && (
-                  <li className="text-xs text-steam">
-                    +{o.items.length - 4} more
-                  </li>
-                )}
-              </ul>
+                  </div>
 
-              <div className="mt-4 flex items-center justify-between border-t border-ink-line pt-3">
-                <span className="text-xs text-steam">
-                  {o.status === "paid" && o.paymentMethod
-                    ? METHOD_LABEL[o.paymentMethod]
-                    : `${o.itemCount} item${o.itemCount === 1 ? "" : "s"}`}
-                </span>
-                <span className="font-display text-xl font-bold text-cream">
-                  {money(o.total)}
-                </span>
-              </div>
+                  {/* Lines preview */}
+                  <ul className="mt-3 flex-1 space-y-1 text-sm">
+                    {o.items.slice(0, 4).map((it, i) => (
+                      <li key={i} className="flex justify-between gap-2 text-cream">
+                        <span className="truncate">
+                          <span className="text-steam">{it.quantity}×</span> {it.name}
+                          {it.variantName ? (
+                            <span className="text-bubble"> · {it.variantName}</span>
+                          ) : null}
+                        </span>
+                        <span className="shrink-0 text-steam">{money(it.lineTotal)}</span>
+                      </li>
+                    ))}
+                    {o.items.length > 4 && (
+                      <li className="text-xs text-steam">
+                        +{o.items.length - 4} more
+                      </li>
+                    )}
+                  </ul>
 
-              {/* Actions */}
-              {(o.status === "open" || isAdmin) && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {o.tab?.webPending && (
-                    <button
-                      onClick={() => doAccept(o.id)}
-                      disabled={pending && busyId === o.id}
-                      className="flex w-full items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02] disabled:opacity-60"
-                    >
-                      <ChefIcon className="h-4 w-4" />
-                      {kot ? "Accept & send to KOT" : "Accept order"}
-                    </button>
+                  <div className="mt-4 flex items-center justify-between border-t border-ink-line pt-3">
+                    <span className="text-xs text-steam">
+                      {o.status === "paid" && o.paymentMethod
+                        ? METHOD_LABEL[o.paymentMethod]
+                        : `${o.itemCount} item${o.itemCount === 1 ? "" : "s"}`}
+                    </span>
+                    <span className="font-display text-xl font-bold text-cream">
+                      {money(o.total)}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  {(o.status === "open" || isAdmin) && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {o.tab?.webPending && (
+                        <button
+                          onClick={() => doAccept(o.id)}
+                          disabled={pending && busyId === o.id}
+                          className="flex w-full items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02] disabled:opacity-60"
+                        >
+                          <ChefIcon className="h-4 w-4" />
+                          {kot ? "Accept & send to KOT" : "Accept order"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openInPos(o)}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz border border-ink-line bg-ink px-3 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                        Edit
+                      </button>
+                      {o.status === "open" && (
+                        <button
+                          onClick={() => openInPos(o)}
+                          className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02]"
+                        >
+                          <CashIcon className="h-4 w-4" />
+                          Settle
+                        </button>
+                      )}
+                      {o.status !== "void" && (
+                        <button
+                          onClick={() => doVoid(o.id)}
+                          disabled={pending && busyId === o.id}
+                          aria-label="Void order"
+                          className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
+                        >
+                          <CloseIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button
+                          onClick={() => doDelete(o.id)}
+                          disabled={pending && busyId === o.id}
+                          aria-label="Delete order"
+                          className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                   )}
+
+                  {/* Kitchen ticket — print/reprint for any order */}
                   <button
-                    onClick={() => openInPos(o)}
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz border border-ink-line bg-ink px-3 py-2.5 text-sm font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz"
+                    onClick={() => setKotFor(o)}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
                   >
-                    <PencilIcon className="h-4 w-4" />
-                    Edit
+                    <ChefIcon className="h-4 w-4" />
+                    {o.status === "open" ? "Print KOT" : "Reprint KOT"}
                   </button>
-                  {o.status === "open" && (
-                    <button
-                      onClick={() => openInPos(o)}
-                      className="flex flex-1 items-center justify-center gap-1.5 rounded-fizz bg-fizz px-3 py-2.5 text-sm font-bold text-ink transition-transform hover:scale-[1.02]"
+                  {o.customer?.phone && o.status !== "void" && (
+                    <a
+                      href={waLink(
+                        o.customer.phone,
+                        storeWhatsapp,
+                        orderShareText({
+                          storeName,
+                          orderNumber: o.number,
+                          customerName: o.customer.name,
+                          lines: o.items,
+                          total: o.total,
+                          paid: o.status === "paid",
+                          currency,
+                        }),
+                      )}
+                      target="_blank"
+                      rel="noopener"
+                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
                     >
-                      <CashIcon className="h-4 w-4" />
-                      Settle
+                      <WhatsAppIcon className="h-4 w-4" />
+                      Share on WhatsApp
+                    </a>
+                  )}
+                  {o.bill && (
+                    <button
+                      onClick={() => reprint(receiptOf(o)!)}
+                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
+                    >
+                      <ReceiptIcon className="h-4 w-4" />
+                      Reprint receipt
                     </button>
                   )}
-                  {o.status !== "void" && (
-                    <button
-                      onClick={() => doVoid(o.id)}
-                      disabled={pending && busyId === o.id}
-                      aria-label="Void order"
-                      className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
-                    >
-                      <CloseIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                  {isAdmin && (
-                    <button
-                      onClick={() => doDelete(o.id)}
-                      disabled={pending && busyId === o.id}
-                      aria-label="Delete order"
-                      className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Kitchen ticket — print/reprint for any order */}
-              <button
-                onClick={() => setKotFor(o)}
-                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
-              >
-                <ChefIcon className="h-4 w-4" />
-                {o.status === "open" ? "Print KOT" : "Reprint KOT"}
-              </button>
-              {o.customer?.phone && o.status !== "void" && (
-                <a
-                  href={waLink(
-                    o.customer.phone,
-                    storeWhatsapp,
-                    orderShareText({
-                      storeName,
-                      orderNumber: o.number,
-                      customerName: o.customer.name,
-                      lines: o.items,
-                      total: o.total,
-                      paid: o.status === "paid",
-                      currency,
-                    }),
-                  )}
-                  target="_blank"
-                  rel="noopener"
-                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
-                >
-                  <WhatsAppIcon className="h-4 w-4" />
-                  Share on WhatsApp
-                </a>
-              )}
-              {o.bill && (
-                <button
-                  onClick={() => reprint(receiptOf(o)!)}
-                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
-                >
-                  <ReceiptIcon className="h-4 w-4" />
-                  Reprint receipt
-                </button>
-              )}
-            </article>
-          ))}
-        </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ))
       )}
 
       {hasMore && (
@@ -448,7 +512,7 @@ export default function OrdersClient({
             disabled={loadingMore}
             className="rounded-fizz border border-ink-line bg-ink-soft px-6 py-3 font-semibold text-cream transition-colors hover:border-fizz hover:text-fizz disabled:opacity-60"
           >
-            {loadingMore ? "Loading…" : "Load older orders"}
+            {loadingMore ? "Loading…" : "Load more"}
           </button>
         </div>
       )}
