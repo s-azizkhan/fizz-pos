@@ -18,7 +18,12 @@ import MonthFilter from "@/components/fizz/MonthFilter";
 import { currentMonth, toDateInput } from "@/lib/store/date-range";
 import { startNav } from "@/components/fizz/NavProgress";
 import { confirmDialog } from "@/components/fizz/ConfirmDialog";
-import { CashIcon, ChefIcon, CloseIcon, PencilIcon, ReceiptIcon, RefreshIcon, TrashIcon, WhatsAppIcon } from "@/components/fizz/dashboard/icons";
+import { CashIcon, ChefIcon, CloseIcon, PencilIcon, ReceiptIcon, RefreshIcon, ShareIcon, TrashIcon, WhatsAppIcon } from "@/components/fizz/dashboard/icons";
+
+const TOOL_BASE =
+  "flex min-w-0 flex-col items-center justify-center gap-1 rounded-fizz border border-ink-line px-1 py-2 text-[11px] font-semibold leading-tight text-steam transition-colors disabled:opacity-50";
+const TOOL = `${TOOL_BASE} hover:border-fizz hover:text-fizz`;
+const TOOL_DANGER = `${TOOL_BASE} hover:border-[#E2655A] hover:text-[#E2655A]`;
 
 const TYPE_LABEL: Record<string, string> = {
   dine_in: "Dine in",
@@ -199,6 +204,32 @@ export default function OrdersClient({
     router.push(`/dashboard/pos?order=${o.id}`);
   }
 
+  const shareText = (o: OrderRow) =>
+    orderShareText({
+      storeName,
+      orderNumber: o.number,
+      customerName: o.customer?.name ?? null,
+      lines: o.items,
+      total: o.total,
+      paid: o.status === "paid",
+      currency,
+    });
+
+  // Native share sheet on phones (SMS, WhatsApp, anything); copy elsewhere.
+  async function shareOrder(o: OrderRow) {
+    const text = shareText(o);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `Order #${o.number}`, text });
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      toast.success("Order copied — paste it anywhere");
+    } catch (e) {
+      if (!(e instanceof DOMException && e.name === "AbortError")) toast.error("Share fizzled");
+    }
+  }
+
   async function reprint(r: ReceiptData) {
     try {
       const sent = await printToDefault((cfg) => receiptTicket(r, cfg), { interactive: true });
@@ -345,11 +376,11 @@ export default function OrdersClient({
                 </span>
               )}
             </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {d.rows.map((o) => (
                 <article
                   key={o.id}
-                  className="flex flex-col rounded-fizz border border-ink-line bg-ink-soft p-5"
+                  className="flex min-w-0 flex-col rounded-fizz border border-ink-line bg-ink-soft p-5"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -406,7 +437,7 @@ export default function OrdersClient({
                     </span>
                   </div>
 
-                  {/* Actions */}
+                  {/* Primary actions */}
                   {(o.status === "open" || isAdmin) && (
                     <div className="mt-4 flex flex-wrap gap-2">
                       {o.tab?.webPending && (
@@ -435,69 +466,59 @@ export default function OrdersClient({
                           Settle
                         </button>
                       )}
-                      {o.status !== "void" && (
-                        <button
-                          onClick={() => doVoid(o.id)}
-                          disabled={pending && busyId === o.id}
-                          aria-label="Void order"
-                          className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
-                        >
-                          <CloseIcon className="h-4 w-4" />
-                        </button>
-                      )}
-                      {isAdmin && (
-                        <button
-                          onClick={() => doDelete(o.id)}
-                          disabled={pending && busyId === o.id}
-                          aria-label="Delete order"
-                          className="rounded-fizz border border-ink-line px-3 text-steam transition-colors hover:border-[#E2655A] hover:text-[#E2655A] disabled:opacity-50"
-                        >
-                          <TrashIcon className="h-4 w-4" />
-                        </button>
-                      )}
                     </div>
                   )}
 
-                  {/* Kitchen ticket — print/reprint for any order */}
-                  <button
-                    onClick={() => setKotFor(o)}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
-                  >
-                    <ChefIcon className="h-4 w-4" />
-                    {o.status === "open" ? "Print KOT" : "Reprint KOT"}
-                  </button>
-                  {o.customer?.phone && o.status !== "void" && (
-                    <a
-                      href={waLink(
-                        o.customer.phone,
-                        storeWhatsapp,
-                        orderShareText({
-                          storeName,
-                          orderNumber: o.number,
-                          customerName: o.customer.name,
-                          lines: o.items,
-                          total: o.total,
-                          paid: o.status === "paid",
-                          currency,
-                        }),
-                      )}
-                      target="_blank"
-                      rel="noopener"
-                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
-                    >
-                      <WhatsAppIcon className="h-4 w-4" />
-                      Share on WhatsApp
-                    </a>
-                  )}
-                  {o.bill && (
-                    <button
-                      onClick={() => reprint(receiptOf(o)!)}
-                      className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-fizz border border-ink-line px-3 py-2 text-sm font-semibold text-steam transition-colors hover:border-fizz hover:text-fizz"
-                    >
-                      <ReceiptIcon className="h-4 w-4" />
-                      Reprint receipt
+                  {/* Tools — one compact row instead of a stack of full-width buttons */}
+                  <div className="mt-2 grid auto-cols-fr grid-flow-col gap-1.5">
+                    <button onClick={() => setKotFor(o)} className={TOOL}>
+                      <ChefIcon className="h-4 w-4" />
+                      {o.status === "open" ? "KOT" : "Reprint KOT"}
                     </button>
-                  )}
+                    {o.bill && (
+                      <button onClick={() => reprint(receiptOf(o)!)} className={TOOL}>
+                        <ReceiptIcon className="h-4 w-4" />
+                        Receipt
+                      </button>
+                    )}
+                    {o.status !== "void" && (
+                      <button onClick={() => shareOrder(o)} className={TOOL}>
+                        <ShareIcon className="h-4 w-4" />
+                        Share
+                      </button>
+                    )}
+                    {o.customer?.phone && o.status !== "void" && (
+                      <a
+                        href={waLink(o.customer.phone, storeWhatsapp, shareText(o))}
+                        target="_blank"
+                        rel="noopener"
+                        className={TOOL}
+                      >
+                        <WhatsAppIcon className="h-4 w-4" />
+                        WhatsApp
+                      </a>
+                    )}
+                    {(o.status === "open" || isAdmin) && o.status !== "void" && (
+                      <button
+                        onClick={() => doVoid(o.id)}
+                        disabled={pending && busyId === o.id}
+                        className={TOOL_DANGER}
+                      >
+                        <CloseIcon className="h-4 w-4" />
+                        Void
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => doDelete(o.id)}
+                        disabled={pending && busyId === o.id}
+                        className={TOOL_DANGER}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </article>
               ))}
             </div>

@@ -406,6 +406,16 @@ export function WhatsAppIcon({ className }: P) {
     </Svg>
   );
 }
+export function ShareIcon({ className }: P) {
+  return (
+    <Svg name="share" className={className}>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
+    </Svg>
+  );
+}
 
 export function QrIcon({ className }: P) {
   return (
